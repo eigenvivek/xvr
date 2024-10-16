@@ -18,12 +18,12 @@ class OrderedGroup(click.Group):
 @click.group(cls=OrderedGroup)
 def cli():
     """
-    DiffPose is a command-line interface for training, fine-tuning, and performing 2D/3D X-ray to CT registration with pose regression models.
+    xvr is a command-line interface for training, fine-tuning, and performing 2D/3D X-ray to CT registration with pose regression models.
     """
 
 
 cli.add_command(train)
+cli.add_command(restart)
 cli.add_command(finetune)
 cli.add_command(register)
-cli.add_command(restart)
 cli.add_command(animate)

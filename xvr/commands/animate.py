@@ -24,7 +24,7 @@ from .register import (
     "--inpath",
     required=True,
     type=click.Path(exists=True),
-    help="Saved registration result from `diffpose register`",
+    help="Saved registration result from `xvr register`",
 )
 @click.option(
     "-o",

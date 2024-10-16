@@ -166,8 +166,14 @@ from ..utils import XrayAugmentations, XrayTransforms, get_random_pose, render
     help="Number of batches per epoch",
 )
 @click.option(
+    "--name",
+    default=None,
+    type=str,
+    help="WandB run name",
+)
+@click.option(
     "--project",
-    default="diffpose",
+    default="xvr",
     type=str,
     help="WandB project name",
 )
@@ -196,6 +202,7 @@ def train(
     batch_size,
     n_epochs,
     n_batches_per_epoch,
+    name,
     project,
 ):
     """
@@ -249,7 +256,11 @@ def train(
 
     # Set up logging and train the model
     wandb.login(key=os.environ["WANDB_API_KEY"])
-    run = wandb.init(project=project, config=config)
+    run = wandb.init(
+        project=project,
+        name=name if name is not None else project,
+        config=config,
+    )
     train_model(config, run)
 
 
@@ -313,6 +324,7 @@ def train_model(config, run):
                     "rgeo": rgeo.mean().item(),
                     "tgeo": tgeo.mean().item(),
                     "loss": loss.mean().item(),
+                    "lr": scheduler.get_last_lr()[0],
                 }
             )
 

@@ -71,7 +71,7 @@ from ..utils import XrayAugmentations, XrayTransforms, get_random_pose, render
 @click.option(
     "--project",
     type=str,
-    default="diffpose",
+    default="xvr",
     help="WandB project name",
 )
 def finetune(
