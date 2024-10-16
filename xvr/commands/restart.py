@@ -54,7 +54,7 @@ def restart(
     # Overwrite the config with the new parameters
     config = ckpt["config"]
     config["ckptpath"] = ckptpath
-    config["batch_size"] = int(config["batch_size"] / (rescale ** 2))
+    config["batch_size"] = int(config["batch_size"] / (rescale**2))
     config["rescale"] = rescale
     config["height"] = int(config["height"] * rescale)
     config["delx"] /= rescale
@@ -121,16 +121,14 @@ def train_model(config, model_state_dict, run):
             scheduler.step()
 
             # Log metrics
-            wandb.log(
-                {
-                    "mncc": mncc.mean().item(),
-                    "dgeo": dgeo.mean().item(),
-                    "rgeo": rgeo.mean().item(),
-                    "tgeo": tgeo.mean().item(),
-                    "loss": loss.mean().item(),
-                    "lr": scheduler.get_last_lr()[0],
-                }
-            )
+            wandb.log({
+                "mncc": mncc.mean().item(),
+                "dgeo": dgeo.mean().item(),
+                "rgeo": rgeo.mean().item(),
+                "tgeo": tgeo.mean().item(),
+                "loss": loss.mean().item(),
+                "lr": scheduler.get_last_lr()[0],
+            })
 
         # Checkpoint the model every epoch
         if epoch % 1 == 0:

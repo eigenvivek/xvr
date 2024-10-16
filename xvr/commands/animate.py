@@ -47,7 +47,7 @@ from .register import (
 )
 def animate(inpath, outpath, dpi, fps):
     """Animate the trajectory of iterative optimization."""
-    
+
     # Initialize the renderer and ground truth data
     run = torch.load(inpath, weights_only=False)
     args = run["arguments"]
@@ -111,7 +111,11 @@ def render(drr, gt, gt_pose, double_geodesic, scales, run, args):
     drrs = []
     nccs = []
     dgeos = []
-    for _, row in tqdm(run["trajectory"].iterrows(), total=len(run["trajectory"]), desc="Rendering DRRs"):
+    for _, row in tqdm(
+        run["trajectory"].iterrows(),
+        total=len(run["trajectory"]),
+        desc="Rendering DRRs",
+    ):
         # If the learning rate has reset, rescale the detector
         if row.lr_rot > lowest_lr:
             scale = scales.pop(0)
