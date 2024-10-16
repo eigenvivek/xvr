@@ -8,7 +8,6 @@ import torch
 from diffdrr.data import read
 from diffdrr.drr import DRR
 from diffdrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelation2d
-from diffdrr.pose import convert
 from diffdrr.registration import PoseRegressor
 from pytorch_transformers.optimization import WarmupCosineSchedule
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
@@ -25,26 +24,49 @@ from ..utils import XrayAugmentations, XrayTransforms, get_random_pose, render
     "--ckptpath",
     required=True,
     type=click.Path(exists=True),
-    help="Checkpoint from which to resume training",
+    help="Checkpoint of a pretrained pose regressor",
+)
+@click.option(
+    "--rescale",
+    default=1.0,
+    type=float,
+    help="Rescale the virtual detector plane",
 )
 @click.option(
     "--project",
-    default="diffpose",
     type=str,
+    default="xvr",
     help="WandB project name",
 )
-def restart(ckptpath, project):
-    """Restart training from a checkpoint."""
+def restart(
+    ckptpath,
+    rescale,
+    project,
+):
+    """
+    Restart model training from a checkpoint.
+    """
+
+    # Load the previous model checkpoint
     ckpt = torch.load(ckptpath, weights_only=False)
+    model_state_dict = ckpt["model_state_dict"]
+
+    # Overwrite the config with the new parameters
     config = ckpt["config"]
+    config["ckptpath"] = ckptpath
+    config["batch_size"] = int(config["batch_size"] / (rescale ** 2))
+    config["rescale"] = rescale
+    config["height"] = int(config["height"] * rescale)
+    config["delx"] /= rescale
 
-    # Set up logging and train the model
+    # Set up logging and fine-tune the model
+    name = ckptpath.split("/")[-1].split("_")[0] + f"-rescale{rescale}"
     wandb.login(key=os.environ["WANDB_API_KEY"])
-    run = wandb.init(project=project, config=config)
-    train_model(ckpt, config, run)
+    run = wandb.init(project=project, name=name, config=config)
+    train_model(config, model_state_dict, run)
 
 
-def train_model(ckpt, config, run):
+def train_model(config, model_state_dict, run):
     # Load all CT volumes
     volumes = []
     inpath = Path(config["inpath"])
@@ -54,7 +76,9 @@ def train_model(ckpt, config, run):
         volumes.append(subject.volume.data.squeeze().to(dtype=torch.float32))
 
     # Initialize deep learning modules
-    model, drr, transforms, optimizer, scheduler = initialize(ckpt, config, subject)
+    model, drr, transforms, optimizer, scheduler = initialize(
+        config, model_state_dict, subject
+    )
 
     # Initialize the loss function
     imagesim = MultiscaleNormalizedCrossCorrelation2d([None, 9], [0.5, 0.5])
@@ -65,7 +89,7 @@ def train_model(ckpt, config, run):
     augmentations = XrayAugmentations()
 
     # Train the model
-    for epoch in range(ckpt["epoch"], config["n_epochs"] + 1):
+    for epoch in range(config["n_epochs"]):
         for _ in tqdm(range(config["n_batches_per_epoch"]), desc=f"Epoch {epoch}"):
             # Sample a random volume for this batch
             volume = choice(volumes).cuda()
@@ -104,11 +128,12 @@ def train_model(ckpt, config, run):
                     "rgeo": rgeo.mean().item(),
                     "tgeo": tgeo.mean().item(),
                     "loss": loss.mean().item(),
+                    "lr": scheduler.get_last_lr()[0],
                 }
             )
 
-        # Checkpoint the model every 5 epochs
-        if epoch % 5 == 0:
+        # Checkpoint the model every epoch
+        if epoch % 1 == 0:
             torch.save(
                 {
                     "model_state_dict": model.state_dict(),
@@ -122,66 +147,20 @@ def train_model(ckpt, config, run):
             )
 
 
-class PoseFinetuner(torch.nn.Module):
-    def __init__(self, config, model_state_dict):
-        super().__init__()
-
-        self.parameterization = config["parameterization"]
-        self.convention = config["convention"]
-
-        #
-        model = PoseRegressor(
-            model_name=config["model_name"],
-            parameterization=config["parameterization"],
-            convention=config["convention"],
-            norm_layer=config["norm_layer"],
-            height=config["height"],
-        )
-        model.load_state_dict(model_state_dict)
-        self.backbone = model.backbone
-
-        #
-        self.xyz_regressor = torch.nn.Sequential(
-            torch.nn.Linear(model.xyz_regression.in_features, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, model.xyz_regression.out_features),
-        )
-
-        self.rot_regressor = torch.nn.Sequential(
-            torch.nn.Linear(model.rot_regression.in_features, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, model.rot_regression.out_features),
-        )
-
-    def forward(self, x):
-        x = self.backbone(x)
-        rot = self.rot_regressor(x)
-        xyz = self.xyz_regressor(x)
-        return convert(
-            rot, xyz, parameterization=self.parameterization, convention=self.convention
-        )
-
-
-def initialize(ckpt, config, subject):
-    # Initialize the pose regression model
-    model = PoseFinetuner(
-        config,
-        ckpt["model_state_dict"],
-        # model_name=config["model_name"],
-        # pretrained=config["pretrained"],
-        # parameterization=config["parameterization"],
-        # convention=config["convention"],
-        # norm_layer=config["norm_layer"],
-        # height=config["height"],
+def initialize(config, model_state_dict, subject):
+    # Load the pretrained pose regression model
+    model = PoseRegressor(
+        model_name=config["model_name"],
+        pretrained=config["pretrained"],
+        parameterization=config["parameterization"],
+        convention=config["convention"],
+        norm_layer=config["norm_layer"],
+        height=config["height"],
     ).cuda()
-    model.load_state_dict(ckpt["model_state_dict"])
+    model.load_state_dict(model_state_dict)
     model.train()
 
-    # Initialize a DRR renderer with a placeholder subject
+    # Initialize the subject-specific DRR module
     drr = DRR(
         subject,
         sdd=config["sdd"],
@@ -190,19 +169,19 @@ def initialize(ckpt, config, subject):
         reverse_x_axis=config["reverse_x_axis"],
         renderer=config["renderer"],
     ).cuda()
-    transforms = XrayTransforms(config["height"])
+    transforms = XrayTransforms(drr.detector.height)
+    print(drr.detector.height)
 
-    # Initialize the optimizer and learning rate scheduler
-    optimizer = torch.optim.Adam(model.parameters(), lr=config["lr"])
+    # Set up the optimizer and learning rate scheduler
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=config["lr"],
+    )
     scheduler = WarmupCosineSchedule(
         optimizer,
         5 * config["n_batches_per_epoch"],
         config["n_epochs"] * config["n_batches_per_epoch"]
         - 5 * config["n_batches_per_epoch"],
     )  # Warmup for 5 epochs, then taper off
-
-    # Load the checkpoint
-    optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-    scheduler.load_state_dict(ckpt["scheduler_state_dict"])
 
     return model, drr, transforms, optimizer, scheduler
