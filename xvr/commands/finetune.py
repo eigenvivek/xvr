@@ -163,14 +163,16 @@ def train_model(config, model_state_dict, run):
             scheduler.step()
 
             # Log metrics
-            wandb.log({
-                "mncc": mncc.mean().item(),
-                "dgeo": dgeo.mean().item(),
-                "rgeo": rgeo.mean().item(),
-                "tgeo": tgeo.mean().item(),
-                "loss": loss.mean().item(),
-                "lr": scheduler.get_last_lr()[0],
-            })
+            wandb.log(
+                {
+                    "mncc": mncc.mean().item(),
+                    "dgeo": dgeo.mean().item(),
+                    "rgeo": rgeo.mean().item(),
+                    "tgeo": tgeo.mean().item(),
+                    "loss": loss.mean().item(),
+                    "lr": scheduler.get_last_lr()[0],
+                }
+            )
 
         # Checkpoint the model every epoch
         if epoch % 1 == 0:
