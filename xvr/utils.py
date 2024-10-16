@@ -50,13 +50,11 @@ class Standardize(torch.nn.Module):
 
 def XrayTransforms(height, width=None, mean=0.15, std=0.1):
     width = height if width is None else width
-    return Compose(
-        [
-            Standardize(),
-            Resize((height, width)),
-            Normalize([mean], [std]),
-        ]
-    )
+    return Compose([
+        Standardize(),
+        Resize((height, width)),
+        Normalize([mean], [std]),
+    ])
 
 
 def XrayAugmentations(p=0.5):

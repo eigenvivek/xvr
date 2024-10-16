@@ -317,16 +317,14 @@ def train_model(config, run):
             scheduler.step()
 
             # Log metrics
-            wandb.log(
-                {
-                    "mncc": mncc.mean().item(),
-                    "dgeo": dgeo.mean().item(),
-                    "rgeo": rgeo.mean().item(),
-                    "tgeo": tgeo.mean().item(),
-                    "loss": loss.mean().item(),
-                    "lr": scheduler.get_last_lr()[0],
-                }
-            )
+            wandb.log({
+                "mncc": mncc.mean().item(),
+                "dgeo": dgeo.mean().item(),
+                "rgeo": rgeo.mean().item(),
+                "tgeo": tgeo.mean().item(),
+                "loss": loss.mean().item(),
+                "lr": scheduler.get_last_lr()[0],
+            })
 
         # Checkpoint the model every 5 epochs
         if epoch % 5 == 0:
