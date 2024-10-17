@@ -1,21 +1,4 @@
-from pathlib import Path
-from tempfile import TemporaryDirectory
-
 import click
-import matplotlib.pyplot as plt
-import torch
-from diffdrr.metrics import DoubleGeodesicSE3
-from diffdrr.pose import RigidTransform, convert
-from diffdrr.visualization import plot_drr
-from imageio.v3 import imread, imwrite
-from tqdm import tqdm
-
-from ..utils import XrayTransforms
-from .register import (
-    _parse_scales,
-    initialize_pose,
-    initialize_registration,
-)
 
 
 @click.command(context_settings=dict(show_default=True, max_content_width=120))
@@ -48,6 +31,9 @@ from .register import (
 def animate(inpath, outpath, dpi, fps):
     """Animate the trajectory of iterative optimization."""
 
+    import torch
+    from imageio.v3 import imwrite
+
     # Initialize the renderer and ground truth data
     run = torch.load(inpath, weights_only=False)
     args = run["arguments"]
@@ -63,6 +49,16 @@ def animate(inpath, outpath, dpi, fps):
 
 def initialize(args):
     """Initialize the DRR and ground truth."""
+
+    import torch
+    from diffdrr.metrics import DoubleGeodesicSE3
+    from diffdrr.pose import RigidTransform
+
+    from .register import (
+        _parse_scales,
+        initialize_pose,
+        initialize_registration,
+    )
 
     # Initialize the ground truth X-ray
     gt, sdd, delx, dely, x0, y0, init_pose, height, config, date = initialize_pose(
@@ -106,6 +102,12 @@ def initialize(args):
 
 
 def render(drr, gt, gt_pose, double_geodesic, scales, run, args):
+    import torch
+    from diffdrr.pose import convert
+    from tqdm import tqdm
+
+    from ..utils import XrayTransforms
+
     lowest_lr = 0.0
 
     drrs = []
@@ -148,6 +150,15 @@ def render(drr, gt, gt_pose, double_geodesic, scales, run, args):
 
 
 def plot(drrs, nccs, dgeos, dpi):
+    from pathlib import Path
+    from tempfile import TemporaryDirectory
+
+    import matplotlib.pyplot as plt
+    import torch
+    from diffdrr.visualization import plot_drr
+    from imageio.v3 import imread
+    from tqdm import tqdm
+
     # Get ylim for the image similarity metric and geodesic distances
     plt.plot(nccs)
     ncc_ylim = plt.gca().get_ylim()

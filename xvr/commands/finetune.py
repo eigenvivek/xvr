@@ -1,19 +1,4 @@
-import os
-from datetime import datetime
-from pathlib import Path
-
 import click
-import torch
-from diffdrr.data import read
-from diffdrr.drr import DRR
-from diffdrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelation2d
-from diffdrr.registration import PoseRegressor
-from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
-from tqdm import tqdm
-
-import wandb
-
-from ..utils import XrayAugmentations, XrayTransforms, get_random_pose, render
 
 
 @click.command(context_settings=dict(show_default=True, max_content_width=120))
@@ -88,6 +73,12 @@ def finetune(
     """
     Optimize a pose regression model for a specific patient.
     """
+    import os
+    from pathlib import Path
+
+    import torch
+
+    import wandb
 
     # Create the output directory for saving model weights
     Path(outpath).mkdir(parents=True, exist_ok=True)
@@ -116,6 +107,21 @@ def finetune(
 
 
 def train_model(config, model_state_dict, run):
+    from datetime import datetime
+
+    import torch
+    from diffdrr.data import read
+    from diffdrr.metrics import (
+        DoubleGeodesicSE3,
+        MultiscaleNormalizedCrossCorrelation2d,
+    )
+    from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
+    from tqdm import tqdm
+
+    import wandb
+
+    from ..utils import XrayAugmentations, get_random_pose, render
+
     # Load the subject-specific CT volume
     subject = read(config["inpath"], orientation=config["orientation"])
     volume = subject.volume.data.squeeze().to(device="cuda", dtype=torch.float32)
@@ -190,6 +196,12 @@ def train_model(config, model_state_dict, run):
 
 
 def initialize(config, model_state_dict, subject):
+    import torch
+    from diffdrr.drr import DRR
+    from diffdrr.registration import PoseRegressor
+
+    from ..utils import XrayTransforms
+
     # Load the pretrained pose regression model
     model = PoseRegressor(
         model_name=config["model_name"],

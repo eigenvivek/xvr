@@ -1,23 +1,4 @@
-from pathlib import Path
-
 import click
-import numpy as np
-import pandas as pd
-import torch
-from diffdrr.data import read
-from diffdrr.drr import DRR
-from diffdrr.metrics import (
-    GradientNormalizedCrossCorrelation2d,
-    MultiscaleNormalizedCrossCorrelation2d,
-)
-from diffdrr.pose import RigidTransform
-from diffdrr.registration import PoseRegressor, Registration
-from diffdrr.utils import resample
-from pydicom import dcmread
-from torchvision.transforms.functional import center_crop
-from tqdm import tqdm
-
-from ..utils import XrayTransforms, get_4x4
 
 
 @click.command(context_settings=dict(show_default=True, max_content_width=120))
@@ -190,6 +171,8 @@ def register(
 
     Can pass multiple DICOM files or a directory in XRAY.
     """
+    from pathlib import Path
+
     dcmfiles = []
     for xpath in xray:
         xpath = Path(xpath)
@@ -252,6 +235,18 @@ def run(
 ):
     # Save input arguments
     arguments = locals()
+
+    # Import required packages
+    from pathlib import Path
+
+    import torch
+    from diffdrr.metrics import (
+        GradientNormalizedCrossCorrelation2d,
+        MultiscaleNormalizedCrossCorrelation2d,
+    )
+    from tqdm import tqdm
+
+    from ..utils import XrayTransforms
 
     # Make the savepath
     outpath = Path(outpath)
@@ -412,6 +407,8 @@ def save(
     savepath,
     **kwargs,
 ):
+    import torch
+
     print("Saving registration results...")
     savepath.parent.mkdir(parents=True, exist_ok=True)
     init_pose = init_pose.matrix.detach().cpu()
@@ -431,6 +428,9 @@ def save(
 
 
 def _make_csv(*metrics, columns):
+    import numpy as np
+    import pandas as pd
+
     ls = []
     for metric in metrics:
         metric = np.array(metric)
@@ -459,6 +459,10 @@ def initialize_registration(
     parameterization,
     convention,
 ):
+    from diffdrr.data import read
+    from diffdrr.drr import DRR
+    from diffdrr.registration import Registration
+
     # Load the CT volume
     if labels is not None:
         labels = [int(x) for x in labels.split(",")]
@@ -514,6 +518,9 @@ def initialize_pose(
 def _parse_dicom(filename):
     """Get pixel array and intrinsic parameters from DICOM"""
 
+    import torch
+    from pydicom import dcmread
+
     # Get the image
     ds = dcmread(filename)
     img = ds.pixel_array
@@ -541,6 +548,9 @@ def _parse_dicom(filename):
 def _preprocess_xray(img, crop, subtract_background, linearize):
     """Configurable X-ray preprocessing"""
 
+    import torch
+    from torchvision.transforms.functional import center_crop
+
     # Remove edge artifacts caused by the collimator
     if crop != 0:
         *_, height, width = img.shape
@@ -565,6 +575,9 @@ def _preprocess_xray(img, crop, subtract_background, linearize):
 
 def _resample_xray(img, sdd, delx, dely, x0, y0, config):
     """Resample the image to match the model's assumed intrinsics"""
+
+    from diffdrr.utils import resample
+
     assert delx == dely, "Non-square pixels are not yet supported"
 
     model_height = config["height"]
@@ -580,6 +593,13 @@ def _resample_xray(img, sdd, delx, dely, x0, y0, config):
 
 
 def _predict_initial_pose(img, sdd, delx, dely, x0, y0, ckptpath):
+    import torch
+    from diffdrr.pose import RigidTransform
+    from diffdrr.registration import PoseRegressor
+    from torchvision.transforms.functional import center_crop
+
+    from ..utils import XrayTransforms
+
     # Load the config file for a pretrained pose regression model
     ckpt = torch.load(ckptpath, weights_only=False)
     config = ckpt["config"]
@@ -615,6 +635,8 @@ def _predict_initial_pose(img, sdd, delx, dely, x0, y0, ckptpath):
 
 
 def _correct_pose(pose, warp, volume, invert):
+    from ..utils import get_4x4
+
     if warp is None:
         return pose
 

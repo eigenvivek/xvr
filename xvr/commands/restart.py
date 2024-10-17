@@ -1,21 +1,4 @@
-import os
-from datetime import datetime
-from pathlib import Path
-from random import choice
-
 import click
-import torch
-from diffdrr.data import read
-from diffdrr.drr import DRR
-from diffdrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelation2d
-from diffdrr.registration import PoseRegressor
-from pytorch_transformers.optimization import WarmupCosineSchedule
-from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
-from tqdm import tqdm
-
-import wandb
-
-from ..utils import XrayAugmentations, XrayTransforms, get_random_pose, render
 
 
 @click.command(context_settings=dict(show_default=True, max_content_width=120))
@@ -46,6 +29,10 @@ def restart(
     """
     Restart model training from a checkpoint.
     """
+    import os
+
+    import torch
+    import wandb
 
     # Load the previous model checkpoint
     ckpt = torch.load(ckptpath, weights_only=False)
@@ -67,6 +54,22 @@ def restart(
 
 
 def train_model(config, model_state_dict, run):
+    from datetime import datetime
+    from pathlib import Path
+    from random import choice
+
+    import torch
+    import wandb
+    from diffdrr.data import read
+    from diffdrr.metrics import (
+        DoubleGeodesicSE3,
+        MultiscaleNormalizedCrossCorrelation2d,
+    )
+    from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
+    from tqdm import tqdm
+
+    from ..utils import XrayAugmentations, get_random_pose, render
+
     # Load all CT volumes
     volumes = []
     inpath = Path(config["inpath"])
@@ -148,6 +151,13 @@ def train_model(config, model_state_dict, run):
 
 
 def initialize(config, model_state_dict, subject):
+    import torch
+    from diffdrr.drr import DRR
+    from diffdrr.registration import PoseRegressor
+    from pytorch_transformers.optimization import WarmupCosineSchedule
+
+    from ..utils import XrayTransforms
+
     # Load the pretrained pose regression model
     model = PoseRegressor(
         model_name=config["model_name"],

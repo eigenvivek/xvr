@@ -1,21 +1,4 @@
-import os
-from datetime import datetime
-from pathlib import Path
-from random import choice
-
 import click
-import torch
-from diffdrr.data import read
-from diffdrr.drr import DRR
-from diffdrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelation2d
-from diffdrr.registration import PoseRegressor
-from pytorch_transformers.optimization import WarmupCosineSchedule
-from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
-from tqdm import tqdm
-
-import wandb
-
-from ..utils import XrayAugmentations, XrayTransforms, get_random_pose, render
 
 
 @click.command(context_settings=dict(show_default=True, max_content_width=120))
@@ -208,6 +191,10 @@ def train(
     """
     Train a pose regression model from scratch.
     """
+    import os
+    from pathlib import Path
+
+    import wandb
 
     # Create the output directory for saving model weights
     Path(outpath).mkdir(parents=True, exist_ok=True)
@@ -265,6 +252,23 @@ def train(
 
 
 def train_model(config, run):
+    from datetime import datetime
+    from pathlib import Path
+    from random import choice
+
+    import torch
+    from diffdrr.data import read
+    from diffdrr.metrics import (
+        DoubleGeodesicSE3,
+        MultiscaleNormalizedCrossCorrelation2d,
+    )
+    from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
+    from tqdm import tqdm
+
+    import wandb
+
+    from ..utils import XrayAugmentations, get_random_pose, render
+
     # Load all CT volumes
     volumes = []
     inpath = Path(config["inpath"])
@@ -344,6 +348,13 @@ def train_model(config, run):
 
 
 def initialize(config, subject):
+    import torch
+    from diffdrr.drr import DRR
+    from diffdrr.registration import PoseRegressor
+    from pytorch_transformers.optimization import WarmupCosineSchedule
+
+    from ..utils import XrayTransforms
+
     # Initialize the pose regression model
     model = PoseRegressor(
         model_name=config["model_name"],
