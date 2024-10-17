@@ -1,5 +1,6 @@
 data
 models
+results
 logs
 wandb
 .last_checked
