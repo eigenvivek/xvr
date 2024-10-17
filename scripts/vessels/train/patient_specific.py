@@ -3,11 +3,11 @@ from subprocess import run
 import submitit
 
 
-def main():
-    command = """
+def main(subject_id):
+    command = f"""
     xvr train \
-        -i data/nitrc_mras \
-        -o models/vessels/patient_agnostic \
+        -i data/ljubljana/subject{subject_id:02d}/volume.nii.gz \
+        -o models/vessels/patient_specific/subject{subject_id:02d} \
         --r1 -45.0 90.0 \
         --r2 -5.0 5.0 \
         --r3 -5.0 5.0 \
@@ -19,8 +19,9 @@ def main():
         --delx 2.31 \
         --orientation AP \
         --pretrained \
-        --n_epochs 2000 \
-        --name nitrc \
+        --n_epochs 1000 \
+        --batch_size 16 \
+        --name ljubljana{subject_id:02d} \
         --project xvr-vessels
     """
     command = command.strip().split()
@@ -28,13 +29,16 @@ def main():
 
 
 if __name__ == "__main__":
+    subject_id = list(range(1, 11))
+    
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
-        name="xvr-vessels-agnostic",
+        name="xvr-vessels-specific",
         gpus_per_node=1,
-        mem_gb=43.5,
-        slurm_partition="A6000",
-        slurm_exclude="sumac,fennel",
+        mem_gb=12.0,
+        slurm_array_parallelism=len(subject_id),
+        slurm_partition="2080ti",
+        slurm_exclude="",
         timeout_min=10_000,
     )
-    jobs = executor.submit(main)
+    jobs = executor.map_array(main, subject_id)

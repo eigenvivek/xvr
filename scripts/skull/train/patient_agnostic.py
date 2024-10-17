@@ -19,18 +19,8 @@ def main():
         --delx 2.0 \
         --reverse_x_axis \
         --pretrained \
-        --n_epochs 251 \
+        --n_epochs 2000 \
         --name totalcta \
-        --project xvr-skull
-    """
-    command = command.strip().split()
-    run(command, check=True)
-
-    # Restart training at 2X scale
-    command = """
-    xvr restart \
-        -c models/skull/patient_agnostic/totalcta_0250.pth \
-        --rescale 2 \
         --project xvr-skull
     """
     command = command.strip().split()
