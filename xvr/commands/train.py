@@ -328,8 +328,8 @@ def train_model(config, run):
                 }
             )
 
-        # Checkpoint the model every 5 epochs
-        if epoch % 5 == 0:
+        # Checkpoint the model every 5 epochs (and the first 100 epochs)
+        if epoch % 5 == 0 or epoch < 100:
             torch.save(
                 {
                     "model_state_dict": model.state_dict(),
