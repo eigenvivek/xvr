@@ -421,14 +421,14 @@ def initialize_pose(
     return img, sdd, delx, dely, x0, y0, init_pose, height, config, date
 
 
-def _predict_initial_pose(img, sdd, delx, dely, x0, y0, ckptpath):
+def _predict_initial_pose(img, sdd, delx, dely, x0, y0, ckptpath, meta=True):
     from ..model import load_model, predict_pose
 
     # Load the pretrained model
-    model, config, date = load_model(ckptpath, meta=True)
+    model, config, date = load_model(ckptpath, meta)
 
     # Predict the pose of the X-ray image
-    init_pose, height = predict_pose(model, config, img, sdd, delx, dely, x0, y0)
+    init_pose, height = predict_pose(model, config, img, sdd, delx, dely, x0, y0, meta)
 
     return init_pose, height, config, date
 

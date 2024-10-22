@@ -28,7 +28,7 @@ def load_model(ckptpath, meta=False):
         return model, config
 
 
-def predict_pose(model, config, img, sdd, delx, dely, x0, y0):
+def predict_pose(model, config, img, sdd, delx, dely, x0, y0, meta=False):
     # Resample the X-ray image to match the model's assumed intrinsics
     img, height, width = _resample_xray(img, sdd, delx, dely, x0, y0, config)
     height = min(height, width)
@@ -42,7 +42,10 @@ def predict_pose(model, config, img, sdd, delx, dely, x0, y0):
     with torch.no_grad():
         init_pose = model(img)
 
-    return init_pose, height
+    if meta:
+        return init_pose, height
+    else:
+        return init_pose
 
 
 def _resample_xray(img, sdd, delx, dely, x0, y0, config):
