@@ -404,7 +404,7 @@ def initialize_pose(
     """Get initial pose estimate and image intrinsics."""
 
     from ..dicom import _parse_dicom, _preprocess_xray
-    from ..utils import _correct_pose
+    from ..model import _correct_pose
 
     # Preprocess X-ray image and get imaging system intrinsics
     img, sdd, delx, dely, x0, y0 = _parse_dicom(i2d)
