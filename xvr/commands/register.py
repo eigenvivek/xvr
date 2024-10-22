@@ -184,15 +184,15 @@ def register(
     for i2d in dcmfiles:
         print(f"\nRegistering {i2d} ...")
         run(
-            i2d,
-            volume,
-            mask,
-            ckptpath,
-            outpath,
+            Path(i2d).resolve(),
+            Path(volume).resolve(),
+            Path(mask).resolve() if mask is not None else None,
+            Path(ckptpath).resolve(),
+            Path(outpath).resolve(),
             crop,
             subtract_background,
             linearize,
-            warp,
+            Path(warp).resolve() if warp is not None else None,
             invert,
             model_only,
             labels,
