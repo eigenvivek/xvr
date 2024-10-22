@@ -61,7 +61,7 @@ def initialize(args):
     )
 
     # Initialize the ground truth X-ray
-    gt, sdd, delx, dely, x0, y0, init_pose, height, config, date = initialize_pose(
+    gt, sdd, delx, dely, x0, y0, init_pose, height, config, _ = initialize_pose(
         args["i2d"],
         args["ckptpath"],
         args["crop"],
@@ -69,6 +69,7 @@ def initialize(args):
         args["linearize"],
         args["warp"],
         args["volume"],
+        args["invert"],
     )
 
     # Get the ground truth pose
@@ -84,7 +85,7 @@ def initialize(args):
         config["orientation"],
         gt,
         sdd,
-        dely,
+        delx,
         dely,
         x0,
         y0,
@@ -139,6 +140,7 @@ def render(drr, gt, gt_pose, double_geodesic, scales, run, args):
 
         # Get the image similarity
         nccs.append(row.ncc)
+
         # Get the geodesic error
         _, _, dgeo = double_geodesic(pose.cpu(), gt_pose)
         dgeos.append(dgeo.item())
