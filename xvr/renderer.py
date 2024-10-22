@@ -16,11 +16,13 @@ def initialize_drr(
     y0,
     reverse_x_axis,
     renderer,
+    read_kwargs={},
+    drr_kwargs={},
 ):
     # Load the CT volume
     if labels is not None:
         labels = [int(x) for x in labels.split(",")]
-    subject = read(volume, mask, labels, orientation)
+    subject = read(volume, mask, labels, orientation, **read_kwargs)
 
     # Initialize the DRR module at full resolution
     *_, height, width = img.shape
@@ -35,6 +37,7 @@ def initialize_drr(
         y0,
         reverse_x_axis=reverse_x_axis,
         renderer=renderer,
+        **drr_kwargs,
     ).cuda()
 
     return drr
