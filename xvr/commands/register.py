@@ -124,6 +124,12 @@ import click
     help="Number of allowed epochs with no improvement after which the learning rate will be reduced",
 )
 @click.option(
+    "--tolerance",
+    default=1e-4,
+    type=float,
+    help="Threshold for measuring the new optimum",
+)
+@click.option(
     "--max_n_itrs",
     default=500,
     type=int,
@@ -162,6 +168,7 @@ def register(
     lr_rot,
     lr_xyz,
     patience,
+    tolerance,
     max_n_itrs,
     max_n_plateaus,
     pattern,
@@ -204,6 +211,7 @@ def register(
             lr_rot,
             lr_xyz,
             patience,
+            tolerance,
             max_n_itrs,
             max_n_plateaus,
         )
@@ -230,6 +238,7 @@ def run(
     lr_rot,
     lr_xyz,
     patience,
+    tolerance,
     max_n_itrs,
     max_n_plateaus,
 ):
@@ -294,6 +303,9 @@ def run(
         convention,
     )
 
+    # Parse the scales for multiscale registration
+    scales = _parse_scales(scales, crop, height)
+
     # Initialize the image similarity metrics
     imagesim1 = MultiscaleNormalizedCrossCorrelation2d([None, 9], [0.5, 0.5])
     imagesim2 = GradientNormalizedCrossCorrelation2d(patch_size=11, sigma=10).cuda()
@@ -309,7 +321,6 @@ def run(
     alphas = [[lr_rot, lr_xyz]]
 
     step_size_scalar = 1.0
-    scales = _parse_scales(scales, crop, height)
     for stage, scale in enumerate(scales, start=1):
         # Rescale DRR detector and ground truth image
         reg.drr.rescale_detector_(scale)
@@ -326,7 +337,7 @@ def run(
             maximize=True,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, factor=0.1, patience=patience, mode="max"
+            optimizer, factor=0.1, patience=patience, tolerance=tolerance, mode="max"
         )
 
         # Iteratively optimize at this scale until improvements in image similarity plateau
