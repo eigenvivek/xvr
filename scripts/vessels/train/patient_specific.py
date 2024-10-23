@@ -30,7 +30,7 @@ def main(subject_id):
 
 if __name__ == "__main__":
     subject_id = list(range(1, 11))
-    
+
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
         name="xvr-vessels-specific",
