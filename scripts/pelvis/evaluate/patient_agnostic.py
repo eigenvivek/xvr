@@ -28,7 +28,7 @@ if __name__ == "__main__":
         name="xvr-pelvis-eval-agnostic",
         gpus_per_node=1,
         mem_gb=10.0,
-        slurm_array_parallelism=12,
+        slurm_array_parallelism=6,
         slurm_partition="2080ti",
         timeout_min=10_000,
     )

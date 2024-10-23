@@ -23,13 +23,13 @@ def main(ckptpath):
 
 
 if __name__ == "__main__":
-    ckptpath = Path("models/pelvis/patient_specific").rglob("*.pth")
+    ckptpath = Path("models/pelvis/patient_specific").rglob("*1000.pth")
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
         name="xvr-pelvis-eval-specific",
         gpus_per_node=1,
         mem_gb=10.0,
-        slurm_array_parallelism=12,
+        slurm_array_parallelism=6,
         slurm_partition="2080ti",
         timeout_min=10_000,
     )
