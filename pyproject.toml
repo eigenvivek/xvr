@@ -1,0 +1,22 @@
+[project]
+name = "xvr"
+version = "0.0.1"
+description = "Differentiable 2D/3D X-ray to volume registration"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.1",
+    "diffdrr>=0.4.5",
+]
+dynamic = ["version"]
+
+[project.scripts]
+xvr = "xvr.cli:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+extend-exclude = ["*.ipynb"]
+
+[tool.hatch]
