@@ -54,6 +54,8 @@ class Registrar:
         self.volume = volume
         self.mask = mask
         self.labels = labels
+        self.reverse_x_axis = reverse_x_axis
+        self.renderer = renderer
 
         self.drr = initialize_drr(
             self.volume,
@@ -67,8 +69,8 @@ class Registrar:
             dely=0.194,
             x0=0.0,
             y0=0.0,
-            reverse_x_axis=reverse_x_axis,
-            renderer=renderer,
+            reverse_x_axis=self.reverse_x_axis,
+            renderer=self.renderer,
             read_kwargs=read_kwargs,
             drr_kwargs=drr_kwargs,
         )
@@ -105,7 +107,7 @@ class Registrar:
 
     def run(self, i2d):
         # Predict the initial pose with a pretrained network
-        gt, sdd, delx, dely, x0, y0, init_pose, height = initialize_pose(
+        gt, sdd, delx, dely, x0, y0, init_pose, self.height = initialize_pose(
             i2d,
             self.model,
             self.config,
@@ -116,19 +118,28 @@ class Registrar:
             self.volume,
             self.invert,
         )
+        *_, height, width = gt.shape
+        intrinsics = {
+            "sdd": sdd,
+            "height": height,
+            "width": width,
+            "delx": delx,
+            "dely": dely,
+            "x0": x0,
+            "y0": y0,
+        }
 
         # Update the DRR's intrinsic parameters
-        *_, height, width = gt.shape
-        self.drr.set_intrinsics_(sdd, height, width, delx, dely, x0, y0)
+        self.drr.set_intrinsics_(**intrinsics)
         if self.model_only:
-            return gt, self.drr, init_pose, None, {}
+            return gt, intrinsics, self.drr, init_pose, None, {}
 
         # Initialize the diffdrr.registration.Registration module
         rot, xyz = init_pose.convert(self.parameterization, self.convention)
         reg = Registration(self.drr, rot, xyz, self.parameterization, self.convention)
 
         # Parse the scales for multiscale registration
-        scales = _parse_scales(self.scales, self.crop, height)
+        scales = _parse_scales(self.scales, self.crop, self.height)
 
         # Perform multiscale registration
         params = [
@@ -219,25 +230,32 @@ class Registrar:
             columns=["r1", "r2", "r3", "tx", "ty", "tz", "ncc", "lr_rot", "lr_xyz"],
         )
 
-        return gt, self.drr, init_pose, reg.pose, dict(trajectory=trajectory)
+        return (
+            gt,
+            intrinsics,
+            self.drr,
+            init_pose,
+            reg.pose,
+            dict(trajectory=trajectory),
+        )
 
     def __call__(self, i2d, outpath):
         savepath = Path(outpath) / f"{i2d.stem}.pt"
         savepath.parent.mkdir(parents=True, exist_ok=True)
 
-        drr, init_pose, final_pose, kwargs = self.run(i2d)
+        gt, intrinsics, _, init_pose, final_pose, kwargs = self.run(i2d)
         init_pose = init_pose.matrix.detach().cpu()
         if final_pose is not None:
             final_pose = final_pose.matrix.detach().cpu()
-        if self.warp is not None:
-            warp = Path(self.warp).resolve()
+        mask = Path(self.mask).resolve() if self.mask is not None else None
+        warp = Path(self.warp).resolve() if self.warp is not None else None
 
         torch.save(
             {
                 "arguments": {
                     "i2d": Path(i2d).resolve(),
                     "volume": Path(self.volume).resolve(),
-                    "mask": Path(self.mask).resolve(),
+                    "mask": mask,
                     "ckptpath": Path(self.ckptpath).resolve(),
                     "outpath": Path(outpath).resolve(),
                     "crop": self.crop,
@@ -249,6 +267,7 @@ class Registrar:
                     "labels": self.labels,
                     "scales": self.scales,
                     "reverse_x_axis": self.reverse_x_axis,
+                    "renderer": self.renderer,
                     "parameterization": self.parameterization,
                     "convention": self.convention,
                     "lr_rot": self.lr_rot,
@@ -257,13 +276,8 @@ class Registrar:
                     "max_n_itrs": self.max_n_itrs,
                     "max_n_plateaus": self.max_n_plateaus,
                 },
-                "intrinsics": {
-                    "sdd": drr.detector.sdd,
-                    "delx": drr.detector.delx,
-                    "dely": drr.detector.dely,
-                    "x0": drr.detector.x0,
-                    "y0": drr.detector.y0,
-                },
+                "gt": gt,
+                "intrinsics": intrinsics,
                 "init_pose": init_pose,
                 "final_pose": final_pose,
                 "config": self.config,

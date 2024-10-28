@@ -147,6 +147,12 @@ import click
     type=str,
     help="Pattern rule for glob is XRAY is directory",
 )
+@click.option(
+    "--verbose",
+    default=2,
+    type=click.IntRange(0, 3),
+    help="Verbosity level for logging",
+)
 def register(
     xray,
     volume,
@@ -172,6 +178,7 @@ def register(
     max_n_itrs,
     max_n_plateaus,
     pattern,
+    verbose,
 ):
     """
     Use gradient-based optimization to register XRAY to a CT.
@@ -179,6 +186,8 @@ def register(
     Can pass multiple DICOM files or a directory in XRAY.
     """
     from pathlib import Path
+
+    from tqdm import tqdm
 
     from ..registrar import Registrar
 
@@ -214,8 +223,13 @@ def register(
         threshold,
         max_n_itrs,
         max_n_plateaus,
+        verbose,
     )
 
+    if verbose == 0:
+        dcmfiles = tqdm(dcmfiles, desc="DICOMs")
+
     for i2d in dcmfiles:
-        print(f"\nRegistering {i2d} ...")
+        if verbose > 0:
+            print(f"\nRegistering {i2d} ...")
         registrar(i2d, outpath)
