@@ -44,7 +44,6 @@ class Registrar:
         read_kwargs={},
         drr_kwargs={},
     ):
-
         # Initialize the model and its config
         self.ckptpath = ckptpath
         self.model, self.config, self.date = load_model(self.ckptpath, meta=True)
@@ -171,7 +170,7 @@ class Registrar:
             pbar = range(self.max_n_itrs)
             if self.verbose > 0:
                 pbar = tqdm(pbar, ncols=100, desc=f"Stage {stage}")
-                
+
             for itr in pbar:
                 optimizer.zero_grad()
                 pred_img = reg()
