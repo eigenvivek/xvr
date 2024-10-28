@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Callable
 
 import torch
+from diffdrr.pose import convert
 from pydicom import dcmread
 from torchvision.transforms.functional import center_crop
 
@@ -10,6 +12,7 @@ def read_xray(
     crop: int = 0,
     subtract_background: bool = False,
     linearize: bool = True,
+    reducefn: str | int | Callable = "max",
 ):
     """
     Read and preprocess an X-ray image from a DICOM file. Returns the pixel array and imaging system intrinsics.
@@ -28,7 +31,7 @@ def read_xray(
     img, sdd, delx, dely, x0, y0 = _parse_dicom(filename)
 
     # Preprocess the X-ray image
-    img = _preprocess_xray(img, crop, subtract_background, linearize)
+    img = _preprocess_xray(img, crop, subtract_background, linearize, reducefn)
 
     return img, sdd, delx, dely, x0, y0
 
@@ -39,8 +42,6 @@ def _parse_dicom(filename):
     # Get the image
     ds = dcmread(filename)
     img = ds.pixel_array
-    if img.ndim == 3:
-        img = img[0]  # Get the first frame
     img = torch.from_numpy(img).to(torch.float32)[None, None]
 
     # Get intrinsic parameters of the imaging system
@@ -60,7 +61,22 @@ def _parse_dicom(filename):
     return img, float(sdd), float(delx), float(dely), float(x0), float(y0)
 
 
-def _preprocess_xray(img, crop, subtract_background, linearize):
+def _parse_dicom_pose(filename, orientation):
+    multiplier = -1 if orientation == "PA" else 1
+    ds = dcmread(filename)
+    alpha = float(ds.PositionerPrimaryAngle) / 180 * torch.pi
+    beta = float(ds.PositionerSecondaryAngle) / 180 * torch.pi
+    sid = multiplier * float(ds.DistanceSourceToPatient)
+    pose = convert(
+        torch.tensor([[alpha, beta, 0.0]]),
+        torch.tensor([[0.0, sid, 0.0]]),
+        parameterization="euler_angles",
+        convention="ZXY",
+    )
+    return pose
+
+
+def _preprocess_xray(img, crop, subtract_background, linearize, reducefn):
     """Configurable X-ray preprocessing"""
 
     # Remove edge artifacts caused by the collimator
@@ -81,5 +97,20 @@ def _preprocess_xray(img, crop, subtract_background, linearize):
     if linearize:
         img += 1
         img = img.max().log() - img.log()
+
+    # If the image has a temporal dimension, take a max intensity projection
+    if img.ndim == 5:
+        if reducefn == "max":
+            img = img.max(dim=2).values
+        elif reducefn == "sum":
+            img = img.sum(dim=2)
+        elif isinstance(reducefn, int):
+            img = img[:, :, reducefn]
+        elif isinstance(reducefn, Callable):
+            img = reducefn(img)
+        elif reducefn is None:
+            pass
+        else:
+            raise ValueError(f"Unrecognized reducefn: {reducefn}")
 
     return img
