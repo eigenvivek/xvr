@@ -41,6 +41,8 @@ class Registrar:
         max_n_itrs=500,
         max_n_plateaus=3,
         verbose=2,
+        read_kwargs={},
+        drr_kwargs={},
     ):
 
         # Initialize the model and its config
@@ -68,6 +70,8 @@ class Registrar:
             y0=0.0,
             reverse_x_axis=reverse_x_axis,
             renderer=renderer,
+            read_kwargs=read_kwargs,
+            drr_kwargs=drr_kwargs,
         )
 
         # Initialize the image similarity metric
