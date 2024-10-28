@@ -227,9 +227,10 @@ class Registrar:
 
         drr, init_pose, final_pose, kwargs = self.run(i2d)
         init_pose = init_pose.matrix.detach().cpu()
-        final_pose = (
-            final_pose.matrix.detach().cpu() if final_pose is not None else None
-        )
+        if final_pose is not None:
+            final_pose = final_pose.matrix.detach().cpu()
+        if self.warp is not None:
+            warp = Path(self.warp).resolve()
 
         torch.save(
             {
@@ -242,9 +243,7 @@ class Registrar:
                     "crop": self.crop,
                     "subtract_background": self.subtract_background,
                     "linearize": self.linearize,
-                    "warp": Path(self.warp).resolve()
-                    if self.warp is not None
-                    else None,
+                    "warp": warp,
                     "invert": self.invert,
                     "model_only": self.model_only,
                     "labels": self.labels,
