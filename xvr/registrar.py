@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import torch
 from tqdm import tqdm
 from diffdrr.metrics import (
@@ -7,6 +8,7 @@ from diffdrr.metrics import (
     GradientNormalizedCrossCorrelation2d,
 )
 from diffdrr.registration import Registration
+from diffdrr.visualization import plot_drr
 
 from .dicom import _parse_dicom, _preprocess_xray
 from .renderer import initialize_drr
@@ -38,6 +40,7 @@ class Registrar:
         threshold=1e-4,
         max_n_itrs=500,
         max_n_plateaus=3,
+        verbose=2,
     ):
 
         # Initialize the model and its config
@@ -95,6 +98,7 @@ class Registrar:
         self.threshold = threshold
         self.max_n_itrs = max_n_itrs
         self.max_n_plateaus = max_n_plateaus
+        self.verbose = verbose
 
     def run(self, i2d):
         # Predict the initial pose with a pretrained network
@@ -159,11 +163,12 @@ class Registrar:
             # Iteratively optimize at this scale until improvements in image similarity plateau
             n_plateaus = 0
             current_lr = torch.inf
-            for _ in (
-                pbar := tqdm(
-                    range(self.max_n_itrs + 1), ncols=100, desc=f"Stage {stage}"
-                )
-            ):
+
+            pbar = range(self.max_n_itrs)
+            if self.verbose > 0:
+                pbar = tqdm(pbar, ncols=100, desc=f"Stage {stage}")
+                
+            for itr in pbar:
                 optimizer.zero_grad()
                 pred_img = reg()
                 pred_img = transform(pred_img)
@@ -173,7 +178,8 @@ class Registrar:
                 scheduler.step(loss)
 
                 # Record current loss
-                pbar.set_postfix_str(f"ncc = {loss.item():5.3f}")
+                if self.verbose > 1:
+                    pbar.set_postfix_str(f"ncc = {loss.item():5.3f}")
                 nccs.append(loss.item())
                 params.append(
                     torch.concat(reg.pose.convert("euler_angles", "ZXY"), dim=-1)
@@ -187,9 +193,15 @@ class Registrar:
                 if lr[0] < current_lr:
                     current_lr = lr[0]
                     n_plateaus += 1
-                    tqdm.write("→ Plateaued... decreasing step size")
+                    if self.verbose > 1:
+                        tqdm.write("→ Plateaued... decreasing step size")
                 if n_plateaus == self.max_n_plateaus:
                     break
+
+                if self.verbose > 2:
+                    if itr % 5 == 0:
+                        plot_drr(torch.concat([img, pred_img, img - pred_img]))
+                        plt.show()
 
         # Record the final NCC value
         with torch.no_grad():
