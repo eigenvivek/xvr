@@ -196,7 +196,6 @@ def register(
         volume,
         mask,
         ckptpath,
-        outpath,
         crop,
         subtract_background,
         linearize,
@@ -219,4 +218,4 @@ def register(
 
     for i2d in dcmfiles:
         print(f"\nRegistering {i2d} ...")
-        registrar(i2d)
+        registrar(i2d, outpath)

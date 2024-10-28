@@ -20,7 +20,6 @@ class Registrar:
         volume,
         mask,
         ckptpath,
-        outpath,
         crop=0,
         subtract_background=False,
         linearize=True,
@@ -40,7 +39,6 @@ class Registrar:
         max_n_itrs=500,
         max_n_plateaus=3,
     ):
-        self.outpath = Path(outpath)
 
         # Initialize the model and its config
         self.ckptpath = ckptpath
@@ -72,9 +70,7 @@ class Registrar:
         # Initialize the image similarity metric
         imagesim1 = MultiscaleNormalizedCrossCorrelation2d([None, 9], [0.5, 0.5])
         imagesim2 = GradientNormalizedCrossCorrelation2d(patch_size=11, sigma=10).cuda()
-
-        def imagesim(self, x, y):
-            return 0.5 * imagesim1(x, y) + 0.5 * imagesim2(x, y)
+        self.imagesim = lambda x, y: 0.5 * imagesim1(x, y) + 0.5 * imagesim2(x, y)
 
         ### Other arguments
 
@@ -89,7 +85,7 @@ class Registrar:
 
         # Registration SE(3) parameterization
         self.parameterization = parameterization
-        self.convention = parameterization
+        self.convention = convention
 
         # Multiscale registration arguments
         self.scales = scales
@@ -118,7 +114,7 @@ class Registrar:
         *_, height, width = gt.shape
         self.drr.set_intrinsics_(sdd, height, width, delx, dely, x0, y0)
         if self.model_only:
-            return self.drr, init_pose, None
+            return gt, self.drr, init_pose, None, {}
 
         # Initialize the diffdrr.registration.Registration module
         rot, xyz = init_pose.convert(self.parameterization, self.convention)
@@ -208,10 +204,10 @@ class Registrar:
             columns=["r1", "r2", "r3", "tx", "ty", "tz", "ncc", "lr_rot", "lr_xyz"],
         )
 
-        return self.drr, init_pose, reg.pose, dict(trajectory=trajectory)
+        return gt, self.drr, init_pose, reg.pose, dict(trajectory=trajectory)
 
-    def __call__(self, i2d):
-        savepath = self.outpath / f"{i2d.stem}.pt"
+    def __call__(self, i2d, outpath):
+        savepath = Path(outpath) / f"{i2d.stem}.pt"
         savepath.parent.mkdir(parents=True, exist_ok=True)
 
         drr, init_pose, final_pose, kwargs = self.run(i2d)
@@ -227,7 +223,7 @@ class Registrar:
                     "volume": Path(self.volume).resolve(),
                     "mask": Path(self.mask).resolve(),
                     "ckptpath": Path(self.ckptpath).resolve(),
-                    "outpath": Path(self.outpath).resolve(),
+                    "outpath": Path(outpath).resolve(),
                     "crop": self.crop,
                     "subtract_background": self.subtract_background,
                     "linearize": self.linearize,
