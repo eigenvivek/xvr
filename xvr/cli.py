@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import click
 
-from .commands import animate, finetune, register, restart, train
+from .commands import animate, finetune, restart, train, model, dicom, fixed
 
 
 # Taken from https://stackoverflow.com/a/58323807
@@ -13,6 +13,20 @@ class OrderedGroup(click.Group):
 
     def list_commands(self, ctx):
         return self.commands
+
+
+@click.group(cls=OrderedGroup)
+def register():
+    """
+    Use gradient-based optimization to register XRAY to a CT.
+
+    Can pass multiple DICOM files or a directory in XRAY.
+    """
+
+
+register.add_command(model)
+register.add_command(dicom)
+register.add_command(fixed)
 
 
 @click.group(cls=OrderedGroup)
