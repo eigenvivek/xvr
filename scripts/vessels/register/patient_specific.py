@@ -10,30 +10,28 @@ def main(model):
 
     command = f"""
     xvr register model \
-        data/deepfluoro/{subject_id}/xrays \
-        -v data/deepfluoro/{subject_id}/volume.nii.gz \
-        -m data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id[-2:]}_mask.nii.gz \
+        data/ljubljana/{subject_id}/xrays \
+        -v data/ljubljana/{subject_id}/volume.nii.gz \
         -c {model} \
-        -o results/deepfluoro/register/patient_specific/{subject_id}/{epoch} \
-        --crop 100 \
+        -o results/ljubljana/register/patient_specific/{subject_id}/{epoch} \
         --linearize \
-        --labels 1,2,3,4,7 \
-        --scales 24,12,6 \
-        --reverse_x_axis
+        --subtract_background \
+        --scales 15,7.5,5 \
+        --pattern *[!_max].dcm
     """
     command = command.strip().split()
     run(command, check=True)
 
 
 if __name__ == "__main__":
-    models = list(Path("models/pelvis/patient_specific").glob("**/*1000.pth"))
+    models = list(Path("models/vessels/patient_specific").glob("**/*1000.pth"))
 
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
-        name="xvr-pelvis-register-specific",
+        name="xvr-vessels-register-specific",
         gpus_per_node=1,
         mem_gb=10.0,
-        slurm_array_parallelism=12,
+        slurm_array_parallelism=10,
         slurm_partition="2080ti",
         timeout_min=10_000,
     )

@@ -7,7 +7,7 @@ import submitit
 def main(ckptpath):
     for subject_id in range(1, 7):
         command = f"""
-        xvr register \
+        xvr register model \
             data/deepfluoro/subject{subject_id:02d}/xrays \
             -v data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}.nii.gz \
             -c {ckptpath} \
@@ -15,7 +15,7 @@ def main(ckptpath):
             --crop 100 \
             --linearize \
             --warp data/ctpelvic1k/combined_subset_registered_deepfluoro/deepfluoro_{subject_id:02d}_reoriented0GenericAffine.mat \
-            --model_only
+            --init_only
         """
         command = command.strip().split()
         run(command, check=True)

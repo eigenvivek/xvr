@@ -9,14 +9,14 @@ def main(ckptpath):
     epoch = epoch.split("_")[-1].split(".")[0]
 
     command = f"""
-    xvr register \
+    xvr register model \
         data/deepfluoro/{subject}/xrays \
         -v data/deepfluoro/{subject}/volume.nii.gz \
         -c {ckptpath} \
         -o results/deepfluoro/evaluate/patient_specific/{subject}/{epoch} \
         --crop 100 \
         --linearize \
-        --model_only
+        --init_only
     """
     command = command.strip().split()
     run(command, check=True)

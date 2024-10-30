@@ -9,7 +9,7 @@ def main(ckptpath):
     epoch = epoch.split("_")[-1].split(".")[0]
 
     command = f"""
-    xvr register \
+    xvr register model \
         data/ljubljana/{subject}/xrays \
         -v data/ljubljana/{subject}/volume.nii.gz \
         -c {ckptpath} \
@@ -18,7 +18,7 @@ def main(ckptpath):
         --subtract_background \
         --invert \
         --pattern *[!_max].dcm \
-        --model_only
+        --init_only
     """
     command = command.strip().split()
     run(command, check=True)

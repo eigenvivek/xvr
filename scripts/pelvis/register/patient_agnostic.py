@@ -9,7 +9,7 @@ def main(subject_id):
     epoch = model.stem.split("_")[-1]
 
     command = f"""
-    xvr register \
+    xvr register model \
         data/deepfluoro/subject{subject_id:02d}/xrays \
         -v data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}.nii.gz \
         -m data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}_mask.nii.gz \
