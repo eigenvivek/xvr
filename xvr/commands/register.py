@@ -210,7 +210,7 @@ def model(
         verbose,
     )
 
-    run(registrar, xray, pattern, verbose)
+    run(registrar, xray, pattern, verbose, outpath)
 
 
 @click.command(context_settings=dict(show_default=True, max_content_width=120))

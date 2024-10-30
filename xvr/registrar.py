@@ -235,9 +235,9 @@ class RegistrarBase:
         init_pose = init_pose.matrix.detach().cpu()
         if final_pose is not None:
             final_pose = final_pose.matrix.detach().cpu()
-        self.save(savepath, gt, intrinsics, init_pose, final_pose, kwargs)
+        self.save(i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs)
 
-    def save(self, savepath, i2d, gt, intrinsics, init_pose, final_pose, kwargs):
+    def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
         raise NotImplementedError
 
 
@@ -316,7 +316,7 @@ class RegistrarModel(RegistrarBase):
 
         return gt, sdd, delx, dely, x0, y0, init_pose
 
-    def save(self, savepath, i2d, gt, intrinsics, init_pose, final_pose, kwargs):
+    def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
         mask = Path(self.mask).resolve() if self.mask is not None else None
         warp = Path(self.warp).resolve() if self.warp is not None else None
         torch.save(
@@ -418,7 +418,7 @@ class RegistrarDicom(RegistrarBase):
 
         return gt, sdd, delx, dely, x0, y0, init_pose
 
-    def save(self, savepath, i2d, gt, intrinsics, init_pose, final_pose, kwargs):
+    def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
         mask = Path(self.mask).resolve() if self.mask is not None else None
         torch.save(
             {
