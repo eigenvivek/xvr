@@ -7,6 +7,7 @@ from diffdrr.metrics import (
     GradientNormalizedCrossCorrelation2d,
     MultiscaleNormalizedCrossCorrelation2d,
 )
+from diffdrr.pose import convert
 from diffdrr.registration import Registration
 from diffdrr.visualization import plot_drr
 from tqdm import tqdm
@@ -417,6 +418,107 @@ class RegistrarDicom(RegistrarBase):
         init_pose = _parse_dicom_pose(i2d, self.orientation).cuda()
 
         return gt, sdd, delx, dely, x0, y0, init_pose
+
+    def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
+        mask = Path(self.mask).resolve() if self.mask is not None else None
+        torch.save(
+            {
+                "arguments": {
+                    "i2d": Path(i2d).resolve(),
+                    "volume": Path(self.volume).resolve(),
+                    "mask": mask,
+                    "crop": self.crop,
+                    "subtract_background": self.subtract_background,
+                    "linearize": self.linearize,
+                    "init_only": self.init_only,
+                    "labels": self.labels,
+                    "scales": self.scales,
+                    "reverse_x_axis": self.reverse_x_axis,
+                    "renderer": self.renderer,
+                    "parameterization": self.parameterization,
+                    "convention": self.convention,
+                    "lr_rot": self.lr_rot,
+                    "lr_xyz": self.lr_xyz,
+                    "patience": self.patience,
+                    "max_n_itrs": self.max_n_itrs,
+                    "max_n_plateaus": self.max_n_plateaus,
+                },
+                "gt": gt,
+                "intrinsics": intrinsics,
+                "init_pose": init_pose,
+                "final_pose": final_pose,
+                **kwargs,
+            },
+            savepath,
+        )
+
+
+class RegistrarFixed(RegistrarBase):
+    def __init__(
+        self,
+        volume,
+        mask,
+        orientation,
+        rot,
+        xyz,
+        labels=None,
+        crop=0,
+        subtract_background=False,
+        linearize=True,
+        scales="8",
+        reverse_x_axis=True,
+        renderer="trilinear",
+        parameterization="euler_angles",
+        convention="ZXY",
+        lr_rot=1e-2,
+        lr_xyz=1e0,
+        patience=10,
+        threshold=1e-4,
+        max_n_itrs=500,
+        max_n_plateaus=3,
+        init_only=False,
+        verbose=2,
+        read_kwargs={},
+        drr_kwargs={},
+    ):
+        super().__init__(
+            volume,
+            mask,
+            orientation,
+            labels,
+            crop,
+            subtract_background,
+            linearize,
+            scales,
+            reverse_x_axis,
+            renderer,
+            parameterization,
+            convention,
+            lr_rot,
+            lr_xyz,
+            patience,
+            threshold,
+            max_n_itrs,
+            max_n_plateaus,
+            init_only,
+            verbose,
+            read_kwargs,
+            drr_kwargs,
+        )
+
+        rot = torch.tensor(rot, dtype=torch.float32)
+        xyz = torch.tensor(xyz, dtype=torch.float32)
+        self.init_pose = convert(
+            rot, xyz, self.parameterization, self.convention
+        ).cuda()
+
+    def initialize_pose(self, i2d):
+        # Preprocess X-ray image and get imaging system intrinsics
+        gt, sdd, delx, dely, x0, y0 = read_xray(
+            i2d, self.crop, self.subtract_background, self.linearize
+        )
+
+        return gt, sdd, delx, dely, x0, y0, self.init_pose
 
     def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
         mask = Path(self.mask).resolve() if self.mask is not None else None
