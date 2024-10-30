@@ -506,10 +506,10 @@ class RegistrarFixed(RegistrarBase):
             drr_kwargs,
         )
 
-        rot = torch.tensor(rot, dtype=torch.float32)
-        xyz = torch.tensor(xyz, dtype=torch.float32)
+        rot = torch.tensor([rot], dtype=torch.float32)
+        xyz = torch.tensor([xyz], dtype=torch.float32)
         self.init_pose = convert(
-            rot, xyz, self.parameterization, self.convention
+            rot, xyz, parameterization=self.parameterization, convention=self.convention
         ).cuda()
 
     def initialize_pose(self, i2d):

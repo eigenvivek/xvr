@@ -436,12 +436,12 @@ def dicom(
 @click.option(
     "--rot",
     type=str,
-    help="",
+    help="Rotational parameters (comma separated); see `parameterization` and `convention`",
 )
 @click.option(
     "--xyz",
     type=str,
-    help="",
+    help="Translational parameters (comma separated); see `parameterization` and `convention`",
 )
 @click.option(
     "-o",
@@ -590,8 +590,8 @@ def fixed(
 
     from ..registrar import RegistrarFixed
 
-    rot = [[float(x) for x in rot.split(",")]]
-    xyz = [[float(x) for x in xyz.split(",")]]
+    rot = [float(x) for x in rot.split(",")]
+    xyz = [float(x) for x in xyz.split(",")]
 
     registrar = RegistrarFixed(
         volume,
