@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import click
 
-from .commands import animate, finetune, restart, train, model, dicom, fixed
+from .commands import animate, dicom, finetune, fixed, model, restart, train
 
 
 # Taken from https://stackoverflow.com/a/58323807

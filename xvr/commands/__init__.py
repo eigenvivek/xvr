@@ -1,6 +1,6 @@
 from .animate import animate
 from .finetune import finetune
-from .register import model, dicom, fixed
+from .register import dicom, fixed, model
 from .restart import restart
 from .train import train
 

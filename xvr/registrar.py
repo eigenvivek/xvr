@@ -3,17 +3,17 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import torch
-from tqdm import tqdm
 from diffdrr.metrics import (
-    MultiscaleNormalizedCrossCorrelation2d,
     GradientNormalizedCrossCorrelation2d,
+    MultiscaleNormalizedCrossCorrelation2d,
 )
 from diffdrr.registration import Registration
 from diffdrr.visualization import plot_drr
+from tqdm import tqdm
 
-from xvr.dicom import read_xray, _parse_dicom_pose
+from xvr.dicom import _parse_dicom_pose, read_xray
+from xvr.model import _correct_pose, load_model, predict_pose
 from xvr.renderer import initialize_drr
-from xvr.model import load_model, predict_pose, _correct_pose
 from xvr.utils import XrayTransforms
 
 
