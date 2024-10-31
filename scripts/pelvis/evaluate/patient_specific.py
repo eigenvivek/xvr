@@ -17,13 +17,14 @@ def main(ckptpath):
         --crop 100 \
         --linearize \
         --init_only
+        --verbose 0
     """
     command = command.strip().split()
     run(command, check=True)
 
 
 if __name__ == "__main__":
-    ckptpath = Path("models/pelvis/patient_specific").rglob("*1000.pth")
+    ckptpath = Path("models/pelvis/patient_specific").rglob("*.pth")
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
         name="xvr-pelvis-eval-specific",
