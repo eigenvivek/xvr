@@ -18,7 +18,7 @@ from xvr.renderer import initialize_drr
 from xvr.utils import XrayTransforms
 
 
-class RegistrarBase:
+class _RegistrarBase:
     def __init__(
         self,
         volume,
@@ -242,7 +242,7 @@ class RegistrarBase:
         raise NotImplementedError
 
 
-class RegistrarModel(RegistrarBase):
+class RegistrarModel(_RegistrarBase):
     def __init__(
         self,
         volume,
@@ -357,7 +357,7 @@ class RegistrarModel(RegistrarBase):
         )
 
 
-class RegistrarDicom(RegistrarBase):
+class RegistrarDicom(_RegistrarBase):
     def __init__(
         self,
         volume,
@@ -453,7 +453,7 @@ class RegistrarDicom(RegistrarBase):
         )
 
 
-class RegistrarFixed(RegistrarBase):
+class RegistrarFixed(_RegistrarBase):
     def __init__(
         self,
         volume,
