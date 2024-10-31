@@ -16,7 +16,8 @@ def main(ckptpath):
             --subtract_background \
             --invert \
             --pattern *[!_max].dcm \
-            --init_only
+            --init_only \
+            --verbose 0
         """
         command = command.strip().split()
         run(command, check=True)

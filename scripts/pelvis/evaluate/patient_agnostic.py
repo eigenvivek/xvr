@@ -15,7 +15,8 @@ def main(ckptpath):
             --crop 100 \
             --linearize \
             --warp data/ctpelvic1k/combined_subset_registered_deepfluoro/deepfluoro_{subject_id:02d}_reoriented0GenericAffine.mat \
-            --init_only
+            --init_only \
+            --verbose 0
         """
         command = command.strip().split()
         run(command, check=True)
