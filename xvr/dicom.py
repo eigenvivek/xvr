@@ -89,7 +89,7 @@ def _preprocess_xray(img, crop, subtract_background, linearize, reducefn):
 
     # Subtract background color (the mode image intensity)
     if subtract_background:
-        background = img.mode().values.mode().values.item()
+        background = img.flatten().mode().values.item()
         img -= background
         img = torch.clamp(img, -1, 0) + 1  # Restrict to [0, 1]
 
