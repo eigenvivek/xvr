@@ -18,7 +18,7 @@ class OrderedGroup(click.Group):
 @click.group(cls=OrderedGroup)
 def register():
     """
-    Use gradient-based optimization to register XRAY to a CT.
+    Use gradient-based optimization to register XRAY to a CT/MR.
 
     Can pass multiple DICOM files or a directory in XRAY.
     """
@@ -32,7 +32,7 @@ register.add_command(fixed)
 @click.group(cls=OrderedGroup)
 def cli():
     """
-    xvr is a command-line interface for training, fine-tuning, and performing 2D/3D X-ray to CT registration with pose regression models.
+    xvr is a PyTorch package for training, fine-tuning, and performing 2D/3D X-ray to CT/MR registration with pose regression models.
     """
 
 
