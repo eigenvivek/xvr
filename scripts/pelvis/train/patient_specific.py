@@ -19,7 +19,7 @@ def main(subject_id):
         --delx 2.1764375 \
         --reverse_x_axis \
         --pretrained \
-        --n_epochs 1000 \
+        --n_epochs 500 \
         --name deepfluoro{subject_id:02d} \
         --project xvr-pelvis
     """

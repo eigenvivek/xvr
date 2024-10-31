@@ -19,7 +19,7 @@ def main():
         --delx 2.1764375 \
         --reverse_x_axis \
         --pretrained \
-        --n_epochs 2000 \
+        --n_epochs 1000 \
         --name ctpelvic1k \
         --project xvr-pelvis
     """
