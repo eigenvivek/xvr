@@ -7,6 +7,7 @@ import torchio
 from ants import read_transform
 from diffdrr.data import transform_hu_to_density
 from diffdrr.pose import RigidTransform, convert, make_matrix
+from torchio.data.io import get_sitk_metadata_from_ras_affine
 from torchvision.transforms import Compose, Normalize, Resize
 from torchvision.transforms.functional import center_crop, pad
 
@@ -108,8 +109,7 @@ def get_4x4(mat, img, invert=False):
     M[:3, 3] = global_t
 
     D = np.eye(4)
-    dirs = np.array(img.direction).reshape(3, 3)
-    D[:3, :3] = dirs
+    D[:3, :3] = direction(img)
 
     Tinv = np.eye(4)
     Tinv[:3, 3] = -np.array(img.get_center())
@@ -119,6 +119,12 @@ def get_4x4(mat, img, invert=False):
     T = RigidTransform(T)
 
     return project_onto_SO3(T)
+
+
+def direction(img: torchio.ScalarImage):
+    """Volume directions in RAS space (comport with ANTS convention)."""
+    *_, direction = get_sitk_metadata_from_ras_affine(img.affine)
+    return np.array(direction).reshape(3, 3)
 
 
 def project_onto_SO3(T: RigidTransform):
