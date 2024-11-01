@@ -58,6 +58,11 @@ def _parse_dicom(filename):
     except AttributeError:
         y0, x0 = 0.0, 0.0
 
+    # Reorient lateral images from posterior-foot to anterior-foot
+    # https://dicom.innolitics.com/ciods/x-ray-angiographic-image/general-image/00200020
+    if ds.PatientOrientation == ["P", "F"]:
+        img = torch.flip(img, dims=[-1])
+
     return img, float(sdd), float(delx), float(dely), float(x0), float(y0)
 
 
