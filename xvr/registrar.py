@@ -74,7 +74,9 @@ class _RegistrarBase:
         # Initialize the image similarity metric
         imagesim1 = MultiscaleNormalizedCrossCorrelation2d([None, 9], [0.5, 0.5])
         imagesim2 = GradientNormalizedCrossCorrelation2d(patch_size=11, sigma=10).cuda()
-        self.imagesim = lambda x, y: 0.5 * imagesim1(x, y) + 0.5 * imagesim2(x, y)
+        self.imagesim = lambda x, y, beta: beta * imagesim1(x, y) + (
+            1 - beta
+        ) * imagesim2(x, y)
 
         ### Other arguments
 
@@ -104,7 +106,7 @@ class _RegistrarBase:
         """Get initial pose estimate and image intrinsics."""
         raise NotImplementedError
 
-    def run(self, i2d):
+    def run(self, i2d, beta=0.5):
         # Predict the initial pose with a pretrained network
         gt, sdd, delx, dely, x0, y0, init_pose = self.initialize_pose(i2d)
         *_, height, width = gt.shape
@@ -175,7 +177,7 @@ class _RegistrarBase:
                 optimizer.zero_grad()
                 pred_img = reg()
                 pred_img = transform(pred_img)
-                loss = self.imagesim(img, pred_img)
+                loss = self.imagesim(img, pred_img, beta=beta)
                 loss.backward()
                 optimizer.step()
                 scheduler.step(loss)
@@ -210,7 +212,7 @@ class _RegistrarBase:
         with torch.no_grad():
             pred_img = reg()
             pred_img = transform(pred_img)
-            loss = self.imagesim(img, pred_img)
+            loss = self.imagesim(img, pred_img, beta=beta)
         nccs.append(loss.item())
         trajectory = _make_csv(
             params,
