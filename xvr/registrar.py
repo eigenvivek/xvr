@@ -28,6 +28,7 @@ class _RegistrarBase:
         crop,
         subtract_background,
         linearize,
+        reducefn,
         scales,
         reverse_x_axis,
         renderer,
@@ -84,6 +85,7 @@ class _RegistrarBase:
         self.crop = crop
         self.subtract_background = subtract_background
         self.linearize = linearize
+        self.reducefn = reducefn
 
         # Registration SE(3) parameterization
         self.parameterization = parameterization
@@ -254,6 +256,7 @@ class RegistrarModel(_RegistrarBase):
         crop=0,
         subtract_background=False,
         linearize=True,
+        reducefn="max",
         warp=None,
         invert=False,
         scales="8",
@@ -288,6 +291,7 @@ class RegistrarModel(_RegistrarBase):
             crop,
             subtract_background,
             linearize,
+            reducefn,
             scales,
             reverse_x_axis,
             renderer,
@@ -308,7 +312,7 @@ class RegistrarModel(_RegistrarBase):
     def initialize_pose(self, i2d):
         # Preprocess X-ray image and get imaging system intrinsics
         gt, sdd, delx, dely, x0, y0 = read_xray(
-            i2d, self.crop, self.subtract_background, self.linearize
+            i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
         )
 
         # Predict the pose of the X-ray image
@@ -332,6 +336,7 @@ class RegistrarModel(_RegistrarBase):
                     "crop": self.crop,
                     "subtract_background": self.subtract_background,
                     "linearize": self.linearize,
+                    "reducefn": self.reducefn,
                     "warp": warp,
                     "invert": self.invert,
                     "init_only": self.init_only,
@@ -369,6 +374,7 @@ class RegistrarDicom(_RegistrarBase):
         crop=0,
         subtract_background=False,
         linearize=True,
+        reducefn="max",
         scales="8",
         reverse_x_axis=True,
         renderer="trilinear",
@@ -393,6 +399,7 @@ class RegistrarDicom(_RegistrarBase):
             crop,
             subtract_background,
             linearize,
+            reducefn,
             scales,
             reverse_x_axis,
             renderer,
@@ -413,7 +420,7 @@ class RegistrarDicom(_RegistrarBase):
     def initialize_pose(self, i2d):
         # Preprocess X-ray image and get imaging system intrinsics
         gt, sdd, delx, dely, x0, y0 = read_xray(
-            i2d, self.crop, self.subtract_background, self.linearize
+            i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
         )
 
         # Parse the pose from dicom parameters
@@ -432,6 +439,7 @@ class RegistrarDicom(_RegistrarBase):
                     "crop": self.crop,
                     "subtract_background": self.subtract_background,
                     "linearize": self.linearize,
+                    "reducefn": self.reducefn,
                     "init_only": self.init_only,
                     "labels": self.labels,
                     "scales": self.scales,
@@ -464,6 +472,7 @@ class RegistrarFixed(_RegistrarBase):
         rot,
         xyz,
         labels=None,
+        reducefn="max",
         crop=0,
         subtract_background=False,
         linearize=True,
@@ -491,6 +500,7 @@ class RegistrarFixed(_RegistrarBase):
             crop,
             subtract_background,
             linearize,
+            reducefn,
             scales,
             reverse_x_axis,
             renderer,
@@ -517,7 +527,7 @@ class RegistrarFixed(_RegistrarBase):
     def initialize_pose(self, i2d):
         # Preprocess X-ray image and get imaging system intrinsics
         gt, sdd, delx, dely, x0, y0 = read_xray(
-            i2d, self.crop, self.subtract_background, self.linearize
+            i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
         )
 
         return gt, sdd, delx, dely, x0, y0, self.init_pose
@@ -533,6 +543,7 @@ class RegistrarFixed(_RegistrarBase):
                     "crop": self.crop,
                     "subtract_background": self.subtract_background,
                     "linearize": self.linearize,
+                    "reducefn": self.reducefn,
                     "init_only": self.init_only,
                     "labels": self.labels,
                     "scales": self.scales,
