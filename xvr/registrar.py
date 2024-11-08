@@ -10,6 +10,7 @@ from diffdrr.metrics import (
 from diffdrr.pose import convert
 from diffdrr.registration import Registration
 from diffdrr.visualization import plot_drr
+from torchvision.utils import save_image
 from tqdm import tqdm
 
 from xvr.dicom import _parse_dicom_pose, read_xray
@@ -75,9 +76,7 @@ class _RegistrarBase:
         # Initialize the image similarity metric
         imagesim1 = MultiscaleNormalizedCrossCorrelation2d([None, 9], [0.5, 0.5])
         imagesim2 = GradientNormalizedCrossCorrelation2d(patch_size=11, sigma=10).cuda()
-        self.imagesim = lambda x, y, beta: beta * imagesim1(x, y) + (
-            1 - beta
-        ) * imagesim2(x, y)
+        self.imagesim = lambda x, y, beta: beta * imagesim1(x, y) + (1 - beta) * imagesim2(x, y)
 
         ### Other arguments
 
@@ -233,17 +232,60 @@ class _RegistrarBase:
         )
 
     def __call__(self, i2d, outpath):
-        savepath = Path(outpath) / f"{i2d.stem}.pt"
-        savepath.parent.mkdir(parents=True, exist_ok=True)
+        savepath = Path(outpath) / f"{i2d.stem}"
+        savepath.mkdir(parents=True, exist_ok=True)
 
-        gt, intrinsics, _, init_pose, final_pose, kwargs = self.run(i2d)
+        gt, intrinsics, drr, init_pose, final_pose, kwargs = self.run(i2d)
+        # drr.set_intrinsics_(**intrinsics)
+        # drr.patch_size = _patch_size(drr.detector.height)
+        
+        init_img = drr(init_pose).detach().cpu()
         init_pose = init_pose.matrix.detach().cpu()
         if final_pose is not None:
+            final_img = drr(final_pose).detach().cpu()
             final_pose = final_pose.matrix.detach().cpu()
-        self.save(i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs)
+        self.save(
+            savepath, gt, init_img, final_img, i2d, intrinsics, init_pose, final_pose, kwargs
+        )
 
-    def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
-        raise NotImplementedError
+    def save(self, savepath, gt, init_img, final_img, i2d, intrinsics, init_pose, final_pose, kwargs):
+        # Organize all the passed parameters to xvr.register
+        mask = Path(self.mask).resolve() if self.mask is not None else None
+        parameters = {
+            "arguments": {
+                "i2d": Path(i2d).resolve(),
+                "volume": Path(self.volume).resolve(),
+                "mask": mask,
+                "crop": self.crop,
+                "subtract_background": self.subtract_background,
+                "linearize": self.linearize,
+                "reducefn": self.reducefn,
+                "init_only": self.init_only,
+                "labels": self.labels,
+                "scales": self.scales,
+                "reverse_x_axis": self.reverse_x_axis,
+                "renderer": self.renderer,
+                "parameterization": self.parameterization,
+                "convention": self.convention,
+                "lr_rot": self.lr_rot,
+                "lr_xyz": self.lr_xyz,
+                "patience": self.patience,
+                "max_n_itrs": self.max_n_itrs,
+                "max_n_plateaus": self.max_n_plateaus,
+            },
+            "intrinsics": intrinsics,
+            "init_pose": init_pose,
+            "final_pose": final_pose,
+            **kwargs,
+        }
+
+        # Save parameters and all generated images to a temporary directory
+        # Then save a compressed folder to the savepath
+        save_image(gt, f"{savepath}/gt.png", normalize=True)
+        save_image(init_img, f"{savepath}/init_img.png", normalize=True)
+        if final_img is not None:
+            save_image(final_img, f"{savepath}/final_img.png", normalize=True)
+        torch.save(parameters, f"{savepath}/parameters.pt")
 
 
 class RegistrarModel(_RegistrarBase):
@@ -323,46 +365,6 @@ class RegistrarModel(_RegistrarBase):
 
         return gt, sdd, delx, dely, x0, y0, init_pose
 
-    def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
-        mask = Path(self.mask).resolve() if self.mask is not None else None
-        warp = Path(self.warp).resolve() if self.warp is not None else None
-        torch.save(
-            {
-                "arguments": {
-                    "i2d": Path(i2d).resolve(),
-                    "volume": Path(self.volume).resolve(),
-                    "mask": mask,
-                    "ckptpath": Path(self.ckptpath).resolve(),
-                    "crop": self.crop,
-                    "subtract_background": self.subtract_background,
-                    "linearize": self.linearize,
-                    "reducefn": self.reducefn,
-                    "warp": warp,
-                    "invert": self.invert,
-                    "init_only": self.init_only,
-                    "labels": self.labels,
-                    "scales": self.scales,
-                    "reverse_x_axis": self.reverse_x_axis,
-                    "renderer": self.renderer,
-                    "parameterization": self.parameterization,
-                    "convention": self.convention,
-                    "lr_rot": self.lr_rot,
-                    "lr_xyz": self.lr_xyz,
-                    "patience": self.patience,
-                    "max_n_itrs": self.max_n_itrs,
-                    "max_n_plateaus": self.max_n_plateaus,
-                },
-                "gt": gt,
-                "intrinsics": intrinsics,
-                "init_pose": init_pose,
-                "final_pose": final_pose,
-                "config": self.config,
-                "date": self.date,
-                **kwargs,
-            },
-            savepath,
-        )
-
 
 class RegistrarDicom(_RegistrarBase):
     def __init__(
@@ -427,40 +429,6 @@ class RegistrarDicom(_RegistrarBase):
         init_pose = _parse_dicom_pose(i2d, self.orientation).cuda()
 
         return gt, sdd, delx, dely, x0, y0, init_pose
-
-    def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
-        mask = Path(self.mask).resolve() if self.mask is not None else None
-        torch.save(
-            {
-                "arguments": {
-                    "i2d": Path(i2d).resolve(),
-                    "volume": Path(self.volume).resolve(),
-                    "mask": mask,
-                    "crop": self.crop,
-                    "subtract_background": self.subtract_background,
-                    "linearize": self.linearize,
-                    "reducefn": self.reducefn,
-                    "init_only": self.init_only,
-                    "labels": self.labels,
-                    "scales": self.scales,
-                    "reverse_x_axis": self.reverse_x_axis,
-                    "renderer": self.renderer,
-                    "parameterization": self.parameterization,
-                    "convention": self.convention,
-                    "lr_rot": self.lr_rot,
-                    "lr_xyz": self.lr_xyz,
-                    "patience": self.patience,
-                    "max_n_itrs": self.max_n_itrs,
-                    "max_n_plateaus": self.max_n_plateaus,
-                },
-                "gt": gt,
-                "intrinsics": intrinsics,
-                "init_pose": init_pose,
-                "final_pose": final_pose,
-                **kwargs,
-            },
-            savepath,
-        )
 
 
 class RegistrarFixed(_RegistrarBase):
@@ -532,40 +500,6 @@ class RegistrarFixed(_RegistrarBase):
 
         return gt, sdd, delx, dely, x0, y0, self.init_pose
 
-    def save(self, i2d, savepath, gt, intrinsics, init_pose, final_pose, kwargs):
-        mask = Path(self.mask).resolve() if self.mask is not None else None
-        torch.save(
-            {
-                "arguments": {
-                    "i2d": Path(i2d).resolve(),
-                    "volume": Path(self.volume).resolve(),
-                    "mask": mask,
-                    "crop": self.crop,
-                    "subtract_background": self.subtract_background,
-                    "linearize": self.linearize,
-                    "reducefn": self.reducefn,
-                    "init_only": self.init_only,
-                    "labels": self.labels,
-                    "scales": self.scales,
-                    "reverse_x_axis": self.reverse_x_axis,
-                    "renderer": self.renderer,
-                    "parameterization": self.parameterization,
-                    "convention": self.convention,
-                    "lr_rot": self.lr_rot,
-                    "lr_xyz": self.lr_xyz,
-                    "patience": self.patience,
-                    "max_n_itrs": self.max_n_itrs,
-                    "max_n_plateaus": self.max_n_plateaus,
-                },
-                "gt": gt,
-                "intrinsics": intrinsics,
-                "init_pose": init_pose,
-                "final_pose": final_pose,
-                **kwargs,
-            },
-            savepath,
-        )
-
 
 def _parse_scales(scales: str, crop: int, height: int):
     pyramid = [1.0] + [float(x) * ((height - crop) / height) for x in scales.split(",")]
@@ -573,6 +507,16 @@ def _parse_scales(scales: str, crop: int, height: int):
     for idx in range(len(pyramid) - 1):
         scales.append(pyramid[idx] / pyramid[idx + 1])
     return scales
+
+
+def _patch_size(n, max_patch_size=300):
+    return max(
+        factor
+        for i in range(1, int(n**0.5) + 1)
+        if n % i == 0
+        for factor in (i, n // i)
+        if factor < max_patch_size
+    )
 
 
 def _make_csv(*metrics, columns):
