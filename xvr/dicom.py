@@ -25,6 +25,8 @@ def read_xray(
         Subtract the mode image intensity from the image.
     linearize : bool, optional
         Convert the X-ray image from exponential to linear form.
+    reducefn :
+        If DICOM is multiframe, how to extract a single 2D image for registration.
     """
 
     # Get the image and imaging system intrinsics
