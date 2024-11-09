@@ -54,6 +54,11 @@ import click
     help="Preprocessing: convert X-ray from exponential to linear form",
 )
 @click.option(
+    "--reducefn",
+    default="max",
+    help="If DICOM is multiframe, how to extract a single 2D image for registration",
+)
+@click.option(
     "--warp",
     type=click.Path(exists=True),
     help="SimpleITK transform to warp input CT to template reference frame",
@@ -162,6 +167,7 @@ def model(
     crop,
     subtract_background,
     linearize,
+    reducefn,
     warp,
     invert,
     labels,
@@ -193,6 +199,7 @@ def model(
         crop,
         subtract_background,
         linearize,
+        reducefn,
         warp,
         invert,
         scales,
@@ -262,6 +269,11 @@ def model(
     default=False,
     is_flag=True,
     help="Preprocessing: convert X-ray from exponential to linear form",
+)
+@click.option(
+    "--reducefn",
+    default="max",
+    help="If DICOM is multiframe, how to extract a single 2D image for registration",
 )
 @click.option(
     "--labels",
@@ -361,6 +373,7 @@ def dicom(
     crop,
     subtract_background,
     linearize,
+    reducefn,
     labels,
     scales,
     reverse_x_axis,
@@ -393,6 +406,7 @@ def dicom(
         scales,
         reverse_x_axis,
         renderer,
+        reducefn,
         parameterization,
         convention,
         lr_rot,
@@ -467,6 +481,11 @@ def dicom(
     default=False,
     is_flag=True,
     help="Preprocessing: convert X-ray from exponential to linear form",
+)
+@click.option(
+    "--reducefn",
+    default="max",
+    help="If DICOM is multiframe, how to extract a single 2D image for registration",
 )
 @click.option(
     "--labels",
@@ -568,6 +587,7 @@ def fixed(
     crop,
     subtract_background,
     linearize,
+    reducefn,
     labels,
     scales,
     reverse_x_axis,
@@ -603,6 +623,7 @@ def fixed(
         crop,
         subtract_background,
         linearize,
+        reducefn,
         scales,
         reverse_x_axis,
         renderer,
