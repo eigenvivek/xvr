@@ -18,7 +18,7 @@ import click
 @click.option(
     "--project",
     type=str,
-    default="xvr",
+    default=None,
     help="WandB project name",
 )
 def restart(
@@ -47,7 +47,10 @@ def restart(
     config["delx"] /= rescale
 
     # Set up logging and fine-tune the model
-    name = ckptpath.split("/")[-1].split("_")[0] + f"-rescale{rescale}"
+    addendum = f"-rescale{rescale}" if rescale != 1 else ""
+    project = config["project"] if project is None else project
+
+    name = ckptpath.split("/")[-1].split("_")[0] + addendum
     wandb.login(key=os.environ["WANDB_API_KEY"])
     run = wandb.init(project=project, name=name, config=config)
     train_model(config, model_state_dict, run)
