@@ -147,6 +147,12 @@ import click
     help="Directly return the initial pose estimate (no iterative pose refinement)",
 )
 @click.option(
+    "--saveimg",
+    default=False,
+    is_flag=True,
+    help="Save ground truth X-ray and predicted DRRs",
+)
+@click.option(
     "--pattern",
     default="*.dcm",
     type=str,
@@ -183,6 +189,7 @@ def model(
     max_n_itrs,
     max_n_plateaus,
     init_only,
+    saveimg,
     pattern,
     verbose,
 ):
@@ -214,6 +221,7 @@ def model(
         max_n_itrs,
         max_n_plateaus,
         init_only,
+        saveimg,
         verbose,
     )
 
@@ -353,6 +361,12 @@ def model(
     help="Directly return the initial pose estimate (no iterative pose refinement)",
 )
 @click.option(
+    "--saveimg",
+    default=False,
+    is_flag=True,
+    help="Save ground truth X-ray and predicted DRRs",
+)
+@click.option(
     "--pattern",
     default="*.dcm",
     type=str,
@@ -387,6 +401,7 @@ def dicom(
     max_n_itrs,
     max_n_plateaus,
     init_only,
+    saveimg,
     pattern,
     verbose,
 ):
@@ -416,6 +431,7 @@ def dicom(
         max_n_itrs,
         max_n_plateaus,
         init_only,
+        saveimg,
         verbose,
     )
 
@@ -565,6 +581,12 @@ def dicom(
     help="Directly return the initial pose estimate (no iterative pose refinement)",
 )
 @click.option(
+    "--saveimg",
+    default=False,
+    is_flag=True,
+    help="Save ground truth X-ray and predicted DRRs",
+)
+@click.option(
     "--pattern",
     default="*.dcm",
     type=str,
@@ -601,6 +623,7 @@ def fixed(
     max_n_itrs,
     max_n_plateaus,
     init_only,
+    saveimg,
     pattern,
     verbose,
 ):
@@ -636,6 +659,7 @@ def fixed(
         max_n_itrs,
         max_n_plateaus,
         init_only,
+        saveimg,
         verbose,
     )
 

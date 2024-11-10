@@ -42,6 +42,7 @@ class _RegistrarBase:
         max_n_itrs,
         max_n_plateaus,
         init_only,
+        saveimg,
         verbose,
         read_kwargs,
         drr_kwargs,
@@ -103,6 +104,7 @@ class _RegistrarBase:
 
         # Misc parameters
         self.init_only = init_only
+        self.saveimg = saveimg
         self.verbose = verbose
         self.save_kwargs = save_kwargs
 
@@ -243,10 +245,16 @@ class _RegistrarBase:
         gt, intrinsics, drr, init_pose, final_pose, kwargs = self.run(i2d)
 
         # Generate DRRs from the intial and final pose estimates
-        init_img = drr(init_pose).detach().cpu()
+        if self.saveimg:
+            init_img = drr(init_pose).detach().cpu()
+            if final_pose is not None:
+                final_img = drr(final_pose).detach().cpu()
+        else:
+            init_img = None
+            final_img = None
+
         init_pose = init_pose.matrix.detach().cpu()
         if final_pose is not None:
-            final_img = drr(final_pose).detach().cpu()
             final_pose = final_pose.matrix.detach().cpu()
 
         # Save the results
@@ -314,11 +322,12 @@ class _RegistrarBase:
 
         # Save parameters and all generated images to a temporary directory
         # Then save a compressed folder to the savepath
-        save_image(gt, f"{savepath}/gt.png", normalize=True)
-        save_image(init_img, f"{savepath}/init_img.png", normalize=True)
-        if final_img is not None:
-            save_image(final_img, f"{savepath}/final_img.png", normalize=True)
         torch.save(parameters, f"{savepath}/parameters.pt")
+        if self.saveimg:
+            save_image(gt, f"{savepath}/gt.png", normalize=True)
+            save_image(init_img, f"{savepath}/init_img.png", normalize=True)
+            if final_img is not None:
+                save_image(final_img, f"{savepath}/final_img.png", normalize=True)
 
 
 class RegistrarModel(_RegistrarBase):
@@ -346,6 +355,7 @@ class RegistrarModel(_RegistrarBase):
         max_n_itrs=500,
         max_n_plateaus=3,
         init_only=False,
+        saveimg=False,
         verbose=2,
         read_kwargs={},
         drr_kwargs={},
@@ -379,6 +389,7 @@ class RegistrarModel(_RegistrarBase):
             max_n_itrs,
             max_n_plateaus,
             init_only,
+            saveimg,
             verbose,
             read_kwargs,
             drr_kwargs,
@@ -428,6 +439,7 @@ class RegistrarDicom(_RegistrarBase):
         max_n_itrs=500,
         max_n_plateaus=3,
         init_only=False,
+        saveimg=False,
         verbose=2,
         read_kwargs={},
         drr_kwargs={},
@@ -453,6 +465,7 @@ class RegistrarDicom(_RegistrarBase):
             max_n_itrs,
             max_n_plateaus,
             init_only,
+            saveimg,
             verbose,
             read_kwargs,
             drr_kwargs,
@@ -496,6 +509,7 @@ class RegistrarFixed(_RegistrarBase):
         max_n_itrs=500,
         max_n_plateaus=3,
         init_only=False,
+        saveimg=False,
         verbose=2,
         read_kwargs={},
         drr_kwargs={},
@@ -521,6 +535,7 @@ class RegistrarFixed(_RegistrarBase):
             max_n_itrs,
             max_n_plateaus,
             init_only,
+            saveimg,
             verbose,
             read_kwargs,
             drr_kwargs,
