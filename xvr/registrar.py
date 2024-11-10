@@ -45,6 +45,7 @@ class _RegistrarBase:
         verbose,
         read_kwargs,
         drr_kwargs,
+        save_kwargs,
     ):
         # Initialize a DRR object with placeholder intrinsic parameters
         # These are reset after a real DICOM file is parsed
@@ -54,7 +55,8 @@ class _RegistrarBase:
         self.labels = labels
         self.reverse_x_axis = reverse_x_axis
         self.renderer = renderer
-
+        self.read_kwargs = read_kwargs
+        self.drr_kwargs = drr_kwargs
         self.drr = initialize_drr(
             self.volume,
             self.mask,
@@ -69,14 +71,14 @@ class _RegistrarBase:
             y0=0.0,
             reverse_x_axis=self.reverse_x_axis,
             renderer=self.renderer,
-            read_kwargs=read_kwargs,
-            drr_kwargs=drr_kwargs,
+            read_kwargs=self.read_kwargs,
+            drr_kwargs=self.drr_kwargs,
         )
 
         # Initialize the image similarity metric
-        imagesim1 = MultiscaleNormalizedCrossCorrelation2d([None, 9], [0.5, 0.5])
-        imagesim2 = GradientNormalizedCrossCorrelation2d(patch_size=11, sigma=10).cuda()
-        self.imagesim = lambda x, y, beta: beta * imagesim1(x, y) + (1 - beta) * imagesim2(x, y)
+        sim1 = MultiscaleNormalizedCrossCorrelation2d([None, 9], [0.5, 0.5])
+        sim2 = GradientNormalizedCrossCorrelation2d(patch_size=11, sigma=10).cuda()
+        self.imagesim = lambda x, y, beta: beta * sim1(x, y) + (1 - beta) * sim2(x, y)
 
         ### Other arguments
 
@@ -102,6 +104,7 @@ class _RegistrarBase:
         # Misc parameters
         self.init_only = init_only
         self.verbose = verbose
+        self.save_kwargs = save_kwargs
 
     def initialize_pose(self, i2d):
         """Get initial pose estimate and image intrinsics."""
@@ -232,39 +235,67 @@ class _RegistrarBase:
         )
 
     def __call__(self, i2d, outpath):
+        # Make the savepath
         savepath = Path(outpath) / f"{i2d.stem}"
         savepath.mkdir(parents=True, exist_ok=True)
 
+        # Run the registration
         gt, intrinsics, drr, init_pose, final_pose, kwargs = self.run(i2d)
-        # drr.set_intrinsics_(**intrinsics)
-        # drr.patch_size = _patch_size(drr.detector.height)
-        
+
+        # Generate DRRs from the intial and final pose estimates
         init_img = drr(init_pose).detach().cpu()
         init_pose = init_pose.matrix.detach().cpu()
         if final_pose is not None:
             final_img = drr(final_pose).detach().cpu()
             final_pose = final_pose.matrix.detach().cpu()
+
+        # Save the results
         self.save(
-            savepath, gt, init_img, final_img, i2d, intrinsics, init_pose, final_pose, kwargs
+            savepath,
+            gt,
+            init_img,
+            final_img,
+            i2d,
+            intrinsics,
+            init_pose,
+            final_pose,
         )
 
-    def save(self, savepath, gt, init_img, final_img, i2d, intrinsics, init_pose, final_pose, kwargs):
+    def save(
+        self,
+        savepath,
+        gt,
+        init_img,
+        final_img,
+        i2d,
+        intrinsics,
+        init_pose,
+        final_pose,
+    ):
         # Organize all the passed parameters to xvr.register
         mask = Path(self.mask).resolve() if self.mask is not None else None
         parameters = {
-            "arguments": {
-                "i2d": Path(i2d).resolve(),
+            "drr": {
                 "volume": Path(self.volume).resolve(),
                 "mask": mask,
+                "labels": self.labels,
+                "orientation": self.orientation,
+                **intrinsics,
+                "reverse_x_axis": self.reverse_x_axis,
+                "renderer": self.renderer,
+                "read_kwargs": self.read_kwargs,
+                "drr_kwargs": self.drr_kwargs,
+            },
+            "xray": {
+                "filename": Path(i2d).resolve(),
                 "crop": self.crop,
                 "subtract_background": self.subtract_background,
                 "linearize": self.linearize,
                 "reducefn": self.reducefn,
+            },
+            "optimization": {
                 "init_only": self.init_only,
-                "labels": self.labels,
                 "scales": self.scales,
-                "reverse_x_axis": self.reverse_x_axis,
-                "renderer": self.renderer,
                 "parameterization": self.parameterization,
                 "convention": self.convention,
                 "lr_rot": self.lr_rot,
@@ -273,10 +304,9 @@ class _RegistrarBase:
                 "max_n_itrs": self.max_n_itrs,
                 "max_n_plateaus": self.max_n_plateaus,
             },
-            "intrinsics": intrinsics,
             "init_pose": init_pose,
             "final_pose": final_pose,
-            **kwargs,
+            **self.save_kwargs,
         }
 
         # Save parameters and all generated images to a temporary directory
@@ -349,6 +379,12 @@ class RegistrarModel(_RegistrarBase):
             verbose,
             read_kwargs,
             drr_kwargs,
+            save_kwargs={
+                "type": "model",
+                "ckptpath": self.ckptpath,
+                "warp": self.warp,
+                "invert": self.invert,
+            },
         )
 
     def initialize_pose(self, i2d):
@@ -417,6 +453,7 @@ class RegistrarDicom(_RegistrarBase):
             verbose,
             read_kwargs,
             drr_kwargs,
+            save_kwargs={"type": "dicom"},
         )
 
     def initialize_pose(self, i2d):
@@ -484,6 +521,7 @@ class RegistrarFixed(_RegistrarBase):
             verbose,
             read_kwargs,
             drr_kwargs,
+            save_kwargs={"type": "fixed"},
         )
 
         rot = torch.tensor([rot], dtype=torch.float32)
@@ -497,7 +535,6 @@ class RegistrarFixed(_RegistrarBase):
         gt, sdd, delx, dely, x0, y0 = read_xray(
             i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
         )
-
         return gt, sdd, delx, dely, x0, y0, self.init_pose
 
 
@@ -507,16 +544,6 @@ def _parse_scales(scales: str, crop: int, height: int):
     for idx in range(len(pyramid) - 1):
         scales.append(pyramid[idx] / pyramid[idx + 1])
     return scales
-
-
-def _patch_size(n, max_patch_size=300):
-    return max(
-        factor
-        for i in range(1, int(n**0.5) + 1)
-        if n % i == 0
-        for factor in (i, n // i)
-        if factor < max_patch_size
-    )
 
 
 def _make_csv(*metrics, columns):
