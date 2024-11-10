@@ -259,6 +259,7 @@ class _RegistrarBase:
             intrinsics,
             init_pose,
             final_pose,
+            kwargs,
         )
 
     def save(
@@ -271,6 +272,7 @@ class _RegistrarBase:
         intrinsics,
         init_pose,
         final_pose,
+        kwargs,
     ):
         # Organize all the passed parameters to xvr.register
         mask = Path(self.mask).resolve() if self.mask is not None else None
@@ -307,6 +309,7 @@ class _RegistrarBase:
             "init_pose": init_pose,
             "final_pose": final_pose,
             **self.save_kwargs,
+            **kwargs,
         }
 
         # Save parameters and all generated images to a temporary directory
