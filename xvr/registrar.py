@@ -396,6 +396,7 @@ class RegistrarModel(_RegistrarBase):
             save_kwargs={
                 "type": "model",
                 "ckptpath": self.ckptpath,
+                "date": self.date,
                 "warp": self.warp,
                 "invert": self.invert,
             },
