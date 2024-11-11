@@ -109,7 +109,15 @@ def get_4x4(mat, img, invert=False):
     M[:3, 3] = global_t
 
     D = np.eye(4)
-    D[:3, :3] = direction(img)
+    if img.orientation == ("L", "P", "S"):
+        D[:3, :3] = np.array(img.direction).reshape(3, 3)
+    elif img.orientation == ("R", "A", "S"):
+        D[:3, :3] = direction(img)
+    else:
+        warnings.warn(
+            f"Unrecognized orientation {img.orientation}; assuming LPS+ directions. If the corrected pose is completely wrong, check here first."
+        )
+        D[:3, :3] = np.array(img.direction).reshape(3, 3)
 
     Tinv = np.eye(4)
     Tinv[:3, 3] = -np.array(img.get_center())
