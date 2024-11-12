@@ -126,17 +126,18 @@ class _RegistrarBase:
             "y0": y0,
         }
 
+        # Parse the scales for multiscale registration
+        scales = _parse_scales(self.scales, self.crop, height)
+
         # Update the DRR's intrinsic parameters
         self.drr.set_intrinsics_(**intrinsics)
         if self.init_only:
+            self.drr.rescale_detector_(scales[0])
             return gt, intrinsics, deepcopy(self.drr), init_pose, None, {}
 
         # Initialize the diffdrr.registration.Registration module
         rot, xyz = init_pose.convert(self.parameterization, self.convention)
         reg = Registration(self.drr, rot, xyz, self.parameterization, self.convention)
-
-        # Parse the scales for multiscale registration
-        scales = _parse_scales(self.scales, self.crop, height)
 
         # Perform multiscale registration
         params = [
@@ -249,6 +250,8 @@ class _RegistrarBase:
             init_img = drr(init_pose).detach().cpu()
             if final_pose is not None:
                 final_img = drr(final_pose).detach().cpu()
+            else:
+                final_img = None
         else:
             init_img = None
             final_img = None
