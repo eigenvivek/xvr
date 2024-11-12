@@ -17,6 +17,12 @@ import click
     help="Savepath for iterative optimization animation",
 )
 @click.option(
+    "--skip",
+    default=1,
+    type=int,
+    help="Animate every <skip> frames of the optimization"
+)
+@click.option(
     "--dpi",
     default=192,
     type=int,
@@ -28,7 +34,7 @@ import click
     type=int,
     help="FPS of animation",
 )
-def animate(inpath, outpath, dpi, fps):
+def animate(inpath, outpath, skip, dpi, fps):
     """Animate the trajectory of iterative optimization."""
 
     import torch
@@ -47,14 +53,14 @@ def animate(inpath, outpath, dpi, fps):
     )
 
     # Render all DRRs
-    drrs = render(drr, gt, scales, run)
+    drrs = render(drr, gt, scales, run, skip)
 
     # Generate the animation
     frames = plot(drrs, dpi)
     imwrite(outpath, frames, fps=fps)
 
 
-def render(drr, gt, scales, run):
+def render(drr, gt, scales, run, skip):
     import torch
     from diffdrr.pose import convert
     from tqdm import tqdm
@@ -64,11 +70,15 @@ def render(drr, gt, scales, run):
     lowest_lr = 0.0
 
     drrs = []
-    for _, row in tqdm(
+    for idx, row in tqdm(
         run["trajectory"].iterrows(),
         total=len(run["trajectory"]),
         desc="Rendering DRRs",
     ):
+        # Animate every <skip> frames
+        if idx % skip != 0:
+            continue
+
         # If the learning rate has reset, rescale the detector
         if row.lr_rot > lowest_lr:
             scale = scales.pop(0)
