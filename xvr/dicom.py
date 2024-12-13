@@ -60,10 +60,10 @@ def _parse_dicom(filename):
     except AttributeError:
         y0, x0 = 0.0, 0.0
 
-    # Reorient lateral images from posterior-foot (PF) to anterior-foot (AF)
+    # Reorient RAO images from posterior-foot (PF) to anterior-foot (AF)
     # https://dicom.innolitics.com/ciods/x-ray-angiographic-image/general-image/00200020
     try:
-        if ds.PatientOrientation == ["P", "F"]:
+        if ds.PatientOrientation == ["P", "F"] and ds.PositionerPrimaryAngle < 0:
             img = torch.flip(img, dims=[-1])
     except AttributeError:
         pass
