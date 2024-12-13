@@ -30,12 +30,12 @@ def read_xray(
     """
 
     # Get the image and imaging system intrinsics
-    img, sdd, delx, dely, x0, y0 = _parse_dicom(filename)
+    img, sdd, delx, dely, x0, y0, pf_to_af = _parse_dicom(filename)
 
     # Preprocess the X-ray image
     img = _preprocess_xray(img, crop, subtract_background, linearize, reducefn)
 
-    return img, sdd, delx, dely, x0, y0
+    return img, sdd, delx, dely, x0, y0, pf_to_af
 
 
 def _parse_dicom(filename):
@@ -62,13 +62,15 @@ def _parse_dicom(filename):
 
     # Reorient RAO images from posterior-foot (PF) to anterior-foot (AF)
     # https://dicom.innolitics.com/ciods/x-ray-angiographic-image/general-image/00200020
+    pf_to_af = False
     try:
         if ds.PatientOrientation == ["P", "F"] and ds.PositionerPrimaryAngle < 0:
             img = torch.flip(img, dims=[-1])
+            pf_to_af = True
     except AttributeError:
         pass
 
-    return img, float(sdd), float(delx), float(dely), float(x0), float(y0)
+    return img, float(sdd), float(delx), float(dely), float(x0), float(y0), pf_to_af
 
 
 def _parse_dicom_pose(filename, orientation):

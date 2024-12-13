@@ -114,7 +114,7 @@ class _RegistrarBase:
 
     def run(self, i2d, beta=0.5):
         # Predict the initial pose with a pretrained network
-        gt, sdd, delx, dely, x0, y0, init_pose = self.initialize_pose(i2d)
+        gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose = self.initialize_pose(i2d)
         *_, height, width = gt.shape
         intrinsics = {
             "sdd": sdd,
@@ -133,7 +133,7 @@ class _RegistrarBase:
         self.drr.set_intrinsics_(**intrinsics)
         if self.init_only:
             self.drr.rescale_detector_(scales[0])
-            return gt, intrinsics, deepcopy(self.drr), init_pose, None, {}
+            return gt, intrinsics, deepcopy(self.drr), init_pose, None, dict(pf_to_af=pf_to_af)
 
         # Initialize the diffdrr.registration.Registration module
         rot, xyz = init_pose.convert(self.parameterization, self.convention)
@@ -234,7 +234,7 @@ class _RegistrarBase:
             deepcopy(self.drr),
             init_pose,
             reg.pose,
-            dict(trajectory=trajectory),
+            dict(pf_to_af=pf_to_af, trajectory=trajectory),
         )
 
     def __call__(self, i2d, outpath):
@@ -407,7 +407,7 @@ class RegistrarModel(_RegistrarBase):
 
     def initialize_pose(self, i2d):
         # Preprocess X-ray image and get imaging system intrinsics
-        gt, sdd, delx, dely, x0, y0 = read_xray(
+        gt, sdd, delx, dely, x0, y0, pf_to_af = read_xray(
             i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
         )
 
@@ -417,7 +417,7 @@ class RegistrarModel(_RegistrarBase):
         # Optionally, correct the pose by warping the CT volume to the template
         init_pose = _correct_pose(init_pose, self.warp, self.volume, self.invert)
 
-        return gt, sdd, delx, dely, x0, y0, init_pose
+        return gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose
 
 
 class RegistrarDicom(_RegistrarBase):
@@ -478,14 +478,14 @@ class RegistrarDicom(_RegistrarBase):
 
     def initialize_pose(self, i2d):
         # Preprocess X-ray image and get imaging system intrinsics
-        gt, sdd, delx, dely, x0, y0 = read_xray(
+        gt, sdd, delx, dely, x0, y0, pf_to_af = read_xray(
             i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
         )
 
         # Parse the pose from dicom parameters
         init_pose = _parse_dicom_pose(i2d, self.orientation).cuda()
 
-        return gt, sdd, delx, dely, x0, y0, init_pose
+        return gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose
 
 
 class RegistrarFixed(_RegistrarBase):
@@ -554,10 +554,10 @@ class RegistrarFixed(_RegistrarBase):
 
     def initialize_pose(self, i2d):
         # Preprocess X-ray image and get imaging system intrinsics
-        gt, sdd, delx, dely, x0, y0 = read_xray(
+        gt, sdd, delx, dely, x0, y0, pf_to_af = read_xray(
             i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
         )
-        return gt, sdd, delx, dely, x0, y0, self.init_pose
+        return gt, sdd, delx, dely, x0, y0, pf_to_af, self.init_pose
 
 
 def _parse_scales(scales: str, crop: int, height: int):
