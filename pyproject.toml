@@ -2,12 +2,16 @@
 name = "xvr"
 version = "0.0.1"
 description = "Differentiable 2D/3D X-ray to volume registration"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 dependencies = [
     "click>=8.1",
-    "diffdrr>=0.4.4",
+    "diffdrr>=0.4.6",
+    "pytorch_transformers",
     "antspyx",
     "pydicom",
+    "gdcm",
+    "pylibjpeg",
+    "pylibjpeg-libjpeg",
 ]
 
 [project.scripts]
