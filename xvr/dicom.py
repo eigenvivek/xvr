@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Callable
 
+import numpy as np
 import torch
 from diffdrr.pose import convert
 from pydicom import dcmread
@@ -43,7 +44,7 @@ def _parse_dicom(filename):
 
     # Get the image
     ds = dcmread(filename)
-    img = ds.pixel_array
+    img = ds.pixel_array.astype(np.int32)
     img = torch.from_numpy(img).to(torch.float32)[None, None]
 
     # Get intrinsic parameters of the imaging system
