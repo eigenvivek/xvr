@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import click
 
-from .commands import animate, dicom, finetune, fixed, model, restart, train
+from .commands import animate, dicom, finetune, fixed, model, restart, train, dcm2nii
 
 
 # Taken from https://stackoverflow.com/a/58323807
@@ -41,3 +41,4 @@ cli.add_command(restart)
 cli.add_command(finetune)
 cli.add_command(register)
 cli.add_command(animate)
+cli.add_command(dcm2nii)
