@@ -25,6 +25,7 @@ def main(ckptpath):
 
 if __name__ == "__main__":
     ckptpath = Path("models/vessels/patient_agnostic").glob("*.pth")
+    
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
         name="xvr-vessels-eval-agnostic",

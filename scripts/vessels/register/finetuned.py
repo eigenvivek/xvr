@@ -4,37 +4,36 @@ from subprocess import run
 import submitit
 
 
-def main(ckptpath):
-    subject_id = str(ckptpath.parent).split("/")[-1]
-    epoch = ckptpath.stem.split("_")[-1]
+def main(model):
+    subject_id = str(model.parent).split("/")[-1]
+    epoch = model.stem.split("_")[-1]
 
     command = f"""
     xvr register model \
         data/ljubljana/{subject_id}/xrays \
         -v data/ljubljana/{subject_id}/volume.nii.gz \
-        -c {ckptpath} \
-        -o results/ljubljana/evaluate/patient_specific/{subject_id}/{epoch} \
+        -c {model} \
+        -o results/ljubljana/register/finetuned/{subject_id}/{epoch} \
         --linearize \
         --subtract_background \
-        --invert \
-        --pattern *[!_max].dcm \
-        --init_only
+        --scales 15,7.5,5 \
+        --pattern *[!_max].dcm
     """
     command = command.strip().split()
     run(command, check=True)
 
 
 if __name__ == "__main__":
-    ckptpath = Path("models/vessels/patient_specific").rglob("*.pth")
-    
+    models = list(Path("models/vessels/finetuned").glob("**/*.pth"))
+
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
-        name="xvr-vessels-eval-specific",
+        name="xvr-vessels-register-finetuned",
         gpus_per_node=1,
         mem_gb=10.0,
-        slurm_array_parallelism=6,
+        slurm_array_parallelism=len(models),
         slurm_partition="polina-2080ti",
         slurm_qos="vision-polina-main",
         timeout_min=10_000,
     )
-    jobs = executor.map_array(main, ckptpath)
+    jobs = executor.map_array(main, models)
