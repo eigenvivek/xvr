@@ -5,15 +5,15 @@ import submitit
 
 
 def main(subject_id):
-    model = list(Path("models/vessels/base").glob("*1000.pth"))[-1]
+    model = list(Path("models/vessels/patient_agnostic").glob("*1000.pth"))[-1]
     epoch = model.stem.split("_")[-1]
 
     command = f"""
-    diffpose register \
+    xvr register model \
         data/ljubljana/subject{subject_id:02d}/xrays \
         -v data/ljubljana/subject{subject_id:02d}/volume.nii.gz \
         -c {model} \
-        -o results/ljubljana/register/zeroshot/{subject_id}/{epoch} \
+        -o results/ljubljana/register/patient_agnostic/{subject_id}/{epoch} \
         --linearize \
         --subtract_background \
         --scales 15,7.5,5 \
@@ -28,11 +28,12 @@ if __name__ == "__main__":
 
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
-        name="vessel-eval-diffpose",
+        name="xvr-vessels-register-agnostic",
         gpus_per_node=1,
         mem_gb=10.0,
         slurm_array_parallelism=len(subject_ids),
-        slurm_partition="2080ti",
+        slurm_partition="polina-2080ti",
+        slurm_qos="vision-polina-main",
         timeout_min=10_000,
     )
     jobs = executor.map_array(main, subject_ids)
