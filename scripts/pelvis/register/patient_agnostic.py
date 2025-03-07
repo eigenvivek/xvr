@@ -7,7 +7,7 @@ import submitit
 def main(subject_id):
     dir = Path(__file__).parents[3]
 
-    model = sorted(Path("models/pelvis/patient_agnostic").glob("**/*.pth"))[-1]
+    model = sorted(Path(dir / "models/pelvis/patient_agnostic").glob("**/*.pth"))[-1]
     epoch = model.stem.split("_")[-1]
 
     command = f"""
@@ -15,7 +15,7 @@ def main(subject_id):
         {dir}/data/deepfluoro/subject{subject_id:02d}/xrays \
         -v {dir}/data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}.nii.gz \
         -m {dir}/data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}_mask.nii.gz \
-        -c {dir / model} \
+        -c {model} \
         -o {dir}/results/deepfluoro/register/patient_agnostic/subject{subject_id:02d}/{epoch} \
         --crop 100 \
         --linearize \
