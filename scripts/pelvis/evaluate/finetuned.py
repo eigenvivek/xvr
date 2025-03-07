@@ -5,15 +5,17 @@ import submitit
 
 
 def main(model):
+    dir = Path(__file__).parents[3]
+
     subject_id = str(model.parent).split("/")[-1]
     epoch = model.stem.split("_")[-1]
 
     command = f"""
     xvr register model \
-        data/deepfluoro/{subject_id}/xrays \
-        -v data/deepfluoro/{subject_id}/volume.nii.gz \
-        -c {model} \
-        -o results/deepfluoro/evaluate/finetuned/{subject_id}/{epoch} \
+        {dir}/data/deepfluoro/{subject_id}/xrays \
+        -v {dir}/data/deepfluoro/{subject_id}/volume.nii.gz \
+        -c {dir / model} \
+        -o {dir}/results/deepfluoro/evaluate/finetuned/{subject_id}/{epoch} \
         --crop 100 \
         --linearize \
         --init_only \

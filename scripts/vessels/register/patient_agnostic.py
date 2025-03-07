@@ -5,15 +5,17 @@ import submitit
 
 
 def main(subject_id):
-    model = list(Path("models/vessels/patient_agnostic").glob("*1000.pth"))[-1]
+    dir = Path(__file__).parents[3]
+
+    model = sorted(Path(dir / "models/vessels/patient_agnostic").glob("*.pth"))[-1]
     epoch = model.stem.split("_")[-1]
 
     command = f"""
     xvr register model \
-        data/ljubljana/subject{subject_id:02d}/xrays \
-        -v data/ljubljana/subject{subject_id:02d}/volume.nii.gz \
+        {dir}/data/ljubljana/subject{subject_id:02d}/xrays \
+        -v {dir}/data/ljubljana/subject{subject_id:02d}/volume.nii.gz \
         -c {model} \
-        -o results/ljubljana/register/patient_agnostic/{subject_id}/{epoch} \
+        -o {dir}/results/ljubljana/register/patient_agnostic/subject{subject_id:02d}/{epoch} \
         --linearize \
         --subtract_background \
         --scales 15,7.5,5 \
@@ -31,7 +33,7 @@ if __name__ == "__main__":
         name="xvr-vessels-register-agnostic",
         gpus_per_node=1,
         mem_gb=10.0,
-        slurm_array_parallelism=len(subject_ids),
+        slurm_array_parallelism=10,
         slurm_partition="polina-2080ti",
         slurm_qos="vision-polina-main",
         timeout_min=10_000,

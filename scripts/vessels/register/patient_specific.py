@@ -5,15 +5,17 @@ import submitit
 
 
 def main(model):
+    dir = Path(__file__).parents[3]
+
     subject_id = str(model.parent).split("/")[-1]
     epoch = model.stem.split("_")[-1]
 
     command = f"""
     xvr register model \
-        data/ljubljana/{subject_id}/xrays \
-        -v data/ljubljana/{subject_id}/volume.nii.gz \
-        -c {model} \
-        -o results/ljubljana/register/patient_specific/{subject_id}/{epoch} \
+        {dir}/data/ljubljana/{subject_id}/xrays \
+        -v {dir}/data/ljubljana/{subject_id}/volume.nii.gz \
+        -c {dir / model} \
+        -o {dir}/results/ljubljana/register/patient_specific/{subject_id}/{epoch} \
         --linearize \
         --subtract_background \
         --scales 15,7.5,5 \

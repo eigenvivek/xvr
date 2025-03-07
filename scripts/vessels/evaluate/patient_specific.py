@@ -5,15 +5,17 @@ import submitit
 
 
 def main(ckptpath):
+    dir = Path(__file__).parents[3]
+
     subject_id = str(ckptpath.parent).split("/")[-1]
     epoch = ckptpath.stem.split("_")[-1]
 
     command = f"""
     xvr register model \
-        data/ljubljana/{subject_id}/xrays \
-        -v data/ljubljana/{subject_id}/volume.nii.gz \
-        -c {ckptpath} \
-        -o results/ljubljana/evaluate/patient_specific/{subject_id}/{epoch} \
+        {dir}/data/ljubljana/{subject_id}/xrays \
+        -v {dir}/data/ljubljana/{subject_id}/volume.nii.gz \
+        -c {dir / ckptpath} \
+        -o {dir}/results/ljubljana/evaluate/patient_specific/{subject_id}/{epoch} \
         --linearize \
         --subtract_background \
         --invert \

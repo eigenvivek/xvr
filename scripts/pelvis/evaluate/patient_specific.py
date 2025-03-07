@@ -5,15 +5,17 @@ import submitit
 
 
 def main(ckptpath):
+    dir = Path(__file__).parents[3]
+
     *_, subject, epoch = str(ckptpath).split("/")
     epoch = epoch.split("_")[-1].split(".")[0]
 
     command = f"""
     xvr register model \
-        data/deepfluoro/{subject}/xrays \
-        -v data/deepfluoro/{subject}/volume.nii.gz \
-        -c {ckptpath} \
-        -o results/deepfluoro/evaluate/patient_specific/{subject}/{epoch} \
+        {dir}/data/deepfluoro/{subject}/xrays \
+        -v {dir}/data/deepfluoro/{subject}/volume.nii.gz \
+        -c {dir / ckptpath} \
+        -o {dir}/results/deepfluoro/evaluate/patient_specific/{subject}/{epoch} \
         --crop 100 \
         --linearize \
         --init_only \

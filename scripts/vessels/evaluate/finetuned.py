@@ -5,15 +5,17 @@ import submitit
 
 
 def main(ckptpath):
+    dir = Path(__file__).parents[3]
+
     subject_id = str(ckptpath.parent).split("/")[-1]
     epoch = ckptpath.stem.split("_")[-1]
 
     command = f"""
     xvr register model \
-        data/ljubljana/{subject_id}/xrays \
-        -v data/ljubljana/{subject_id}/volume.nii.gz \
+        {dir}/data/ljubljana/{subject_id}/xrays \
+        -v {dir}/data/ljubljana/{subject_id}/volume.nii.gz \
         -c {ckptpath} \
-        -o results/ljubljana/evaluate/finetuned/{subject_id}/{epoch} \
+        -o {dir}/results/ljubljana/evaluate/finetuned/{subject_id}/{epoch} \
         --linearize \
         --subtract_background \
         --pattern *[!_max].dcm \
@@ -32,7 +34,7 @@ if __name__ == "__main__":
         name="xvr-vessels-eval-finetuned",
         gpus_per_node=1,
         mem_gb=10.0,
-        slurm_array_parallelism=-1,
+        slurm_array_parallelism=6,
         slurm_partition="polina-2080ti",
         slurm_qos="vision-polina-main",
         timeout_min=10_000,

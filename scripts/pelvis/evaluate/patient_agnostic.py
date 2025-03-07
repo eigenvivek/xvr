@@ -5,16 +5,18 @@ import submitit
 
 
 def main(ckptpath):
+    dir = Path(__file__).parents[3]
+
     for subject_id in range(1, 7):
         command = f"""
         xvr register model \
-            data/deepfluoro/subject{subject_id:02d}/xrays \
-            -v data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}.nii.gz \
-            -c {ckptpath} \
-            -o results/deepfluoro/evaluate/patient_agnostic/subject{subject_id:02d}/{ckptpath.stem.split('_')[-1]} \
+            {dir}/data/deepfluoro/subject{subject_id:02d}/xrays \
+            -v {dir}/data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}.nii.gz \
+            -c {dir / ckptpath} \
+            -o {dir}/results/deepfluoro/evaluate/patient_agnostic/subject{subject_id:02d}/{ckptpath.stem.split('_')[-1]} \
             --crop 100 \
             --linearize \
-            --warp data/ctpelvic1k/combined_subset_registered_deepfluoro/deepfluoro_{subject_id:02d}_reoriented0GenericAffine.mat \
+            --warp {dir}/data/ctpelvic1k/combined_subset_registered_deepfluoro/deepfluoro_{subject_id:02d}_reoriented0GenericAffine.mat \
             --init_only \
             --verbose 0
         """
