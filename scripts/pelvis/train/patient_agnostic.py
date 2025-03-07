@@ -33,8 +33,8 @@ if __name__ == "__main__":
         name="xvr-pelvis-agnostic",
         gpus_per_node=1,
         mem_gb=43.5,
-        slurm_partition="A6000",
-        slurm_exclude="sumac,fennel",
+        slurm_partition="polina-a6000",
+        slurm_qos="vision-polina-main",
         timeout_min=10_000,
     )
     jobs = executor.submit(main)

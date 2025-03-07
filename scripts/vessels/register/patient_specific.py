@@ -32,7 +32,8 @@ if __name__ == "__main__":
         gpus_per_node=1,
         mem_gb=10.0,
         slurm_array_parallelism=10,
-        slurm_partition="2080ti",
+        slurm_partition="polina-2080ti",
+        slurm_qos="vision-polina-main",
         timeout_min=10_000,
     )
     jobs = executor.map_array(main, models)
