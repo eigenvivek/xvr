@@ -26,14 +26,14 @@ def main(model):
 
 
 if __name__ == "__main__":
-    models = sorted(Path("models/deepfluoro/finetuned/").glob("**/*.pth"))
+    models = sorted(Path("models/pelvis/finetuned/").glob("**/*.pth"))
 
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
         name="xvr-pelvis-eval-finetuned",
         gpus_per_node=1,
         mem_gb=10.0,
-        slurm_array_parallelism=20,
+        slurm_array_parallelism=6,
         slurm_partition="polina-2080ti",
         slurm_qos="vision-polina-main",
         timeout_min=10_000,
