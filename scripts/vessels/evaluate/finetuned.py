@@ -14,7 +14,7 @@ def main(ckptpath):
     xvr register model \
         {dir}/data/ljubljana/{subject_id}/xrays \
         -v {dir}/data/ljubljana/{subject_id}/volume.nii.gz \
-        -c {ckptpath} \
+        -c {dir / ckptpath} \
         -o {dir}/results/ljubljana/evaluate/finetuned/{subject_id}/{epoch} \
         --linearize \
         --subtract_background \
