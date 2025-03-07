@@ -5,13 +5,15 @@ import submitit
 
 
 def main(inpath):
+    dir = Path(__file__).parents[3]
+
     subject = str(Path(inpath).parent).split("/")[-1]
-    ckptpath = sorted(Path("models/vessels/base").glob("*.pth"))[-1]
+    ckptpath = sorted(Path(dir / "models/vessels/base").glob("*.pth"))[-1]
 
     command = f"""
     xvr train \
-        -i {inpath} \
-        -o models/vessels/finetuned/{subject}
+        -i {dir / inpath} \
+        -o {dir}/models/vessels/finetuned/{subject} \
         -c {ckptpath} \
         --project xvr-vessels
     """

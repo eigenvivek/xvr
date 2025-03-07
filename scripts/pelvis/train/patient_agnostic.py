@@ -1,13 +1,16 @@
+from pathlib import Path
 from subprocess import run
 
 import submitit
 
 
 def main():
-    command = """
+    dir = Path(__file__).parents[3]
+
+    command = f"""
     xvr train \
-        -i data/ctpelvic1k/imgs_registered \
-        -o models/pelvis/patient_agnostic \
+        -i {dir}/data/ctpelvic1k/imgs_registered \
+        -o {dir}/models/pelvis/patient_agnostic \
         --r1 -45.0 45.0 \
         --r2 -45.0 45.0 \
         --r3 -15.0 15.0 \
