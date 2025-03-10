@@ -8,13 +8,15 @@ def main(inpath):
     dir = Path(__file__).parents[3]
 
     subject = str(Path(inpath).parent).split("/")[-1]
-    ckptpath = sorted(Path(dir / "models/vessels/base").glob("*.pth"))[-1]
+    subject_id = int(subject[-2:])
+    ckptpath = sorted(Path(dir / "models/vessels/patient_agnostic").glob("*.pth"))[-1]
 
     command = f"""
-    xvr train \
+    xvr finetune \
         -i {dir / inpath} \
         -o {dir}/models/vessels/finetuned/{subject} \
         -c {ckptpath} \
+        --name ljubljana{subject_id:02d} \
         --project xvr-vessels
     """
     command = command.strip().split()

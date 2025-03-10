@@ -37,7 +37,7 @@ import click
 )
 @click.option(
     "--n_epochs",
-    default=20,
+    default=10,
     type=int,
     help="Number of epochs",
 )
