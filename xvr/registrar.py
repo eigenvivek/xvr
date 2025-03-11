@@ -239,6 +239,7 @@ class _RegistrarBase:
 
     def __call__(self, i2d, outpath, beta=0.5):
         # Make the savepath
+        i2d = Path(i2d)
         savepath = Path(outpath) / f"{i2d.stem}"
         savepath.mkdir(parents=True, exist_ok=True)
 
