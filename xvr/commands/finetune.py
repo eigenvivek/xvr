@@ -43,7 +43,7 @@ import click
 )
 @click.option(
     "--n_batches_per_epoch",
-    default=20,
+    default=25,
     type=int,
     help="Number of batches per epoch",
 )
@@ -52,6 +52,12 @@ import click
     default=1.0,
     type=float,
     help="Rescale the virtual detector plane",
+)
+@click.option(
+    "--name",
+    default=None,
+    type=str,
+    help="WandB run name",
 )
 @click.option(
     "--project",
@@ -68,6 +74,7 @@ def finetune(
     n_epochs,
     n_batches_per_epoch,
     rescale,
+    name,
     project,
 ):
     """
@@ -102,7 +109,11 @@ def finetune(
 
     # Set up logging and fine-tune the model
     wandb.login(key=os.environ["WANDB_API_KEY"])
-    run = wandb.init(project=project, config=config)
+    run = wandb.init(
+        project=project,
+        name=name if name is not None else project, 
+        config=config,
+    )
     train_model(config, model_state_dict, run)
 
 
