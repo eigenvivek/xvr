@@ -28,7 +28,7 @@ def main(model):
 
 
 if __name__ == "__main__":
-    models = list(Path("models/pelvis/finetuned").glob("**/*10.pth"))
+    models = list(Path("models/pelvis/finetuned").glob("**/*9.pth"))
     
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(

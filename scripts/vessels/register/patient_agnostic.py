@@ -7,7 +7,7 @@ import submitit
 def main(subject_id):
     dir = Path(__file__).parents[3]
 
-    model = sorted(Path(dir / "models/vessels/patient_agnostic").glob("*.pth"))[-1]
+    model = sorted(Path(dir / "models/vessels/patient_agnostic").glob("*1100.pth"))[-1]
     epoch = model.stem.split("_")[-1]
 
     command = f"""
