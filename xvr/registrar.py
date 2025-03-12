@@ -562,7 +562,7 @@ class RegistrarFixed(_RegistrarBase):
 
 
 def _parse_scales(scales: str, crop: int, height: int):
-    pyramid = [1.0] + [float(x) * ((height - crop) / height) for x in scales.split(",")]
+    pyramid = [1.0] + [float(x) * (height / (height + crop)) for x in scales.split(",")]
     scales = []
     for idx in range(len(pyramid) - 1):
         scales.append(pyramid[idx] / pyramid[idx + 1])
