@@ -17,6 +17,7 @@ def main(subject_id):
         -m {dir}/data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}_mask.nii.gz \
         -c {model} \
         -o {dir}/results/deepfluoro/register/patient_agnostic/subject{subject_id:02d}/{epoch} \
+        --warp {dir}/data/ctpelvic1k/combined_subset_registered_deepfluoro/deepfluoro_{subject_id:02d}_reoriented0GenericAffine.mat \
         --crop 100 \
         --linearize \
         --labels 1,2,3,4,7 \
