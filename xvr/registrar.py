@@ -116,15 +116,7 @@ class _RegistrarBase:
         # Predict the initial pose with a pretrained network
         gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose = self.initialize_pose(i2d)
         *_, height, width = gt.shape
-        intrinsics = {
-            "sdd": sdd,
-            "height": height,
-            "width": width,
-            "delx": delx,
-            "dely": dely,
-            "x0": x0,
-            "y0": y0,
-        }
+        intrinsics = dict(sdd=sdd, height=height, width=width, delx=delx, dely=dely, x0=-x0, y0=y0)
 
         # Parse the scales for multiscale registration
         scales = _parse_scales(self.scales, self.crop, height)
