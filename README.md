@@ -180,11 +180,11 @@ Options:
 
 Pretrained models are available [here](https://huggingface.co/eigenvivek/xvr/tree/main).
 
-### Data
+#### Data
 
 Benchmarks datasets are available [here](https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main).
 
-If you use either the `DeepFluoro` or `Ljubljana` datasets, please cite the original works:
+If you use the `DeepFluoro` dataset, please cite:
 
     @article{grupp2020automatic,
       title={Automatic annotation of hip anatomy in fluoroscopy for robust and efficient 2D/3D registration},
@@ -195,6 +195,8 @@ If you use either the `DeepFluoro` or `Ljubljana` datasets, please cite the orig
       year={2020},
       publisher={Springer}
     }
+
+If you use the `Ljubljana` dataset, please cite:
 
     @article{pernus20133d,
       title={3D-2D registration of cerebral angiograms: A method and evaluation on clinical images},
