@@ -23,7 +23,6 @@ description = "Differentiable 2D/3D X-ray to volume registration"
 readme = "README.md"
 license = {file = "LICENSE"}
 
-
 [project.scripts]
 xvr = "xvr.cli:cli"
 
@@ -31,7 +30,8 @@ xvr = "xvr.cli:cli"
 Repository = "https://github.com/eigenvivek/xvr"
 Issues = "https://github.com/eigenvivek/xvr/issues"
 
-[tool.hatch]
+[tool.hatch.version]
+path = "xvr/__init__.py"
 
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
