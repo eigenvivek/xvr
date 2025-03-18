@@ -150,8 +150,8 @@ Options:
   --reducefn TEXT                If DICOM is multiframe, how to extract a single 2D image for registration  [default: max]
   --warp PATH                    SimpleITK transform to warp input CT to template reference frame
   --invert                       Invert the warp
-  --labels TEXT                  Labels in mask to exclusively render (comma-separated)
-  --scales TEXT                  Scales of downsampling for multiscale registration (comma-separated)  [default: 8]
+  --labels TEXT                  Labels in mask to exclusively render (comma separated)
+  --scales TEXT                  Scales of downsampling for multiscale registration (comma separated)  [default: 8]
   --reverse_x_axis               Enable to obey radiologic convention (e.g., heart on right)
   --renderer [siddon|trilinear]  Rendering equation  [default: trilinear]
   --parameterization TEXT        Parameterization of SO(3) for regression  [default: euler_angles]
@@ -165,7 +165,7 @@ Options:
   --init_only                    Directly return the initial pose estimate (no iterative pose refinement)
   --saveimg                      Save ground truth X-ray and predicted DRRs
   --pattern TEXT                 Pattern rule for glob is XRAY is directory  [default: *.dcm]
-  --verbose INTEGER RANGE        Verbosity level for logging  [default: 2; 0<=x<=3]
+  --verbose INTEGER RANGE        Verbosity level for logging  [default: 1; 0<=x<=3]
   --help                         Show this message and exit.
 ```
 
