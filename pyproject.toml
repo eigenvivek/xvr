@@ -1,8 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "xvr"
-version = "0.0.0rc0"
-description = "Differentiable 2D/3D X-ray to volume registration"
-requires-python = ">=3.10"
+dynamic = ["version"]
 dependencies = [
     "click>=8.1",
     "diffdrr>=0.5.0rc0",
@@ -14,13 +16,20 @@ dependencies = [
     "pylibjpeg",
     "pylibjpeg-libjpeg",
 ]
+requires-python = ">=3.10"
+authors = [{name = "Vivek Gopalakrishnan", email = "vivekg@mit.edu"}]
+maintainers = [{name = "Vivek Gopalakrishnan", email = "vivekg@mit.edu"}]
+description = "Differentiable 2D/3D X-ray to volume registration"
+readme = "README.md"
+license = {file = "LICENSE"}
+
 
 [project.scripts]
 xvr = "xvr.cli:cli"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[project.urls]
+Repository = "https://github.com/eigenvivek/xvr"
+Issues = "https://github.com/eigenvivek/xvr/issues"
 
 [tool.hatch]
 
