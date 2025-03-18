@@ -160,7 +160,7 @@ import click
 )
 @click.option(
     "--verbose",
-    default=2,
+    default=1,
     type=click.IntRange(0, 3),
     help="Verbosity level for logging",
 )
