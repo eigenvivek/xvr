@@ -176,13 +176,36 @@ Options:
 
 ## Experiments
 
-### Data
-
-### Setup
-
 #### Models
 
+Pretrained models are available [here](https://huggingface.co/eigenvivek/xvr/tree/main).
 
+### Data
+
+Benchmarks datasets are available [here](https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main).
+
+If you use either the `DeepFluoro` or `Ljubljana` datasets, please cite the original works:
+
+    @article{grupp2020automatic,
+      title={Automatic annotation of hip anatomy in fluoroscopy for robust and efficient 2D/3D registration},
+      author={Grupp, Robert B and Unberath, Mathias and Gao, Cong and Hegeman, Rachel A and Murphy, Ryan J and Alexander, Clayton P and Otake, Yoshito and McArthur, Benjamin A and Armand, Mehran and Taylor, Russell H},
+      journal={International journal of computer assisted radiology and surgery},
+      volume={15},
+      pages={759--769},
+      year={2020},
+      publisher={Springer}
+    }
+
+    @article{pernus20133d,
+      title={3D-2D registration of cerebral angiograms: A method and evaluation on clinical images},
+      author={Mitrović, Uros˘ and S˘piclin, Z˘iga and Likar, Bos˘tjan and Pernus˘, Franjo},
+      journal={IEEE transactions on medical imaging},
+      volume={32},
+      number={8},
+      pages={1550--1563},
+      year={2013},
+      publisher={IEEE}
+    }
 
 #### Logging
 
