@@ -2,7 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 <a href="https://colab.research.google.com/drive/1K9lBPxcLh55mr8o50Y7aHkjzjEWKPCrM?usp=sharing"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg"></a>
-<a href="https://huggingface.co/eigenvivek/xvr" target="_blank"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-ffc107?color=ffc107&logoColor=white"/></a>
+<a href="https://huggingface.co/eigenvivek/xvr/tree/main" target="_blank"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-ffc107?color=ffc107&logoColor=white"/></a>
+<a href="https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main" target="_blank"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Data-ffc107?color=ffc107&logoColor=white"/></a>
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 `xvr` is a PyTorch package for differentiable 2D/3D rigid registration with patient-specific learning-based initialization.
@@ -15,8 +16,14 @@ This package includes:
 
 ## Installation
 
+Install the Python API and CLI:
 ```
 pip install xvr
+```
+
+Test the installation:
+```
+xvr --version
 ```
 
 ## Usage
@@ -28,11 +35,12 @@ $ xvr --help
 
 Usage: xvr [OPTIONS] COMMAND [ARGS]...
 
-  xvr is a PyTorch package for training, finetuning, and performing 2D/3D
+  xvr is a PyTorch package for training, fine-tuning, and performing 2D/3D
   X-ray to CT/MR registration with pose regression models.
 
 Options:
-  --help  Show this message and exit.
+  --version  Show the version and exit.
+  --help     Show this message and exit.
 
 Commands:
   train     Train a pose regression model from scratch.
