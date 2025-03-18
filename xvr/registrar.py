@@ -352,7 +352,7 @@ class RegistrarModel(_RegistrarBase):
         max_n_plateaus=3,
         init_only=False,
         saveimg=False,
-        verbose=2,
+        verbose=1,
         read_kwargs={},
         drr_kwargs={},
     ):
@@ -437,7 +437,7 @@ class RegistrarDicom(_RegistrarBase):
         max_n_plateaus=3,
         init_only=False,
         saveimg=False,
-        verbose=2,
+        verbose=1,
         read_kwargs={},
         drr_kwargs={},
     ):
@@ -507,7 +507,7 @@ class RegistrarFixed(_RegistrarBase):
         max_n_plateaus=3,
         init_only=False,
         saveimg=False,
-        verbose=2,
+        verbose=1,
         read_kwargs={},
         drr_kwargs={},
     ):
