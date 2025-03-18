@@ -18,10 +18,10 @@ This package includes:
 
 Install the Python API and CLI:
 ```
-pip install xvr
+pip install git+https://github.com/eigenvivek/xvr.git
 ```
 
-Test the installation:
+Verify the installation version:
 ```
 xvr --version
 ```
