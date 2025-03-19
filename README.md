@@ -21,7 +21,7 @@ Install the Python API and CLI:
 pip install git+https://github.com/eigenvivek/xvr.git
 ```
 
-Verify the installation version:
+Verify the installation version (should match the latest release on GitHub):
 ```
 xvr --version
 ```
@@ -182,9 +182,9 @@ Pretrained models are available [here](https://huggingface.co/eigenvivek/xvr/tre
 
 #### Data
 
-Benchmarks datasets are available [here](https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main).
+Benchmarks datasets, reformatted into DICOM/NIfTI files, are available [here](https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main).
 
-If you use the `DeepFluoro` dataset, please cite:
+If you use the [`DeepFluoro`](https://github.com/rg2/DeepFluoroLabeling-IPCAI2020) dataset, please cite:
 
     @article{grupp2020automatic,
       title={Automatic annotation of hip anatomy in fluoroscopy for robust and efficient 2D/3D registration},
@@ -196,7 +196,7 @@ If you use the `DeepFluoro` dataset, please cite:
       publisher={Springer}
     }
 
-If you use the `Ljubljana` dataset, please cite:
+If you use the [`Ljubljana`](https://lit.fe.uni-lj.si/en/research/resources/3D-2D-GS-CA/) dataset, please cite:
 
     @article{pernus20133d,
       title={3D-2D registration of cerebral angiograms: A method and evaluation on clinical images},
