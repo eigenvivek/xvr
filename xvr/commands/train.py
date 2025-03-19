@@ -351,8 +351,8 @@ def initialize(config, subject):
     import torch
     from diffdrr.drr import DRR
     from diffdrr.registration import PoseRegressor
-    from pytorch_transformers.optimization import WarmupCosineSchedule
 
+    from ..model import WarmupCosineSchedule
     from ..utils import XrayTransforms
 
     # Initialize the pose regression model
