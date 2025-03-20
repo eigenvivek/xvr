@@ -20,7 +20,7 @@ import click
     "--skip",
     default=1,
     type=int,
-    help="Animate every <skip> frames of the optimization"
+    help="Animate every <skip> frames of the optimization",
 )
 @click.option(
     "--dpi",

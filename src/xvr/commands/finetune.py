@@ -84,7 +84,6 @@ def finetune(
     from pathlib import Path
 
     import torch
-
     import wandb
 
     # Create the output directory for saving model weights
@@ -111,7 +110,7 @@ def finetune(
     wandb.login(key=os.environ["WANDB_API_KEY"])
     run = wandb.init(
         project=project,
-        name=name if name is not None else project, 
+        name=name if name is not None else project,
         config=config,
     )
     train_model(config, model_state_dict, run)
@@ -121,6 +120,7 @@ def train_model(config, model_state_dict, run):
     from datetime import datetime
 
     import torch
+    import wandb
     from diffdrr.data import read
     from diffdrr.metrics import (
         DoubleGeodesicSE3,
@@ -128,8 +128,6 @@ def train_model(config, model_state_dict, run):
     )
     from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
     from tqdm import tqdm
-
-    import wandb
 
     from ..utils import XrayAugmentations, get_random_pose, render
 

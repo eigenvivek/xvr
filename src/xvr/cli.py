@@ -3,7 +3,7 @@ from collections import OrderedDict
 import click
 
 from .__init__ import __version__
-from .commands import animate, dicom, finetune, fixed, model, restart, train, dcm2nii
+from .commands import animate, dcm2nii, dicom, finetune, fixed, model, restart, train
 
 
 # Taken from https://stackoverflow.com/a/58323807

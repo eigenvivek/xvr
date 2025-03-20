@@ -257,6 +257,7 @@ def train_model(config, run):
     from random import choice
 
     import torch
+    import wandb
     from diffdrr.data import read
     from diffdrr.metrics import (
         DoubleGeodesicSE3,
@@ -264,8 +265,6 @@ def train_model(config, run):
     )
     from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
     from tqdm import tqdm
-
-    import wandb
 
     from ..utils import XrayAugmentations, get_random_pose, render
 

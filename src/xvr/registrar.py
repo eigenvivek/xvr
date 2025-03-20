@@ -116,7 +116,9 @@ class _RegistrarBase:
         # Predict the initial pose with a pretrained network
         gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose = self.initialize_pose(i2d)
         *_, height, width = gt.shape
-        intrinsics = dict(sdd=sdd, height=height, width=width, delx=delx, dely=dely, x0=-x0, y0=y0)
+        intrinsics = dict(
+            sdd=sdd, height=height, width=width, delx=delx, dely=dely, x0=-x0, y0=y0
+        )
 
         # Parse the scales for multiscale registration
         scales = _parse_scales(self.scales, self.crop, height)
@@ -125,7 +127,14 @@ class _RegistrarBase:
         self.drr.set_intrinsics_(**intrinsics)
         if self.init_only:
             self.drr.rescale_detector_(scales[0])
-            return gt, intrinsics, deepcopy(self.drr), init_pose, None, dict(pf_to_af=pf_to_af)
+            return (
+                gt,
+                intrinsics,
+                deepcopy(self.drr),
+                init_pose,
+                None,
+                dict(pf_to_af=pf_to_af),
+            )
 
         # Initialize the diffdrr.registration.Registration module
         rot, xyz = init_pose.convert(self.parameterization, self.convention)
@@ -238,7 +247,7 @@ class _RegistrarBase:
         # Run the registration
         gt, intrinsics, drr, init_pose, final_pose, kwargs = self.run(i2d, beta=beta)
 
-        # Generate DRRs from the intial and final pose estimates
+        # Generate DRRs from the initial and final pose estimates
         if self.saveimg:
             init_img = drr(init_pose).detach().cpu()
             if final_pose is not None:
