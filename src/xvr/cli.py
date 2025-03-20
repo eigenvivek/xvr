@@ -1,8 +1,8 @@
 from collections import OrderedDict
+from importlib.metadata import version
 
 import click
 
-from .__init__ import __version__
 from .commands import animate, dcm2nii, dicom, finetune, fixed, model, restart, train
 
 
@@ -31,7 +31,7 @@ register.add_command(fixed)
 
 
 @click.group(cls=OrderedGroup)
-@click.version_option(__version__)
+@click.version_option(version("xvr"))
 @click.pass_context
 def cli(ctx):
     """

@@ -3716,6 +3716,7 @@ wheels = [
 
 [[package]]
 name = "xvr"
+version = "0.0.0rc1"
 source = { editable = "." }
 dependencies = [
     { name = "antspyx" },

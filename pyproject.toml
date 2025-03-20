@@ -1,6 +1,6 @@
 [project]
 name = "xvr"
-dynamic = ["version"]
+version = "0.0.0rc1"
 description = "Differentiable 2D/3D X-ray to volume registration"
 readme = "README.md"
 license = {file = "LICENSE"}
