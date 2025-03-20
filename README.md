@@ -8,6 +8,10 @@
 
 A PyTorch package for training patient-specific 2D/3D registration models **in 5 minutes.**
 
+<p align="center">
+  <img width="410" alt="image" src="https://github.com/user-attachments/assets/8a01c184-f6f1-420e-82b9-1cbe733adf7f" />
+</p>
+
 ## Highlights
 
 - 🚀 A single CLI/API for training models and registering clinical data
