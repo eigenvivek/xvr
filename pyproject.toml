@@ -36,10 +36,6 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.2.0",
-    "ruff>=0.11.1",
-]
-paper = [
     "diffdrrdata>=0.0.7",
     "huggingface-hub>=0.29.3",
 ]
