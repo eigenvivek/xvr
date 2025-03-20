@@ -1,25 +1,20 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "xvr"
 dynamic = ["version"]
-dependencies = [
-    "click>=8.1",
-    "diffdrr>=0.5.0rc0",
-    "antspyx",
-    "pydicom",
-    "gdcm",
-    "pylibjpeg",
-    "pylibjpeg-libjpeg",
-]
-requires-python = ">=3.10"
-authors = [{name = "Vivek Gopalakrishnan", email = "vivekg@mit.edu"}]
-maintainers = [{name = "Vivek Gopalakrishnan", email = "vivekg@mit.edu"}]
 description = "Differentiable 2D/3D X-ray to volume registration"
 readme = "README.md"
 license = {file = "LICENSE"}
+authors = [
+    { name = "Vivek Gopalakrishnan", email = "vivekg@mit.edu" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "antspyx>=0.5.4",
+    "click>=8.1.8",
+    "diffdrr>=0.5.0rc0",
+    "pydicom[pixeldata]>=3.0.1",
+    "wandb>=0.19.8",
+]
 
 [project.scripts]
 xvr = "xvr.cli:cli"
@@ -29,7 +24,22 @@ Repository = "https://github.com/eigenvivek/xvr"
 Issues = "https://github.com/eigenvivek/xvr/issues"
 
 [tool.hatch.version]
-path = "xvr/__init__.py"
+path = "src/xvr/__init__.py"
 
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "ruff>=0.11.1",
+]
+paper = [
+    "diffdrrdata>=0.0.7",
+    "huggingface-hub>=0.29.3",
+]
