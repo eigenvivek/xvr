@@ -6,13 +6,18 @@
 <a href="https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main" target="_blank"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Data-ffc107?color=ffc107&logoColor=white"/></a>
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-`xvr` is a PyTorch package for differentiable 2D/3D rigid registration with patient-specific learning-based initialization.
+A PyTorch package for training patient-specific 2D/3D registration models **in 5 minutes.**
 
-This package includes:
+## Highlights
 
-- One-line commands for training patient-specific pose regression models from preoperative volumes
-- One-line commands for performing iterative pose refinement with different initialization strategies
-- A Python API and a CLI
+- 🚀 A single CLI/API for training models and registering clinical data
+- ⚡️ **100x faster** patient-specific model training than [`DiffPose`](https://github.com/eigenvivek/DiffPose)
+- 📐 Submillimeter registration accuracy with new image-similarity metrics
+- 🩺 Human-interpretable pose parameters for **training your own models**
+- 🐍 Pure Python/PyTorch implementation
+- 🖥️ Supports macOS, Linux, and Windows
+
+`xvr` is built upon [`DiffDRR`](https://github.com/eigenvivek/DiffDRR), the differentiable X-ray renderer.
 
 ## Installation
 
