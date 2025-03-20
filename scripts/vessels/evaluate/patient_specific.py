@@ -29,7 +29,7 @@ def main(ckptpath):
 
 if __name__ == "__main__":
     ckptpath = Path("models/vessels/patient_specific").rglob("*.pth")
-    
+
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
         name="xvr-vessels-eval-specific",

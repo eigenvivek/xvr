@@ -13,7 +13,7 @@ def main(ckptpath):
             {dir}/data/ljubljana/subject{subject_id:02d}/xrays \
             -v {dir}/data/ljubljana/subject{subject_id:02d}/volume.nii.gz \
             -c {dir / ckptpath} \
-            -o {dir}/results/ljubljana/evaluate/patient_agnostic/subject{subject_id:02d}/{ckptpath.stem.split('_')[-1]} \
+            -o {dir}/results/ljubljana/evaluate/patient_agnostic/subject{subject_id:02d}/{ckptpath.stem.split("_")[-1]} \
             --linearize \
             --subtract_background \
             --invert \
@@ -27,7 +27,7 @@ def main(ckptpath):
 
 if __name__ == "__main__":
     ckptpath = Path("models/vessels/patient_agnostic").glob("*.pth")
-    
+
     executor = submitit.AutoExecutor(folder="logs")
     executor.update_parameters(
         name="xvr-vessels-eval-agnostic",

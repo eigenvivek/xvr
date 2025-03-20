@@ -43,8 +43,8 @@ def write_dicom(
     ds.PixelData = img.tobytes()
 
     ds.save_as(filepath, write_like_original=False)
-    
-    
+
+
 def parse_intrinsic_parameters(proj_params):
     intrinsic = proj_params["intrinsic"][:]
 
@@ -145,7 +145,6 @@ for idx, subject_id in enumerate(
 
     projs = f[subject_id]["projections"]
     for proj in tqdm(projs, ncols=75):
-
         # Parse the image
         img = projs[proj]["image/pixels"][:].astype(np.uint16)
         if projs[proj]["rot-180-for-up"][()]:

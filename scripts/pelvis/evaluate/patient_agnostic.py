@@ -13,7 +13,7 @@ def main(ckptpath):
             {dir}/data/deepfluoro/subject{subject_id:02d}/xrays \
             -v {dir}/data/ctpelvic1k/deepfluoro/deepfluoro_{subject_id:02d}.nii.gz \
             -c {dir / ckptpath} \
-            -o {dir}/results/deepfluoro/evaluate/patient_agnostic/subject{subject_id:02d}/{ckptpath.stem.split('_')[-1]} \
+            -o {dir}/results/deepfluoro/evaluate/patient_agnostic/subject{subject_id:02d}/{ckptpath.stem.split("_")[-1]} \
             --crop 100 \
             --linearize \
             --warp {dir}/data/ctpelvic1k/combined_subset_registered_deepfluoro/deepfluoro_{subject_id:02d}_reoriented0GenericAffine.mat \
