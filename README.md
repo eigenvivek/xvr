@@ -226,3 +226,36 @@ We use `wandb` to log experiments. To use this feature, set the `WANDB_API_KEY` 
 ```zsh
 export WANDB_API_KEY=your_api_key
 ```
+
+## Development
+
+`xvr` is built using [`uv`](https://docs.astral.sh/uv/), an extremely fast Python project manager.
+
+If you want to modify `xvr` (e.g., adding different loss functions, network architectures, etc.), `uv` makes it easy to set up a development environment:
+
+```
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Download xvr
+git clone https://github.com/eigenvivek/xvr
+cd xvr
+
+# Set up the virtual environment with all dev requirements
+uv sync --all-extras
+```
+
+To verify your virtual environment, you can run
+
+```
+uv run xvr --version
+```
+
+Alternatively, you can directly use the virtual environment that `uv` creates:
+
+```
+source .venv/bin/activate
+xvr --version
+```
+
+`xvr`'s [pre-commit hooks](.pre-commit-config.yaml) automatically take care of things like linting and formatting, so hack away! All PRs are welcome.
