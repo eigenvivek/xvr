@@ -210,7 +210,7 @@ If you use the [`Ljubljana`](https://lit.fe.uni-lj.si/en/research/resources/3D-2
 
     @article{pernus20133d,
       title={3D-2D registration of cerebral angiograms: A method and evaluation on clinical images},
-      author={Mitrović, Uros˘ and S˘piclin, Z˘iga and Likar, Bos˘tjan and Pernus˘, Franjo},
+      author={Mitrović, Uroš and Špiclin, Žiga and Likar, Boštjan and Pernuš, Franjo},
       journal={IEEE transactions on medical imaging},
       volume={32},
       number={8},
