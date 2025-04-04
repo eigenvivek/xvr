@@ -23,12 +23,8 @@ xvr = "xvr.cli:cli"
 Repository = "https://github.com/eigenvivek/xvr"
 Issues = "https://github.com/eigenvivek/xvr/issues"
 
-[tool.hatch.version]
-path = "src/xvr/__init__.py"
-
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
-
 
 [build-system]
 requires = ["hatchling"]
