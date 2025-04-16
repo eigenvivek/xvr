@@ -36,6 +36,19 @@ Verify the installation version (should match the latest release on GitHub):
 xvr --version
 ```
 
+## Roadmap
+
+The current repository contains a fully functional package for registering X-ray and CT data. Additionally, pretrained models and data are released such that the results in the paper can be reproduced. 
+
+In the future, extensive documentation, tutorials, and usability improvements (e.g., a user interface) will be added! Feel free to open an issue if there is anything in particular you would like to be added to `xvr`!
+
+- [x] Release a pip-installable version of `xvr`
+- [x] Upload pretrained models to reproduce all results in the paper
+- [ ] Add detailed documentation
+- [ ] Colab tutorial for training patient-specific pose regression models
+- [ ] Colab tutorial for iterative pose refinement
+- [ ] User interface for interactive 2D/3D registration
+
 ## Usage
 
 `xvr` provides a command-line interface for training, finetuning, and performing registration (i.e., test-time optimization) with pose regression models. The API is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations.
