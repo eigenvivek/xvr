@@ -558,7 +558,7 @@ wheels = [
 
 [[package]]
 name = "diffdrr"
-version = "0.5.0rc0"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
@@ -576,9 +576,9 @@ dependencies = [
     { name = "torchvision" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5e/a8/4656fbdfce956f034df2844067282bd2d73474fc71925c77addf95f2cac7/diffdrr-0.5.0rc0.tar.gz", hash = "sha256:bcfbb4284e46bd0b5524d44a3631aa1e1c6f283ae44a43c7b807dd1d4621b55c", size = 34805425 }
+sdist = { url = "https://files.pythonhosted.org/packages/55/90/40c66cdd1eed3dea76158d7344d9cf2de2762506f47c0a8b1146fbafeb7a/diffdrr-0.5.0.tar.gz", hash = "sha256:3be6748f2e4614baf915412346e7be969ea08e63eb5f9c8afec458956e42d706", size = 34805149 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/0e/d631f5bf46ec268aff860106a85f2b7d6323d882ea0e375692e59b420c7e/diffdrr-0.5.0rc0-py3-none-any.whl", hash = "sha256:fa9f84ce5d5710280dc7cf0aaacc6dfe5aa72e34e1281cf3807c1bdfe2fc3647", size = 34802637 },
+    { url = "https://files.pythonhosted.org/packages/fe/a2/411f188926a3d4aef6b41bfccbdb0857f2a1c825b9ef7b473060dbab5a55/diffdrr-0.5.0-py3-none-any.whl", hash = "sha256:178f5f7e30b137fbbf55057b2a9c77ccdef7814e3ccae7e56759c626f0e323d1", size = 34802605 },
 ]
 
 [[package]]
@@ -3736,7 +3736,7 @@ dev = [
 requires-dist = [
     { name = "antspyx", specifier = ">=0.5.4" },
     { name = "click", specifier = ">=8.1.8" },
-    { name = "diffdrr", specifier = ">=0.5.0rc0" },
+    { name = "diffdrr", specifier = ">=0.5.0" },
     { name = "pydicom", extras = ["pixeldata"], specifier = ">=3.0.1" },
     { name = "wandb", specifier = ">=0.19.8" },
 ]
