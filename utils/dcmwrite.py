@@ -143,6 +143,7 @@ for idx, subject_id in enumerate(
     savepath = Path(f"data/deepfluoro/subject{idx + 1:02d}/xrays")
     savepath.mkdir(parents=True, exist_ok=True)
 
+    # Save the images
     projs = f[subject_id]["projections"]
     for proj in tqdm(projs, ncols=75):
         # Parse the image
@@ -153,6 +154,35 @@ for idx, subject_id in enumerate(
         # Save cols-ray as a DICOM file
         filepath = savepath / f"{proj}.dcm"
         write_dicom(img, filepath, **intrinsics)
+
+    # Save the image poses
+    deepfluoro = DeepFluoroDataset(idx)
+    for jdx in tqdm(range(len(deepfluoro)), ncols=100):
+        img, pose = deepfluoro[jdx]
+        *_, height, width = img.shape
+        torch.save(
+            {
+                "pose": pose.matrix,
+                "intrinsics": dict(
+                    sdd=intrinsics["source_to_detector_distance"],
+                    delx=intrinsics["row_spacing"],
+                    dely=intrinsics["col_spacing"],
+                    x0=intrinsics["row_origin"],
+                    y0=intrinsics["col_origin"],
+                    height=intrinsics["rows"],
+                    width=intrinsics["cols"],
+                ),
+            },
+            savepath / f"{jdx:03d}.pt",
+        )
+
+    # Save volume
+    data = deepfluoro.subject.volume.data.flip(1).flip(2).clone()
+    affine = deepfluoro.subject.volume.affine.copy()
+    affine[0, 0] = -1.0
+    affine[1, 1] = -1.0
+    volume = ScalarImage(tensor=data, affine=affine)
+    volume.save(f"data/deepfluoro/subject{idx:02d}/volume.nii.gz")
 
 
 ### Ljubljana ###
