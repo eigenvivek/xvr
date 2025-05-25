@@ -44,9 +44,9 @@ In the future, extensive documentation, tutorials, and usability improvements (e
 
 - [x] Release a pip-installable version of `xvr`
 - [x] Upload pretrained models to reproduce all results in the paper
-- [ ] Add detailed documentation
+- [x] Add detailed documentation
+- [x] Colab tutorial for iterative pose refinement
 - [ ] Colab tutorial for training patient-specific pose regression models
-- [ ] Colab tutorial for iterative pose refinement
 - [ ] User interface for interactive 2D/3D registration
 
 ## Usage
