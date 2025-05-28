@@ -18,6 +18,7 @@ def initialize_drr(
     renderer,
     read_kwargs={},
     drr_kwargs={},
+    device="cuda",
 ):
     # Load the CT volume
     if labels is not None:
@@ -37,6 +38,6 @@ def initialize_drr(
         reverse_x_axis=reverse_x_axis,
         renderer=renderer,
         **drr_kwargs,
-    ).cuda()
+    ).to(device)
 
     return drr
