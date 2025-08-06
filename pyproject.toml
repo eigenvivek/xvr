@@ -14,6 +14,7 @@ dependencies = [
     "diffdrr>=0.5.0",
     "pydicom[pixeldata]>=3.0.1",
     "wandb>=0.19.8",
+    "huggingface-hub>=0.29.3",
 ]
 
 [project.scripts]
@@ -32,6 +33,9 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "black>=25.1.0",
     "diffdrrdata>=0.0.7",
-    "huggingface-hub>=0.29.3",
+    "isort>=6.0.1",
+    "jupyterlab-code-formatter>=3.0.2",
+    "jupyterlab-execute-time>=3.2.0",
 ]
