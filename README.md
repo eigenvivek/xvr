@@ -272,3 +272,23 @@ xvr --version
 ```
 
 `xvr`'s [pre-commit hooks](.pre-commit-config.yaml) automatically take care of things like linting and formatting, so hack away! All PRs are welcome.
+
+## Reproducibility
+
+First, set up your environment as described above.
+
+#### Download the datasets
+
+```
+uv run hf download eigenvivek/xvr-data --repo-type dataset --local-dir data/
+```
+
+HuggingFace's internet connection can be spotty, so you sometimes have to run this command multiple (2-4) times. Luckily their CLI won't redownload cached files. Execute the command until it runs with raising an error message.
+
+#### Download the pretrained models
+
+```
+uv run hf download eigenvivek/xvr --repo-type model --local-dir models/
+```
+
+Similar to the data, rerun til the command raises no errors.
