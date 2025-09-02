@@ -1,7 +1,7 @@
 from random import randint, random
 
-import torch
 import kornia.augmentation as K
+import torch
 from torchvision.transforms.functional import center_crop, pad
 
 from ..utils import Standardize

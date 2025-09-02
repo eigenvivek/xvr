@@ -1,8 +1,8 @@
 import torch
 from diffdrr.pose import convert
 
-from .base import _RegistrarBase
 from ..dicom import read_xray
+from .base import _RegistrarBase
 
 
 class RegistrarFixed(_RegistrarBase):

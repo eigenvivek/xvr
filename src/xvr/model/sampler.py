@@ -26,7 +26,9 @@ def get_random_pose(
     tz = uniform(tzmin, tzmax, batch_size)
     rot = torch.concat([alpha, beta, gamma], dim=1)
     xyz = torch.concat([tx, ty, tz], dim=1)
-    return convert(rot, xyz, parameterization="euler_angles", convention="ZXY", degrees=True)
+    return convert(
+        rot, xyz, parameterization="euler_angles", convention="ZXY", degrees=True
+    )
 
 
 def uniform(low, high, n):

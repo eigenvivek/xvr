@@ -17,7 +17,9 @@ def render(
     a PoseRegression model.
     """
 
-    volume, affinv, offset = load(subject, dtype=pose.matrix.dtype, device=pose.matrix.device)
+    volume, affinv, offset = load(
+        subject, dtype=pose.matrix.dtype, device=pose.matrix.device
+    )
 
     if centerize:
         # pose = pose.compose(offset)
@@ -35,10 +37,9 @@ def render(
 
 
 def load(subject, dtype, device):
-    
     volume = subject.data.squeeze().to(dtype=dtype, device=device)
     affine = torch.from_numpy(subject.affine).to(dtype=dtype, device=device)
-    
+
     affine = RigidTransform(affine)
     affinv = affine.inverse()
 

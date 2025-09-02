@@ -231,7 +231,18 @@ class _RegistrarBase:
             nccs,
             times,
             alphas,
-            columns=["r1", "r2", "r3", "tx", "ty", "tz", "ncc", "times", "lr_rot", "lr_xyz"],
+            columns=[
+                "r1",
+                "r2",
+                "r3",
+                "tx",
+                "ty",
+                "tz",
+                "ncc",
+                "times",
+                "lr_rot",
+                "lr_xyz",
+            ],
         )
 
         return (

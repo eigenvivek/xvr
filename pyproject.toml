@@ -38,4 +38,5 @@ dev = [
     "isort>=6.0.1",
     "jupyterlab-code-formatter>=3.0.2",
     "jupyterlab-execute-time>=3.2.0",
+    "pre-commit>=4.3.0",
 ]

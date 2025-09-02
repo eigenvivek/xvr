@@ -4,7 +4,7 @@ from diffdrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelat
 
 class PoseRegressionLoss(torch.nn.Module):
     def __init__(
-        self, 
+        self,
         sdd: float,  # Source-to-detector distance (in mm)
         weight_geo: float,  # Balancing term for geodesic loss (in mm) and NCC [-1, 1]
     ):

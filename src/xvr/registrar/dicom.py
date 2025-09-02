@@ -1,5 +1,5 @@
-from .base import _RegistrarBase
 from ..dicom.xray import _parse_dicom_pose, read_xray
+from .base import _RegistrarBase
 
 
 class RegistrarDicom(_RegistrarBase):

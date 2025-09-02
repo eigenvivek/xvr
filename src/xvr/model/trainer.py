@@ -61,7 +61,6 @@ class Trainer:
         n_grad_accum_itrs,
         n_save_every_itrs,
     ):
-        
         # Record all hyperparameters to be checkpointed
         self.config = locals()
         del self.config["self"]
@@ -119,12 +118,12 @@ class Trainer:
         self.model_number = 0
 
     def train(self, run=None):
-        for itr in (pbar := tqdm(range(self.n_total_itrs), desc="Training model...", ncols=200)):
-            
+        pbar = tqdm(range(self.n_total_itrs), desc="Training model...", ncols=200)
+        for itr in pbar:
             # Checkpoint the model
             if itr % self.n_save_every_itrs == 0:
                 self._checkpoint(itr)
-                
+
             # Run an iteration of the training loop
             try:
                 log, imgs = self.step(itr)
@@ -147,9 +146,10 @@ class Trainer:
         return log, imgs
 
     def _render_samples(self, subject, threshold=0.8):
-        
         # Sample a batch of random poses
-        pose = get_random_pose(**self.pose_distribution, batch_size=self.batch_size).cuda()
+        pose = get_random_pose(
+            **self.pose_distribution, batch_size=self.batch_size
+        ).cuda()
 
         # Render random DRRs and apply augmentations/transforms
         contrast = self.contrast_distribution.sample().item()
@@ -162,7 +162,6 @@ class Trainer:
         return img, pose, keep, contrast
 
     def _run_iteration(self, itr, subject):
-
         # Sample a batch of DRRs
         img, pose, keep, contrast = self._render_samples(subject)
 
@@ -183,7 +182,9 @@ class Trainer:
         self.optimizer.zero_grad()
         loss.mean().backward()
         adaptive_clip_grad_(self.model.parameters())
-        if ((itr + 1) % self.n_grad_accum_itrs == 0) or ((itr + 1) == self.n_total_itrs):
+        if ((itr + 1) % self.n_grad_accum_itrs == 0) or (
+            (itr + 1) == self.n_total_itrs
+        ):
             self.optimizer.step()
             self.scheduler.step()
 
@@ -236,7 +237,7 @@ def initialize_subjects(inpath):
 
     # If the volumes can fit in memory, read all data now
     # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
-    if (loaded := _subjects_fit_in_memory(subjects)):
+    if loaded := _subjects_fit_in_memory(subjects):
         for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
             subject.load()
 
@@ -247,6 +248,7 @@ def _subjects_fit_in_memory(subjects):
     available = virtual_memory().available / (1024**2)  # Available memory in MiB
     required = sum([_size(subject) for subject in subjects])  # Total memory for all subjects in MiB
     return required < available
+
 
 def _size(subject: ScalarImage, element_size=4):
     """Size of a volume in MiB (assumes float32)."""
@@ -269,7 +271,6 @@ def initialize_modules(
     n_warmup_itrs,
     n_grad_accum_itrs,
 ):
-
     # Initialize the pose regression model
     model = PoseRegressor(
         model_name=model_name,
