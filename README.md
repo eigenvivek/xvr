@@ -36,6 +36,12 @@ Verify the installation version (should match the latest release on GitHub):
 xvr --version
 ```
 
+You can also enable tab-completion for `xvr` by adding this line to your `~/.bashrc` (instructions for other shells are [here](https://click.palletsprojects.com/en/stable/shell-completion/)):
+
+```
+eval "$(_XVR_COMPLETE=bash_source xvr)"
+```
+
 ## Roadmap
 
 The current repository contains a fully functional package for registering X-ray and CT data. Additionally, pretrained models and data are released such that the results in the paper can be reproduced. 

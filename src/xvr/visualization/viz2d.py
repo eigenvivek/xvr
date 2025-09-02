@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 from diffdrr.visualization import plot_drr
 
-from .metrics import Evaluator
-from .utils import XrayTransforms
+from ..metrics import Evaluator
+from ..utils import XrayTransforms
 
 
 def plot_registration(drr, fiducials, gt, pred_pose, true_pose):

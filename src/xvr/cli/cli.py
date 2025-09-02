@@ -3,7 +3,12 @@ from importlib.metadata import version
 
 import click
 
-from .commands import animate, dcm2nii, dicom, finetune, fixed, model, restart, train
+from .animate import animate
+from .dcm2nii import dcm2nii
+from .finetune import finetune
+from .register import dicom, fixed, model
+from .restart import restart
+from .train import train
 
 
 # Taken from https://stackoverflow.com/a/58323807

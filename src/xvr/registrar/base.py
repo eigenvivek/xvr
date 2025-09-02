@@ -1,3 +1,4 @@
+import time
 from copy import deepcopy
 from pathlib import Path
 
@@ -7,16 +8,13 @@ from diffdrr.metrics import (
     GradientNormalizedCrossCorrelation2d,
     MultiscaleNormalizedCrossCorrelation2d,
 )
-from diffdrr.pose import convert
 from diffdrr.registration import Registration
 from diffdrr.visualization import plot_drr
 from torchvision.utils import save_image
 from tqdm import tqdm
 
-from xvr.dicom import _parse_dicom_pose, read_xray
-from xvr.model import _correct_pose, load_model, predict_pose
-from xvr.renderer import initialize_drr
-from xvr.utils import XrayTransforms
+from ..renderer import initialize_drr
+from ..utils import XrayTransforms
 
 
 class _RegistrarBase:
@@ -147,6 +145,7 @@ class _RegistrarBase:
             .tolist()
         ]
         nccs = []
+        times = []
         alphas = [[self.lr_rot, self.lr_xyz]]
 
         step_size_scalar = 1.0
@@ -182,6 +181,8 @@ class _RegistrarBase:
                 pbar = tqdm(pbar, ncols=100, desc=f"Stage {stage}")
 
             for itr in pbar:
+                torch.cuda.synchronize()
+                t0 = time.time()
                 optimizer.zero_grad()
                 pred_img = reg()
                 pred_img = transform(pred_img)
@@ -189,11 +190,14 @@ class _RegistrarBase:
                 loss.backward()
                 optimizer.step()
                 scheduler.step(loss)
+                torch.cuda.synchronize()
+                t1 = time.time()
 
                 # Record current loss
                 if self.verbose > 0:
                     pbar.set_postfix_str(f"ncc = {loss.item():5.3f}")
                 nccs.append(loss.item())
+                times.append(t1 - t0)
                 params.append(
                     torch.concat(reg.pose.convert("euler_angles", "ZXY"), dim=-1)
                     .squeeze()
@@ -225,8 +229,9 @@ class _RegistrarBase:
         trajectory = _make_csv(
             params,
             nccs,
+            times,
             alphas,
-            columns=["r1", "r2", "r3", "tx", "ty", "tz", "ncc", "lr_rot", "lr_xyz"],
+            columns=["r1", "r2", "r3", "tx", "ty", "tz", "ncc", "times", "lr_rot", "lr_xyz"],
         )
 
         return (
@@ -235,7 +240,7 @@ class _RegistrarBase:
             deepcopy(self.drr),
             init_pose,
             reg.pose,
-            dict(pf_to_af=pf_to_af, trajectory=trajectory),
+            dict(pf_to_af=pf_to_af, runtime=sum(times), trajectory=trajectory),
         )
 
     def __call__(self, i2d, outpath, beta=0.5):
@@ -333,233 +338,6 @@ class _RegistrarBase:
             save_image(init_img, f"{savepath}/init_img.png", normalize=True)
             if final_img is not None:
                 save_image(final_img, f"{savepath}/final_img.png", normalize=True)
-
-
-class RegistrarModel(_RegistrarBase):
-    def __init__(
-        self,
-        volume,
-        mask,
-        ckptpath,
-        labels=None,
-        crop=0,
-        subtract_background=False,
-        linearize=True,
-        reducefn="max",
-        warp=None,
-        invert=False,
-        scales="8",
-        reverse_x_axis=True,
-        renderer="trilinear",
-        parameterization="euler_angles",
-        convention="ZXY",
-        lr_rot=1e-2,
-        lr_xyz=1e0,
-        patience=10,
-        threshold=1e-4,
-        max_n_itrs=500,
-        max_n_plateaus=3,
-        init_only=False,
-        saveimg=False,
-        verbose=1,
-        read_kwargs={},
-        drr_kwargs={},
-    ):
-        # Initialize the model and its config
-        self.ckptpath = ckptpath
-        self.model, self.config, self.date = load_model(self.ckptpath, meta=True)
-
-        # Initial pose correction
-        self.warp = warp
-        self.invert = invert
-
-        super().__init__(
-            volume,
-            mask,
-            self.config["orientation"],
-            labels,
-            crop,
-            subtract_background,
-            linearize,
-            reducefn,
-            scales,
-            reverse_x_axis,
-            renderer,
-            parameterization,
-            convention,
-            lr_rot,
-            lr_xyz,
-            patience,
-            threshold,
-            max_n_itrs,
-            max_n_plateaus,
-            init_only,
-            saveimg,
-            verbose,
-            read_kwargs,
-            drr_kwargs,
-            save_kwargs={
-                "type": "model",
-                "ckptpath": self.ckptpath,
-                "date": self.date,
-                "warp": self.warp,
-                "invert": self.invert,
-            },
-        )
-
-    def initialize_pose(self, i2d):
-        # Preprocess X-ray image and get imaging system intrinsics
-        gt, sdd, delx, dely, x0, y0, pf_to_af = read_xray(
-            i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
-        )
-
-        # Predict the pose of the X-ray image
-        init_pose = predict_pose(self.model, self.config, gt, sdd, delx, dely, x0, y0)
-
-        # Optionally, correct the pose by warping the CT volume to the template
-        init_pose = _correct_pose(init_pose, self.warp, self.volume, self.invert)
-
-        return gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose
-
-
-class RegistrarDicom(_RegistrarBase):
-    def __init__(
-        self,
-        volume,
-        mask,
-        orientation,
-        labels=None,
-        crop=0,
-        subtract_background=False,
-        linearize=True,
-        reducefn="max",
-        scales="8",
-        reverse_x_axis=True,
-        renderer="trilinear",
-        parameterization="euler_angles",
-        convention="ZXY",
-        lr_rot=1e-2,
-        lr_xyz=1e0,
-        patience=10,
-        threshold=1e-4,
-        max_n_itrs=500,
-        max_n_plateaus=3,
-        init_only=False,
-        saveimg=False,
-        verbose=1,
-        read_kwargs={},
-        drr_kwargs={},
-    ):
-        super().__init__(
-            volume,
-            mask,
-            orientation,
-            labels,
-            crop,
-            subtract_background,
-            linearize,
-            reducefn,
-            scales,
-            reverse_x_axis,
-            renderer,
-            parameterization,
-            convention,
-            lr_rot,
-            lr_xyz,
-            patience,
-            threshold,
-            max_n_itrs,
-            max_n_plateaus,
-            init_only,
-            saveimg,
-            verbose,
-            read_kwargs,
-            drr_kwargs,
-            save_kwargs={"type": "dicom"},
-        )
-
-    def initialize_pose(self, i2d):
-        # Preprocess X-ray image and get imaging system intrinsics
-        gt, sdd, delx, dely, x0, y0, pf_to_af = read_xray(
-            i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
-        )
-
-        # Parse the pose from dicom parameters
-        init_pose = _parse_dicom_pose(i2d, self.orientation).cuda()
-
-        return gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose
-
-
-class RegistrarFixed(_RegistrarBase):
-    def __init__(
-        self,
-        volume,
-        mask,
-        orientation,
-        rot,
-        xyz,
-        labels=None,
-        reducefn="max",
-        crop=0,
-        subtract_background=False,
-        linearize=True,
-        scales="8",
-        reverse_x_axis=True,
-        renderer="trilinear",
-        parameterization="euler_angles",
-        convention="ZXY",
-        lr_rot=1e-2,
-        lr_xyz=1e0,
-        patience=10,
-        threshold=1e-4,
-        max_n_itrs=500,
-        max_n_plateaus=3,
-        init_only=False,
-        saveimg=False,
-        verbose=1,
-        read_kwargs={},
-        drr_kwargs={},
-    ):
-        super().__init__(
-            volume,
-            mask,
-            orientation,
-            labels,
-            crop,
-            subtract_background,
-            linearize,
-            reducefn,
-            scales,
-            reverse_x_axis,
-            renderer,
-            parameterization,
-            convention,
-            lr_rot,
-            lr_xyz,
-            patience,
-            threshold,
-            max_n_itrs,
-            max_n_plateaus,
-            init_only,
-            saveimg,
-            verbose,
-            read_kwargs,
-            drr_kwargs,
-            save_kwargs={"type": "fixed"},
-        )
-
-        rot = torch.tensor([rot], dtype=torch.float32)
-        xyz = torch.tensor([xyz], dtype=torch.float32)
-        self.init_pose = convert(
-            rot, xyz, parameterization=self.parameterization, convention=self.convention
-        ).cuda()
-
-    def initialize_pose(self, i2d):
-        # Preprocess X-ray image and get imaging system intrinsics
-        gt, sdd, delx, dely, x0, y0, pf_to_af = read_xray(
-            i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
-        )
-        return gt, sdd, delx, dely, x0, y0, pf_to_af, self.init_pose
 
 
 def _parse_scales(scales: str, crop: int, height: int):
