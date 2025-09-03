@@ -154,7 +154,7 @@ class Trainer:
         # Render random DRRs and apply augmentations/transforms
         contrast = self.contrast_distribution.sample().item()
         with torch.no_grad():
-            img, pose = render(self.drr, pose, subject, contrast, centerize=True)
+            img, pose = render(self.drr, pose, contrast, subject, centerize=True)
             keep = (img == 0).to(img).flatten(1).mean(1) < threshold
             img = self.augmentations(img)
             img = self.transforms(img)

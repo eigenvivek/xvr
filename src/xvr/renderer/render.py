@@ -2,51 +2,58 @@ import torch
 from diffdrr.data import transform_hu_to_density
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform, convert
-from torchio import ScalarImage
+from torchio import ScalarImage, LabelMap
 
 
 def render(
     drr: DRR,
     pose: RigidTransform,
-    subject: ScalarImage,
     contrast: float,
+    volume: ScalarImage,
+    mask: LabelMap = None,
     centerize: bool = True,
 ):
     """
-    Render a batch of DRRs from a subject. Data synthesis engine for training
-    a PoseRegression model.
+    Render a batch of DRRs from a volume (and optional mask). If a mask is a provided, the rendered
+    DRRs wqill be multi-channel (i.e., one channel for each structure in the volume's labelmap).
     """
 
-    volume, affinv, offset = load(
-        subject, dtype=pose.matrix.dtype, device=pose.matrix.device
+    # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
+    volume, mask, affinv, offset = load(
+        volume, mask, dtype=pose.matrix.dtype, device=pose.matrix.device
     )
-
     if centerize:
-        # pose = pose.compose(offset)
         pose = offset.compose(pose)
 
+    # Get the source and target locations for every ray in voxel coordinates
     source, target = drr.detector(pose, None)
     img = (target - source).norm(dim=-1).unsqueeze(1)
     source, target = affinv(source), affinv(target)
 
+    # Render a batch of DRRs
     tmp = transform_hu_to_density(volume, contrast)
-    img = drr.renderer(tmp, source, target, img)
+    img = drr.renderer(tmp, source, target, img, mask=mask)
     img = drr.reshape_transform(img, batch_size=len(pose))
 
     return img, pose
 
 
-def load(subject, dtype, device):
-    volume = subject.data.squeeze().to(dtype=dtype, device=device)
-    affine = torch.from_numpy(subject.affine).to(dtype=dtype, device=device)
+def load(volume, mask, dtype, device):
+    # Load the volume and optional mask into memory
+    data = volume.data.squeeze().to(dtype=dtype, device=device)
+    if mask is not None:
+        mask = mask.data.squeeze().to(dtype=dtype, device=device)
 
+    # Save the inverse affine for moving from world to voxel coordinates
+    affine = torch.from_numpy(volume.affine).to(dtype=dtype, device=device)
     affine = RigidTransform(affine)
     affinv = affine.inverse()
 
-    center = torch.tensor(subject.get_center())[None].to(dtype=dtype, device=device)
+    # Make a transform from the origin in world coordinates to the volume's isocenter
+    center = torch.tensor(volume.get_center())[None].to(dtype=dtype, device=device)
     offset = make_translation(center)
 
-    return volume, affinv, offset
+    return data, mask, affinv, offset
 
 
 def make_translation(xyz):
