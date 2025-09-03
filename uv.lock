@@ -832,8 +832,8 @@ wheels = [
 
 [[package]]
 name = "diffdrr"
-version = "0.5.1"
-source = { registry = "https://pypi.org/simple" }
+version = "0.6.0rc2"
+source = { git = "https://github.com/eigenvivek/DiffDRR#13a9a224db3005348f174a349aea9774d500aac5" }
 dependencies = [
     { name = "einops" },
     { name = "fastcore" },
@@ -850,10 +850,6 @@ dependencies = [
     { name = "torchio" },
     { name = "torchvision" },
     { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/06/11/a0f300f453bcdcfe52bac5f8650ed8802488516a4b832d884a009f05f173/diffdrr-0.5.1.tar.gz", hash = "sha256:418f17f8cf099d180e3e6e2ecbff79a9175ad9e9e9defc6ac8bf15f5c06233bd", size = 34805250, upload_time = "2025-05-19T21:03:10.122Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/44/84896b1f147e00e976e34d53424361a2c34fb8aafff48c63daaa8b4161d3/diffdrr-0.5.1-py3-none-any.whl", hash = "sha256:1346b3933310b690b97029c130764c23eb210773afdf6357c337199bdccd5de3", size = 34802710, upload_time = "2025-05-19T21:03:05.178Z" },
 ]
 
 [[package]]
@@ -4780,7 +4776,7 @@ dev = [
 requires-dist = [
     { name = "antspyx", specifier = ">=0.5.4" },
     { name = "click", specifier = ">=8.1.8" },
-    { name = "diffdrr", specifier = ">=0.5.0" },
+    { name = "diffdrr", git = "https://github.com/eigenvivek/DiffDRR" },
     { name = "huggingface-hub", extras = ["cli"], specifier = ">=0.32.0" },
     { name = "pydicom", extras = ["pixeldata"], specifier = ">=3.0.1" },
     { name = "wandb", specifier = ">=0.21.1" },
