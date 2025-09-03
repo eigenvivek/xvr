@@ -175,7 +175,7 @@ class Trainer:
         imgs = torch.concat([img[:4], pred_img[:4]])
 
         # Compute the loss
-        loss, mncc, dgeo, rgeo, tgeo = self.lossfn(img, pose, pred_img, pred_pose)
+        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(img, pose, pred_img, pred_pose)
         loss = loss / self.n_grad_accum_itrs
 
         # Optimize the model
@@ -194,6 +194,7 @@ class Trainer:
             "dgeo": dgeo.mean().item(),
             "rgeo": rgeo.mean().item(),
             "tgeo": tgeo.mean().item(),
+            "dice": dice.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
@@ -201,6 +202,8 @@ class Trainer:
         return log, imgs
 
     def _log_wandb(self, itr, log, imgs):
+        if imgs.shape[1] > 1:
+            imgs = imgs.sum(dim=1, keepdim=True)
         if itr % 1000 == 0:
             fig, axs = plt.subplots(ncols=4, nrows=2)
             plot_drr(imgs, axs=axs.flatten(), ticks=False)
