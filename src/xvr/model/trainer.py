@@ -9,10 +9,10 @@ import wandb
 from diffdrr.data import load_example_ct
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
-from diffdrr.visualization import plot_drr
+from diffdrr.visualization import plot_drr, plot_mask
 from psutil import virtual_memory
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
-from torchio import ScalarImage
+from torchio import LabelMap, ScalarImage, Subject
 from tqdm import tqdm
 
 from ..renderer import render
@@ -27,7 +27,8 @@ from .scheduler import WarmupCosineSchedule
 class Trainer:
     def __init__(
         self,
-        inpath,
+        volpath,
+        maskpath,
         outpath,
         alphamin,
         alphamax,
@@ -66,24 +67,26 @@ class Trainer:
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.loaded = initialize_subjects(inpath)
+        self.subjects, self.loaded = initialize_subjects(volpath, maskpath)
 
         # Initialize all deep learning modulues
-        self.model, self.drr, self.transforms, self.optimizer, self.scheduler = initialize_modules(
-            model_name,
-            pretrained,
-            parameterization,
-            convention,
-            norm_layer,
-            sdd,
-            height,
-            delx,
-            reverse_x_axis,
-            renderer,
-            lr,
-            n_total_itrs,
-            n_warmup_itrs,
-            n_grad_accum_itrs,
+        self.model, self.drr, self.transforms, self.optimizer, self.scheduler = (
+            initialize_modules(
+                model_name,
+                pretrained,
+                parameterization,
+                convention,
+                norm_layer,
+                sdd,
+                height,
+                delx,
+                reverse_x_axis,
+                renderer,
+                lr,
+                n_total_itrs,
+                n_warmup_itrs,
+                n_grad_accum_itrs,
+            )
         )
 
         # Initialize the loss function
@@ -126,24 +129,24 @@ class Trainer:
 
             # Run an iteration of the training loop
             try:
-                log, imgs = self.step(itr)
+                log, imgs, masks = self.step(itr)
             except RuntimeError as e:
                 print(e)
 
             # Log metrics (and optionally save to wandb)
             pbar.set_postfix(log)
             if run is not None:
-                self._log_wandb(itr, log, imgs)
+                self._log_wandb(itr, log, imgs, masks)
 
     def step(self, itr):
         subject = choice(self.subjects)
         if not self.loaded:
             subject.load()
-            log, imgs = self._run_iteration(itr, subject)
+            log, imgs, masks = self._run_iteration(itr, subject)
             subject.unload()
         else:
-            log, imgs = self._run_iteration(itr, subject)
-        return log, imgs
+            log, imgs, masks = self._run_iteration(itr, subject)
+        return log, imgs, masks
 
     def _render_samples(self, subject, threshold=0.8):
         # Sample a batch of random poses
@@ -154,28 +157,30 @@ class Trainer:
         # Render random DRRs and apply augmentations/transforms
         contrast = self.contrast_distribution.sample().item()
         with torch.no_grad():
-            img, pose = render(self.drr, pose, contrast, subject, centerize=True)
-            keep = (img == 0).to(img).flatten(1).mean(1) < threshold
+            img, mask, pose = render(self.drr, pose, subject, contrast, centerize=True)
+            keep = (img != 0).to(img).flatten(1).mean(1) > threshold
             img = self.augmentations(img)
             img = self.transforms(img)
 
-        return img, pose, keep, contrast
+        return img, mask, pose, keep, contrast
 
     def _run_iteration(self, itr, subject):
         # Sample a batch of DRRs
-        img, pose, keep, contrast = self._render_samples(subject)
+        img, mask, pose, keep, contrast = self._render_samples(subject)
 
         # Keep only those samples with >80% intersection with the volume
         img = img[keep]
+        mask = mask[keep]
         pose = RigidTransform(pose[keep])
 
         # Regress the poses and render the predicted DRRs
         pred_pose = self.model(img)
-        pred_img, _ = render(self.drr, pred_pose, subject, contrast, centerize=False)
+        pred_img, pred_mask, _ = render(self.drr, pred_pose, subject, contrast, centerize=False)
         imgs = torch.concat([img[:4], pred_img[:4]])
+        masks = torch.concat([mask[:4], pred_mask[:4]])
 
         # Compute the loss
-        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(img, pose, pred_img, pred_pose)
+        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
         loss = loss / self.n_grad_accum_itrs
 
         # Optimize the model
@@ -199,14 +204,14 @@ class Trainer:
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
-        return log, imgs
+        return log, imgs, masks
 
-    def _log_wandb(self, itr, log, imgs):
-        if imgs.shape[1] > 1:
-            imgs = imgs.sum(dim=1, keepdim=True)
+    def _log_wandb(self, itr, log, imgs, masks):
         if itr % 1000 == 0:
             fig, axs = plt.subplots(ncols=4, nrows=2)
             plot_drr(imgs, axs=axs.flatten(), ticks=False)
+            if masks.shape[1] > 1:
+                plot_mask(masks[:, 1:], axs=axs.flatten())
             plt.tight_layout()
             log["imgs"] = fig
             plt.close()
@@ -228,18 +233,40 @@ class Trainer:
         self.model_number += 1
 
 
-def initialize_subjects(inpath):
-    # Get all volumes
+def initialize_subjects(volpath, maskpath):
+    # Get all volumes and (optional) masks
     subjects = []
-    inpath = Path(inpath)
-    niftis = [inpath] if inpath.is_file() else sorted(inpath.glob("*.nii.gz"))
+    volpath = Path(volpath)
+    volumes = [volpath] if volpath.is_file() else sorted(volpath.glob("*.nii.gz"))
+    
+    if maskpath is not None:
+        maskpath = Path(maskpath)
+        masks = [maskpath] if maskpath.is_file() else sorted(maskpath.glob("*.nii.gz"))
+    else:
+        masks = []
 
-    # Lazily load all volumes
-    for filepath in tqdm(niftis, desc="Reading CTs...", ncols=200):
-        subjects.append(ScalarImage(filepath))
+    # Lazily load all volumes and (optional) masks
+    if masks:
+        pbar = tqdm(
+            zip(volumes, masks), desc="Reading CTs...", total=len(volumes), ncols=200
+        )
+        read_mask = True
+    else:
+        pbar = tqdm(
+            zip(volumes, volumes), desc="Reading CTs...", total=len(volumes), ncols=200
+        )
+        read_mask = False
 
-    # If the volumes can fit in memory, read all data now
-    # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
+    subjects = []
+    for vol_path, mask_path in pbar:
+        if read_mask:
+            subject = Subject(volume=ScalarImage(vol_path), mask=LabelMap(mask_path))
+        else:
+            subject = Subject(volume=ScalarImage(vol_path), mask=None)
+        subjects.append(subject)
+
+    # # If the volumes can fit in memory, read all data now
+    # # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
     if loaded := _subjects_fit_in_memory(subjects):
         for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
             subject.load()
@@ -248,8 +275,14 @@ def initialize_subjects(inpath):
 
 
 def _subjects_fit_in_memory(subjects):
-    available = virtual_memory().available / (1024**2)  # Available memory in MiB
-    required = sum([_size(subject) for subject in subjects])  # Total memory for all subjects in MiB
+    available = virtual_memory().available / (1024**2)
+    required = sum(
+        [
+            _size(img)
+            for subject in subjects
+            for img in subject.get_images(intensity_only=False)
+        ]
+    )
     return required < available
 
 

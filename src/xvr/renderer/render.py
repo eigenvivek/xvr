@@ -2,15 +2,14 @@ import torch
 from diffdrr.data import transform_hu_to_density
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform, convert
-from torchio import ScalarImage, LabelMap
+from torchio import Subject
 
 
 def render(
     drr: DRR,
     pose: RigidTransform,
+    subject: Subject,
     contrast: float,
-    volume: ScalarImage,
-    mask: LabelMap = None,
     centerize: bool = True,
 ):
     """
@@ -20,7 +19,10 @@ def render(
 
     # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
     volume, mask, affinv, offset = load(
-        volume, mask, dtype=pose.matrix.dtype, device=pose.matrix.device
+        subject.volume,
+        subject.mask,
+        dtype=pose.matrix.dtype,
+        device=pose.matrix.device,
     )
     if centerize:
         pose = offset.compose(pose)
@@ -35,7 +37,11 @@ def render(
     img = drr.renderer(tmp, source, target, img, mask=mask)
     img = drr.reshape_transform(img, batch_size=len(pose))
 
-    return img, pose
+    # Create a foreground mask and collapse potentially multichannel images to a single DRR
+    mask = img > 0
+    img = img.sum(dim=1, keepdim=True)
+
+    return img, mask, pose
 
 
 def load(volume, mask, dtype, device):
