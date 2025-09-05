@@ -207,7 +207,7 @@ class Trainer:
         return log, imgs, masks
 
     def _log_wandb(self, itr, log, imgs, masks):
-        if itr % 1000 == 0:
+        if itr % 250 == 0:
             fig, axs = plt.subplots(ncols=4, nrows=2)
             plot_drr(imgs, axs=axs.flatten(), ticks=False)
             if masks.shape[1] > 1:
