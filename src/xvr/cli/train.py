@@ -3,11 +3,17 @@ import click
 
 @click.command(context_settings=dict(show_default=True, max_content_width=120))
 @click.option(
-    "-i",
-    "--inpath",
+    "-v",
+    "--volpath",
     required=True,
     type=click.Path(exists=True),
     help="A single CT or a directory of CTs for pretraining",
+)
+@click.option(
+    "-m",
+    "--maskpath",
+    required=False,
+    type=click.Path(exists=True),
 )
 @click.option(
     "-o",
@@ -179,7 +185,8 @@ import click
     help="WandB project name",
 )
 def train(
-    inpath,
+    volpath,
+    maskpath,
     outpath,
     r1,
     r2,
@@ -232,7 +239,8 @@ def train(
 
     # Parse configuration parameters
     config = dict(
-        inpath=inpath,
+        volpath=volpath,
+        maskpath=maskpath,
         outpath=outpath,
         alphamin=alphamin,
         alphamax=alphamax,
