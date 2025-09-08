@@ -6,13 +6,13 @@ from random import choice
 import matplotlib.pyplot as plt
 import torch
 import wandb
-from diffdrr.data import load_example_ct
+from diffdrr.data import load_example_ct, read
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
-from diffdrr.visualization import plot_drr
+from diffdrr.visualization import plot_drr, plot_mask
 from psutil import virtual_memory
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
-from torchio import ScalarImage
+from torchio import LabelMap, ScalarImage, Subject
 from tqdm import tqdm
 
 from ..renderer import render
@@ -27,7 +27,8 @@ from .scheduler import WarmupCosineSchedule
 class Trainer:
     def __init__(
         self,
-        inpath,
+        volpath,
+        maskpath,
         outpath,
         alphamin,
         alphamax,
@@ -66,24 +67,30 @@ class Trainer:
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.loaded = initialize_subjects(inpath)
+        self.subjects, self.loaded, self.single_subject = initialize_subjects(
+            volpath, maskpath, orientation
+        )
 
-        # Initialize all deep learning modulues
-        self.model, self.drr, self.transforms, self.optimizer, self.scheduler = initialize_modules(
-            model_name,
-            pretrained,
-            parameterization,
-            convention,
-            norm_layer,
-            sdd,
-            height,
-            delx,
-            reverse_x_axis,
-            renderer,
-            lr,
-            n_total_itrs,
-            n_warmup_itrs,
-            n_grad_accum_itrs,
+        # Initialize all deep learning modules
+        self.model, self.drr, self.transforms, self.optimizer, self.scheduler = (
+            initialize_modules(
+                model_name,
+                pretrained,
+                parameterization,
+                convention,
+                norm_layer,
+                sdd,
+                height,
+                delx,
+                orientation,
+                reverse_x_axis,
+                renderer,
+                lr,
+                n_total_itrs,
+                n_warmup_itrs,
+                n_grad_accum_itrs,
+                self.subjects[0] if self.single_subject else None,
+            )
         )
 
         # Initialize the loss function
@@ -107,8 +114,8 @@ class Trainer:
             tymax=tymax,
             tzmin=tzmin,
             tzmax=tzmax,
+            batch_size=batch_size,
         )
-        self.batch_size = batch_size
 
         self.n_total_itrs = n_total_itrs
         self.n_grad_accum_itrs = n_grad_accum_itrs
@@ -126,56 +133,57 @@ class Trainer:
 
             # Run an iteration of the training loop
             try:
-                log, imgs = self.step(itr)
+                log, imgs, masks = self.step(itr)
             except RuntimeError as e:
                 print(e)
 
             # Log metrics (and optionally save to wandb)
             pbar.set_postfix(log)
             if run is not None:
-                self._log_wandb(itr, log, imgs)
+                self._log_wandb(itr, log, imgs, masks)
 
     def step(self, itr):
+        if self.single_subject:
+            log, imgs, masks = self._step_single_subject(itr)
+        else:
+            log, imgs, masks = self._step_random_subject(itr)
+        return log, imgs, masks
+
+    def _step_single_subject(self, itr):
+        log, imgs, masks = self._run_iteration(itr)
+        return log, imgs, masks
+
+    def _step_random_subject(self, itr):
         subject = choice(self.subjects)
         if not self.loaded:
             subject.load()
-            log, imgs = self._run_iteration(itr, subject)
+            log, imgs, masks = self._run_iteration(itr, subject)
             subject.unload()
         else:
-            log, imgs = self._run_iteration(itr, subject)
-        return log, imgs
+            log, imgs, masks = self._run_iteration(itr, subject)
+        return log, imgs, masks
 
-    def _render_samples(self, subject, threshold=0.8):
-        # Sample a batch of random poses
-        pose = get_random_pose(
-            **self.pose_distribution, batch_size=self.batch_size
-        ).cuda()
-
-        # Render random DRRs and apply augmentations/transforms
-        contrast = self.contrast_distribution.sample().item()
-        with torch.no_grad():
-            img, pose = render(self.drr, pose, subject, contrast, centerize=True)
-            keep = (img == 0).to(img).flatten(1).mean(1) < threshold
-            img = self.augmentations(img)
-            img = self.transforms(img)
-
-        return img, pose, keep, contrast
-
-    def _run_iteration(self, itr, subject):
+    def _run_iteration(self, itr, subject=None):
         # Sample a batch of DRRs
-        img, pose, keep, contrast = self._render_samples(subject)
+        img, mask, pose, keep, contrast = self._render_samples(subject)
 
         # Keep only those samples with >80% intersection with the volume
         img = img[keep]
+        mask = mask[keep]
         pose = RigidTransform(pose[keep])
 
         # Regress the poses and render the predicted DRRs
         pred_pose = self.model(img)
-        pred_img, _ = render(self.drr, pred_pose, subject, contrast, centerize=False)
+        pred_img, pred_mask, _ = render(
+            self.drr, pred_pose, subject, contrast, centerize=False
+        )
         imgs = torch.concat([img[:4], pred_img[:4]])
+        masks = torch.concat([mask[:4], pred_mask[:4]])
 
         # Compute the loss
-        loss, mncc, dgeo, rgeo, tgeo = self.lossfn(img, pose, pred_img, pred_pose)
+        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
+            img, mask, pose, pred_img, pred_mask, pred_pose
+        )
         loss = loss / self.n_grad_accum_itrs
 
         # Optimize the model
@@ -194,16 +202,41 @@ class Trainer:
             "dgeo": dgeo.mean().item(),
             "rgeo": rgeo.mean().item(),
             "tgeo": tgeo.mean().item(),
+            "dice": dice.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
-        return log, imgs
+        return log, imgs, masks
 
-    def _log_wandb(self, itr, log, imgs):
-        if itr % 1000 == 0:
+    def _render_samples(self, subject, img_threshold=0.8, mask_threshold=0.05):
+        # Sample a batch of random poses
+        pose = get_random_pose(**self.pose_distribution).cuda()
+
+        # Render random DRRs and apply augmentations/transforms
+        contrast = self.contrast_distribution.sample().item()
+        with torch.no_grad():
+            img, mask, pose = render(self.drr, pose, subject, contrast, centerize=True)
+
+            if mask.shape[1] == 1:
+                # Keep if >80% of the image is non-zero pixels
+                keep = mask.to(img).flatten(1).mean(1) > img_threshold
+            else:
+                # Keep if >5% of the image contains pixels corresponding to masked structures
+                keep = mask[:, 1:].sum(dim=1, keepdim=True)
+                keep = (keep > 0).to(img).flatten(1).mean(1) > mask_threshold
+
+            img = self.augmentations(img)
+            img = self.transforms(img)
+
+        return img, mask, pose, keep, contrast
+
+    def _log_wandb(self, itr, log, imgs, masks):
+        if itr % 250 == 0:
             fig, axs = plt.subplots(ncols=4, nrows=2)
             plot_drr(imgs, axs=axs.flatten(), ticks=False)
+            if masks.shape[1] > 1:
+                plot_mask(masks[:, 1:], axs=axs.flatten())
             plt.tight_layout()
             log["imgs"] = fig
             plt.close()
@@ -225,28 +258,59 @@ class Trainer:
         self.model_number += 1
 
 
-def initialize_subjects(inpath):
-    # Get all volumes
+def initialize_subjects(volpath, maskpath, orientation):
+    # Get all volumes and (optional) masks
     subjects = []
-    inpath = Path(inpath)
-    niftis = [inpath] if inpath.is_file() else sorted(inpath.glob("*.nii.gz"))
+    volpath = Path(volpath)
+    volumes = [volpath] if volpath.is_file() else sorted(volpath.glob("*.nii.gz"))
+    n_subjects = len(volumes)
 
-    # Lazily load all volumes
-    for filepath in tqdm(niftis, desc="Reading CTs...", ncols=200):
-        subjects.append(ScalarImage(filepath))
+    if maskpath is not None:
+        maskpath = Path(maskpath)
+        masks = [maskpath] if maskpath.is_file() else sorted(maskpath.glob("*.nii.gz"))
+    else:
+        masks = []
+
+    # Lazily load all volumes and (optional) masks
+    if masks:
+        itr = zip(volumes, masks)
+        read_mask = True
+    else:
+        itr = zip(volumes, volumes)
+        read_mask = False
+    pbar = tqdm(itr, desc="Reading CTs...", total=n_subjects, ncols=200)
+
+    # Construct the subject list
+    subjects = []
+    single_subject = False
+    for vol_path, mask_path in pbar:
+        if n_subjects == 1:
+            subject = read(vol_path, mask_path, orientation=orientation)
+            single_subject = True
+        if read_mask:
+            subject = Subject(volume=ScalarImage(vol_path), mask=LabelMap(mask_path))
+        else:
+            subject = Subject(volume=ScalarImage(vol_path), mask=None)
+        subjects.append(subject)
 
     # If the volumes can fit in memory, read all data now
     # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
-    if loaded := _subjects_fit_in_memory(subjects):
+    if loaded := _subjects_fit_in_memory(subjects) and not single_subject:
         for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
             subject.load()
 
-    return subjects, loaded
+    return subjects, loaded, single_subject
 
 
 def _subjects_fit_in_memory(subjects):
-    available = virtual_memory().available / (1024**2)  # Available memory in MiB
-    required = sum([_size(subject) for subject in subjects])  # Total memory for all subjects in MiB
+    available = virtual_memory().available / (1024**2)
+    required = sum(
+        [
+            _size(img)
+            for subject in subjects
+            for img in subject.get_images(intensity_only=False)
+        ]
+    )
     return required < available
 
 
@@ -264,12 +328,14 @@ def initialize_modules(
     sdd,
     height,
     delx,
+    orientation,
     reverse_x_axis,
     renderer,
     lr,
     n_total_itrs,
     n_warmup_itrs,
     n_grad_accum_itrs,
+    subject,
 ):
     # Initialize the pose regression model
     model = PoseRegressor(
@@ -281,16 +347,23 @@ def initialize_modules(
         height=height,
     ).cuda()
 
-    # Initialize a DRR renderer with a placeholder subject
+    # If more than one subject is provided, initialize the DRR module with a dummy CT
     drr = DRR(
-        load_example_ct(),
+        subject if subject is not None else load_example_ct(orientation=orientation),
         sdd=sdd,
         height=height,
         delx=delx,
         reverse_x_axis=reverse_x_axis,
         renderer=renderer,
-    ).cuda()
+    )
+    drr.density = None  # Unload the precomputed density map to free up memory
     transforms = XrayTransforms(height)
+
+    # If a single subject was provided, expose their volume and isocenter in the DRR module
+    if subject is not None:
+        drr.register_buffer("volume", subject.volume.data.squeeze())
+        drr.register_buffer("center", torch.tensor(subject.volume.get_center())[None])
+    drr = drr.cuda()
 
     # Initialize the optimizer and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)

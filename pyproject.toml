@@ -15,6 +15,8 @@ dependencies = [
     "pydicom[pixeldata]>=3.0.1",
     "huggingface_hub[cli]>=0.32.0",
     "wandb>=0.21.1",
+    "monai>=1.5.0",
+    "totalsegmentator>=2.11.0",
 ]
 
 [project.scripts]
@@ -26,6 +28,9 @@ Issues = "https://github.com/eigenvivek/xvr/issues"
 
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
+
+[tool.uv.sources]
+diffdrr = { git = "https://github.com/eigenvivek/DiffDRR" }
 
 [build-system]
 requires = ["hatchling"]
