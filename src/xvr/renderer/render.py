@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from diffdrr.data import transform_hu_to_density
 from diffdrr.drr import DRR
@@ -8,8 +10,8 @@ from torchio import Subject
 def render(
     drr: DRR,
     pose: RigidTransform,
-    subject: Subject,
-    contrast: float,
+    subject: Optional[Subject] = None,
+    contrast: float = 1.0,
     centerize: bool = True,
 ):
     """
@@ -18,12 +20,16 @@ def render(
     """
 
     # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
-    volume, mask, affinv, offset = load(
-        subject.volume,
-        subject.mask,
-        dtype=pose.matrix.dtype,
-        device=pose.matrix.device,
-    )
+    if subject is not None:
+        volume, mask, affinv, offset = load(
+            subject.volume,
+            subject.mask,
+            dtype=pose.matrix.dtype,
+            device=pose.matrix.device,
+        )
+    else:
+        volume, mask, affinv = drr.volume, drr.mask, drr.affine_inverse
+        offset = make_translation(drr.center)
     if centerize:
         pose = offset.compose(pose)
 

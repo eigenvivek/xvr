@@ -67,11 +67,11 @@ class Trainer:
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.loaded, self.single_subjet = initialize_subjects(
+        self.subjects, self.loaded, self.single_subject = initialize_subjects(
             volpath, maskpath, orientation
         )
 
-        # Initialize all deep learning modulues
+        # Initialize all deep learning modules
         self.model, self.drr, self.transforms, self.optimizer, self.scheduler = (
             initialize_modules(
                 model_name,
@@ -114,7 +114,7 @@ class Trainer:
             tymax=tymax,
             tzmin=tzmin,
             tzmax=tzmax,
-            batch_size=batch_size
+            batch_size=batch_size,
         )
 
         self.n_total_itrs = n_total_itrs
@@ -150,7 +150,8 @@ class Trainer:
         return log, imgs, masks
 
     def _step_single_subject(self, itr):
-
+        log, imgs, masks = self._run_iteration(itr)
+        return log, imgs, masks
 
     def _step_random_subject(self, itr):
         subject = choice(self.subjects)
@@ -162,7 +163,7 @@ class Trainer:
             log, imgs, masks = self._run_iteration(itr, subject)
         return log, imgs, masks
 
-    def _run_iteration(self, itr, subject):
+    def _run_iteration(self, itr, subject=None):
         # Sample a batch of DRRs
         img, mask, pose, keep, contrast = self._render_samples(subject)
 
@@ -173,12 +174,16 @@ class Trainer:
 
         # Regress the poses and render the predicted DRRs
         pred_pose = self.model(img)
-        pred_img, pred_mask, _ = render(self.drr, pred_pose, subject, contrast, centerize=False)
+        pred_img, pred_mask, _ = render(
+            self.drr, pred_pose, subject, contrast, centerize=False
+        )
         imgs = torch.concat([img[:4], pred_img[:4]])
         masks = torch.concat([mask[:4], pred_mask[:4]])
 
         # Compute the loss
-        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
+        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
+            img, mask, pose, pred_img, pred_mask, pred_pose
+        )
         loss = loss / self.n_grad_accum_itrs
 
         # Optimize the model
@@ -251,7 +256,7 @@ def initialize_subjects(volpath, maskpath, orientation):
     volpath = Path(volpath)
     volumes = [volpath] if volpath.is_file() else sorted(volpath.glob("*.nii.gz"))
     n_subjects = len(volumes)
-    
+
     if maskpath is not None:
         maskpath = Path(maskpath)
         masks = [maskpath] if maskpath.is_file() else sorted(maskpath.glob("*.nii.gz"))
@@ -269,11 +274,11 @@ def initialize_subjects(volpath, maskpath, orientation):
 
     # Construct the subject list
     subjects = []
-    single_subjet = False
+    single_subject = False
     for vol_path, mask_path in pbar:
         if n_subjects == 1:
             subject = read(vol_path, mask_path, orientation=orientation)
-            single_subjet = True
+            single_subject = True
         if read_mask:
             subject = Subject(volume=ScalarImage(vol_path), mask=LabelMap(mask_path))
         else:
@@ -282,11 +287,11 @@ def initialize_subjects(volpath, maskpath, orientation):
 
     # If the volumes can fit in memory, read all data now
     # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
-    if loaded := _subjects_fit_in_memory(subjects) and not single_subjet:
+    if loaded := _subjects_fit_in_memory(subjects) and not single_subject:
         for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
             subject.load()
 
-    return subjects, loaded, single_subjet
+    return subjects, loaded, single_subject
 
 
 def _subjects_fit_in_memory(subjects):
@@ -342,8 +347,15 @@ def initialize_modules(
         delx=delx,
         reverse_x_axis=reverse_x_axis,
         renderer=renderer,
-    ).cuda()
+    )
+    drr.density = None  # Unload the precomputed density map to free up memory
     transforms = XrayTransforms(height)
+
+    # If a single subject was provided, expose their volume and isocenter in the DRR module
+    if subject is not None:
+        drr.register_buffer("volume", subject.volume.data.squeeze())
+        drr.register_buffer("center", torch.tensor(subject.volume.get_center())[None])
+    drr = drr.cuda()
 
     # Initialize the optimizer and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
