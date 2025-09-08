@@ -14,7 +14,7 @@ def render(
 ):
     """
     Render a batch of DRRs from a volume (and optional mask). If a mask is a provided, the rendered
-    DRRs wqill be multi-channel (i.e., one channel for each structure in the volume's labelmap).
+    DRRs will be multi-channel (i.e., one channel for each structure in the volume's labelmap).
     """
 
     # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
