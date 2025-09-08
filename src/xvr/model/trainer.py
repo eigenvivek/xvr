@@ -209,7 +209,7 @@ class Trainer:
         }
         return log, imgs, masks
 
-    def _render_samples(self, subject, threshold=0.8):
+    def _render_samples(self, subject, img_threshold=0.8, mask_threshold=0.05):
         # Sample a batch of random poses
         pose = get_random_pose(**self.pose_distribution).cuda()
 
@@ -217,7 +217,15 @@ class Trainer:
         contrast = self.contrast_distribution.sample().item()
         with torch.no_grad():
             img, mask, pose = render(self.drr, pose, subject, contrast, centerize=True)
-            keep = (img != 0).to(img).flatten(1).mean(1) > threshold
+
+            if mask.shape[1] == 1:
+                # Keep if >80% of the image is non-zero pixels
+                keep = mask.to(img).flatten(1).mean(1) > img_threshold
+            else:
+                # Keep if >5% of the image contains pixels corresponding to masked structures
+                keep = mask[:, 1:].sum(dim=1, keepdim=True)
+                keep = (keep > 0).to(img).flatten(1).mean(1) > mask_threshold
+
             img = self.augmentations(img)
             img = self.transforms(img)
 
