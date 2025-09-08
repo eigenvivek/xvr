@@ -6,7 +6,7 @@ from random import choice
 import matplotlib.pyplot as plt
 import torch
 import wandb
-from diffdrr.data import load_example_ct
+from diffdrr.data import load_example_ct, read
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
 from diffdrr.visualization import plot_drr, plot_mask
@@ -67,7 +67,9 @@ class Trainer:
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.loaded = initialize_subjects(volpath, maskpath)
+        self.subjects, self.loaded, self.single_subjet = initialize_subjects(
+            volpath, maskpath, orientation
+        )
 
         # Initialize all deep learning modulues
         self.model, self.drr, self.transforms, self.optimizer, self.scheduler = (
@@ -80,12 +82,14 @@ class Trainer:
                 sdd,
                 height,
                 delx,
+                orientation,
                 reverse_x_axis,
                 renderer,
                 lr,
                 n_total_itrs,
                 n_warmup_itrs,
                 n_grad_accum_itrs,
+                self.subjects[0] if self.single_subject else None,
             )
         )
 
@@ -110,8 +114,8 @@ class Trainer:
             tymax=tymax,
             tzmin=tzmin,
             tzmax=tzmax,
+            batch_size=batch_size
         )
-        self.batch_size = batch_size
 
         self.n_total_itrs = n_total_itrs
         self.n_grad_accum_itrs = n_grad_accum_itrs
@@ -139,6 +143,16 @@ class Trainer:
                 self._log_wandb(itr, log, imgs, masks)
 
     def step(self, itr):
+        if self.single_subject:
+            log, imgs, masks = self._step_single_subject(itr)
+        else:
+            log, imgs, masks = self._step_random_subject(itr)
+        return log, imgs, masks
+
+    def _step_single_subject(self, itr):
+
+
+    def _step_random_subject(self, itr):
         subject = choice(self.subjects)
         if not self.loaded:
             subject.load()
@@ -147,22 +161,6 @@ class Trainer:
         else:
             log, imgs, masks = self._run_iteration(itr, subject)
         return log, imgs, masks
-
-    def _render_samples(self, subject, threshold=0.8):
-        # Sample a batch of random poses
-        pose = get_random_pose(
-            **self.pose_distribution, batch_size=self.batch_size
-        ).cuda()
-
-        # Render random DRRs and apply augmentations/transforms
-        contrast = self.contrast_distribution.sample().item()
-        with torch.no_grad():
-            img, mask, pose = render(self.drr, pose, subject, contrast, centerize=True)
-            keep = (img != 0).to(img).flatten(1).mean(1) > threshold
-            img = self.augmentations(img)
-            img = self.transforms(img)
-
-        return img, mask, pose, keep, contrast
 
     def _run_iteration(self, itr, subject):
         # Sample a batch of DRRs
@@ -206,6 +204,20 @@ class Trainer:
         }
         return log, imgs, masks
 
+    def _render_samples(self, subject, threshold=0.8):
+        # Sample a batch of random poses
+        pose = get_random_pose(**self.pose_distribution).cuda()
+
+        # Render random DRRs and apply augmentations/transforms
+        contrast = self.contrast_distribution.sample().item()
+        with torch.no_grad():
+            img, mask, pose = render(self.drr, pose, subject, contrast, centerize=True)
+            keep = (img != 0).to(img).flatten(1).mean(1) > threshold
+            img = self.augmentations(img)
+            img = self.transforms(img)
+
+        return img, mask, pose, keep, contrast
+
     def _log_wandb(self, itr, log, imgs, masks):
         if itr % 250 == 0:
             fig, axs = plt.subplots(ncols=4, nrows=2)
@@ -233,11 +245,12 @@ class Trainer:
         self.model_number += 1
 
 
-def initialize_subjects(volpath, maskpath):
+def initialize_subjects(volpath, maskpath, orientation):
     # Get all volumes and (optional) masks
     subjects = []
     volpath = Path(volpath)
     volumes = [volpath] if volpath.is_file() else sorted(volpath.glob("*.nii.gz"))
+    n_subjects = len(volumes)
     
     if maskpath is not None:
         maskpath = Path(maskpath)
@@ -247,31 +260,33 @@ def initialize_subjects(volpath, maskpath):
 
     # Lazily load all volumes and (optional) masks
     if masks:
-        pbar = tqdm(
-            zip(volumes, masks), desc="Reading CTs...", total=len(volumes), ncols=200
-        )
+        itr = zip(volumes, masks)
         read_mask = True
     else:
-        pbar = tqdm(
-            zip(volumes, volumes), desc="Reading CTs...", total=len(volumes), ncols=200
-        )
+        itr = zip(volumes, volumes)
         read_mask = False
+    pbar = tqdm(itr, desc="Reading CTs...", total=n_subjects, ncols=200)
 
+    # Construct the subject list
     subjects = []
+    single_subjet = False
     for vol_path, mask_path in pbar:
+        if n_subjects == 1:
+            subject = read(vol_path, mask_path, orientation=orientation)
+            single_subjet = True
         if read_mask:
             subject = Subject(volume=ScalarImage(vol_path), mask=LabelMap(mask_path))
         else:
             subject = Subject(volume=ScalarImage(vol_path), mask=None)
         subjects.append(subject)
 
-    # # If the volumes can fit in memory, read all data now
-    # # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
-    if loaded := _subjects_fit_in_memory(subjects):
+    # If the volumes can fit in memory, read all data now
+    # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
+    if loaded := _subjects_fit_in_memory(subjects) and not single_subjet:
         for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
             subject.load()
 
-    return subjects, loaded
+    return subjects, loaded, single_subjet
 
 
 def _subjects_fit_in_memory(subjects):
@@ -300,12 +315,14 @@ def initialize_modules(
     sdd,
     height,
     delx,
+    orientation,
     reverse_x_axis,
     renderer,
     lr,
     n_total_itrs,
     n_warmup_itrs,
     n_grad_accum_itrs,
+    subject,
 ):
     # Initialize the pose regression model
     model = PoseRegressor(
@@ -317,9 +334,9 @@ def initialize_modules(
         height=height,
     ).cuda()
 
-    # Initialize a DRR renderer with a placeholder subject
+    # If more than one subject is provided, initialize the DRR module with a dummy CT
     drr = DRR(
-        load_example_ct(),
+        subject if subject is not None else load_example_ct(orientation=orientation),
         sdd=sdd,
         height=height,
         delx=delx,
