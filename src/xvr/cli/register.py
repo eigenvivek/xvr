@@ -406,7 +406,7 @@ def dicom(
     verbose,
 ):
     """
-    Initialize from paraneters in the DICOM header.
+    Initialize from pose parameters in the DICOM header.
     """
     from ..registrar import RegistrarDicom
 
