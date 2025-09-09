@@ -156,7 +156,7 @@ import click
 )
 @click.option(
     "--n_warmup_itrs",
-    default=int(5e3),
+    default=int(1e3),
     type=int,
     help="Number of iterations for warming up the learning rate",
 )

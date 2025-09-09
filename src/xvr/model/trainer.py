@@ -58,7 +58,7 @@ class Trainer:
         weight_geo=1e-2,
         batch_size=96,
         n_total_itrs=100_000,
-        n_warmup_itrs=5_000,
+        n_warmup_itrs=1_000,
         n_grad_accum_itrs=4,
         n_save_every_itrs=2_500,
     ):
