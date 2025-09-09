@@ -187,14 +187,14 @@ class Trainer:
         loss = loss / self.n_grad_accum_itrs
 
         # Optimize the model
-        self.optimizer.zero_grad()
         loss.mean().backward()
-        adaptive_clip_grad_(self.model.parameters())
         if ((itr + 1) % self.n_grad_accum_itrs == 0) or (
             (itr + 1) == self.n_total_itrs
         ):
+            adaptive_clip_grad_(self.model.parameters())
             self.optimizer.step()
             self.scheduler.step()
+            self.optimizer.zero_grad()
 
         # Return losses and imgs
         log = {
