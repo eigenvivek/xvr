@@ -285,8 +285,10 @@ def initialize_subjects(volpath, maskpath, orientation):
     single_subject = False
     for vol_path, mask_path in pbar:
         if n_subjects == 1:
-            subject = read(vol_path, mask_path, orientation=orientation)
+            subject = read(vol_path, mask_path, orientation=orientation, center_volume=False)
             single_subject = True
+            subjects.append(subject)
+            continue
         if read_mask:
             subject = Subject(volume=ScalarImage(vol_path), mask=LabelMap(mask_path))
         else:
@@ -363,7 +365,7 @@ def initialize_modules(
     if subject is not None:
         drr.register_buffer("volume", subject.volume.data.squeeze())
         drr.register_buffer("center", torch.tensor(subject.volume.get_center())[None])
-    drr = drr.cuda()
+    drr = drr.cuda().to(torch.float32)
 
     # Initialize the optimizer and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
