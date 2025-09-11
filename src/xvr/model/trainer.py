@@ -57,6 +57,7 @@ class Trainer:
         p_augmentation=0.5,
         lr=5e-3,
         weight_geo=1e-2,
+        weight_dice=1.0,
         batch_size=96,
         n_total_itrs=100_000,
         n_warmup_itrs=1_000,
@@ -97,7 +98,7 @@ class Trainer:
         )
 
         # Initialize the loss function
-        self.lossfn = PoseRegressionLoss(sdd, weight_geo)
+        self.lossfn = PoseRegressionLoss(sdd, weight_geo, weight_dice)
 
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)

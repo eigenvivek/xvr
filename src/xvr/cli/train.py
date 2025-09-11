@@ -143,6 +143,12 @@ import click
     help="Weight on geodesic loss term",
 )
 @click.option(
+    "--weight_dice",
+    default=1.0,
+    type=float,
+    help="Weight on Dice loss term",
+)
+@click.option(
     "--batch_size",
     default=116,
     type=int,
@@ -208,6 +214,7 @@ def train(
     p_augmentation,
     lr,
     weight_geo,
+    weight_dice,
     batch_size,
     n_total_itrs,
     n_warmup_itrs,
@@ -268,6 +275,7 @@ def train(
         p_augmentation=p_augmentation,
         lr=lr,
         weight_geo=weight_geo,
+        weight_dice=weight_dice,
         batch_size=batch_size,
         n_total_itrs=n_total_itrs,
         n_warmup_itrs=n_warmup_itrs,
