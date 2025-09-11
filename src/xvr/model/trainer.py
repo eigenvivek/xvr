@@ -61,6 +61,7 @@ class Trainer:
         n_warmup_itrs=1_000,
         n_grad_accum_itrs=4,
         n_save_every_itrs=2_500,
+        ckptpath=None,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
@@ -90,6 +91,7 @@ class Trainer:
                 n_warmup_itrs,
                 n_grad_accum_itrs,
                 self.subjects[0] if self.single_subject else None,
+                torch.load(ckptpath, weights_only=False) if ckptpath is not None else None,
             )
         )
 
@@ -338,6 +340,7 @@ def initialize_modules(
     n_warmup_itrs,
     n_grad_accum_itrs,
     subject,
+    ckpt,
 ):
     # Initialize the pose regression model
     model = PoseRegressor(
@@ -372,5 +375,12 @@ def initialize_modules(
     warmup_itrs = n_warmup_itrs / n_grad_accum_itrs
     total_itrs = n_total_itrs / n_grad_accum_itrs
     scheduler = WarmupCosineSchedule(optimizer, warmup_itrs, total_itrs)
+
+    # If a checkpoint is passed, reload the states for the model, optimizer, and scheduler
+    if ckpt is not None:
+        model.load_state_dict(ckpt["model_state_dict"])
+        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+    model.train()
 
     return model, drr, transforms, optimizer, scheduler
