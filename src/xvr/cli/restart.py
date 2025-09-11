@@ -34,13 +34,14 @@ def restart(
     import torch
     import wandb
 
+    from ..model import Trainer
+
     # Load the config from the previous model checkpoint
     config = torch.load(ckptpath, weights_only=False)["config"]
     config["ckptpath"] = ckptpath
 
     # Rescale the detector plane
     config["batch_size"] = int(config["batch_size"] / (rescale**2))
-    config["rescale"] = rescale
     config["height"] = int(config["height"] * rescale)
     config["delx"] /= rescale
 
@@ -52,5 +53,5 @@ def restart(
     run = wandb.init(project=project, name=name, config=config)
     
     # Train the model
-    trainer = Trainer(**config, ckptpath=ckptpath)
+    trainer = Trainer(**config)
     trainer.train(run)
