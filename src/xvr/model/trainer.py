@@ -354,7 +354,6 @@ def initialize_modules(
         renderer=renderer,
     )
     drr.density = None  # Unload the precomputed density map to free up memory
-    print(hasattr(drr, "mask"))
     if not hasattr(drr, "mask"):
         drr.mask = None
     transforms = XrayTransforms(height)
