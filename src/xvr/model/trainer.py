@@ -58,7 +58,7 @@ class Trainer:
         weight_geo=1e-2,
         batch_size=96,
         n_total_itrs=100_000,
-        n_warmup_itrs=5_000,
+        n_warmup_itrs=1_000,
         n_grad_accum_itrs=4,
         n_save_every_itrs=2_500,
     ):
@@ -187,14 +187,14 @@ class Trainer:
         loss = loss / self.n_grad_accum_itrs
 
         # Optimize the model
-        self.optimizer.zero_grad()
         loss.mean().backward()
-        adaptive_clip_grad_(self.model.parameters())
         if ((itr + 1) % self.n_grad_accum_itrs == 0) or (
             (itr + 1) == self.n_total_itrs
         ):
+            adaptive_clip_grad_(self.model.parameters())
             self.optimizer.step()
             self.scheduler.step()
+            self.optimizer.zero_grad()
 
         # Return losses and imgs
         log = {
@@ -285,8 +285,10 @@ def initialize_subjects(volpath, maskpath, orientation):
     single_subject = False
     for vol_path, mask_path in pbar:
         if n_subjects == 1:
-            subject = read(vol_path, mask_path, orientation=orientation)
+            subject = read(vol_path, mask_path, orientation=orientation, center_volume=False)
             single_subject = True
+            subjects.append(subject)
+            continue
         if read_mask:
             subject = Subject(volume=ScalarImage(vol_path), mask=LabelMap(mask_path))
         else:
@@ -363,7 +365,7 @@ def initialize_modules(
     if subject is not None:
         drr.register_buffer("volume", subject.volume.data.squeeze())
         drr.register_buffer("center", torch.tensor(subject.volume.get_center())[None])
-    drr = drr.cuda()
+    drr = drr.cuda().to(torch.float32)
 
     # Initialize the optimizer and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
