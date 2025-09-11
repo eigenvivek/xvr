@@ -1,4 +1,5 @@
 from datetime import datetime
+from itertools import zip_longest
 from math import prod
 from pathlib import Path
 from random import choice
@@ -56,6 +57,7 @@ class Trainer:
         p_augmentation=0.5,
         lr=5e-3,
         weight_geo=1e-2,
+        weight_dice=1.0,
         batch_size=96,
         n_total_itrs=100_000,
         n_warmup_itrs=1_000,
@@ -90,13 +92,13 @@ class Trainer:
                 n_total_itrs,
                 n_warmup_itrs,
                 n_grad_accum_itrs,
-                self.subjects[0] if self.single_subject else None,
+                self.subjects if self.single_subject else None,
                 torch.load(ckptpath, weights_only=False) if ckptpath is not None else None,
             )
         )
 
         # Initialize the loss function
-        self.lossfn = PoseRegressionLoss(sdd, weight_geo)
+        self.lossfn = PoseRegressionLoss(sdd, weight_geo, weight_dice)
 
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
@@ -138,6 +140,7 @@ class Trainer:
                 log, imgs, masks = self.step(itr)
             except RuntimeError as e:
                 print(e)
+                continue
 
             # Log metrics (and optionally save to wandb)
             pbar.set_postfix(log)
@@ -261,45 +264,34 @@ class Trainer:
 
 
 def initialize_subjects(volpath, maskpath, orientation):
-    # Get all volumes and (optional) masks
-    subjects = []
+    # If only a single subject is passed, load it and return
     volpath = Path(volpath)
-    volumes = [volpath] if volpath.is_file() else sorted(volpath.glob("*.nii.gz"))
-    n_subjects = len(volumes)
-
-    if maskpath is not None:
-        maskpath = Path(maskpath)
-        masks = [maskpath] if maskpath.is_file() else sorted(maskpath.glob("*.nii.gz"))
+    if volpath.is_file():
+        subject = read(volpath, maskpath, orientation=orientation, center_volume=False)
+        single_subject = True
+        return subject, (loaded := True), single_subject
     else:
-        masks = []
+        single_subject = False
 
-    # Lazily load all volumes and (optional) masks
-    if masks:
-        itr = zip(volumes, masks)
-        read_mask = True
-    else:
-        itr = zip(volumes, volumes)
-        read_mask = False
-    pbar = tqdm(itr, desc="Reading CTs...", total=n_subjects, ncols=200)
+    # Else, construct a list of all volumes and masks
+    # We assume volumes and masks have the same name, but are in different folders
+    volumes = sorted(volpath.glob("*.nii.gz"))
+    masks = sorted(Path(maskpath).glob("*.nii.gz")) if maskpath is not None else []
+    itr = zip_longest(volumes, masks)
+    pbar = tqdm(itr, desc="Reading CTs...", total=len(volumes), ncols=200)
 
-    # Construct the subject list
+    # Lazily load a list of all subjects in the dataset
     subjects = []
-    single_subject = False
-    for vol_path, mask_path in pbar:
-        if n_subjects == 1:
-            subject = read(vol_path, mask_path, orientation=orientation, center_volume=False)
-            single_subject = True
-            subjects.append(subject)
-            continue
-        if read_mask:
-            subject = Subject(volume=ScalarImage(vol_path), mask=LabelMap(mask_path))
-        else:
-            subject = Subject(volume=ScalarImage(vol_path), mask=None)
+    for volpath, maskpath in pbar:
+        subject = Subject(
+            volume=ScalarImage(volpath),
+            mask=LabelMap(maskpath) if maskpath is not None else None,
+        )
         subjects.append(subject)
 
     # If the volumes can fit in memory, read all data now
     # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
-    if loaded := _subjects_fit_in_memory(subjects) and not single_subject:
+    if loaded := _subjects_fit_in_memory(subjects):
         for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
             subject.load()
 
@@ -362,6 +354,8 @@ def initialize_modules(
         renderer=renderer,
     )
     drr.density = None  # Unload the precomputed density map to free up memory
+    if not hasattr(drr, "mask"):
+        drr.mask = None
     transforms = XrayTransforms(height)
 
     # If a single subject was provided, expose their volume and isocenter in the DRR module
