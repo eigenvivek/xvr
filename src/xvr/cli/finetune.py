@@ -233,7 +233,6 @@ def initialize(config, model_state_dict, subject):
         renderer=config["renderer"],
     ).cuda()
     transforms = XrayTransforms(drr.detector.height)
-    print(drr.detector.height)
 
     # Set up the optimizer and learning rate scheduler
     optimizer = torch.optim.Adam(
