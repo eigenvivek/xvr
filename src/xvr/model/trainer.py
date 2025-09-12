@@ -65,29 +65,22 @@ class Trainer:
         n_save_every_itrs=2_500,
         ckptpath=None,
         reuse_optimizer=False,
+        preload_volumes=False,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.loaded, self.single_subject = initialize_subjects(
-            volpath, maskpath, orientation
+        self.preload_volumes = preload_volumes
+        self.subjects, self.single_subject = _initialize_subjects(
+            volpath, maskpath, orientation, self.preload_volumes
         )
 
         # Initialize all deep learning modules
-        if ckptpath is not None:
-            ckpt = torch.load(ckptpath, weights_only=False)
-            if reuse_optimizer:
-                self.start_itr = ckpt["itr"]
-                self.model_number = ckpt["model_number"]
-        else:
-            ckpt = None
-            self.start_itr = 0
-            self.model_number = 0
-
+        ckpt, self.start_itr, self.model_number = _load_checkpoint(ckpt, reuse_optimizer)
         self.model, self.drr, self.transforms, self.optimizer, self.scheduler = (
-            initialize_modules(
+            _initialize_modules(
                 model_name,
                 pretrained,
                 parameterization,
@@ -171,7 +164,7 @@ class Trainer:
 
     def _step_random_subject(self, itr):
         subject = choice(self.subjects)
-        if not self.loaded:
+        if not self.preload_volumes:
             subject.load()
             log, imgs, masks = self._run_iteration(itr, subject)
             subject.unload()
@@ -275,7 +268,7 @@ class Trainer:
         self.model_number += 1
 
 
-def initialize_subjects(volpath, maskpath, orientation):
+def _initialize_subjects(volpath, maskpath, orientation, preload_volumes):
     # If only a single subject is passed, load it and return
     volpath = Path(volpath)
     if volpath.is_file():
@@ -301,34 +294,26 @@ def initialize_subjects(volpath, maskpath, orientation):
         )
         subjects.append(subject)
 
-    # If the volumes can fit in memory, read all data now
-    # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
-    if loaded := _subjects_fit_in_memory(subjects):
+    # Optionally, load all volumes in memory
+    if preload_volumes:
         for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
             subject.load()
 
-    return subjects, loaded, single_subject
+    return subjects, single_subject
 
 
-def _subjects_fit_in_memory(subjects):
-    available = virtual_memory().available / (1024**2)
+def _load_checkpoint(ckptpath, reuse_optimizer):
+    if ckptpath is not None:
+        ckpt = torch.load(ckptpath, weights_only=False)
+        if reuse_optimizer:
+            return ckpt, ckpt["itr"], ckpt["model_number"]
+        else:
+            return ckpt, 0, 0
 
-    required = 0.0
-    for subject in tqdm(subjects, desc="Compute total size of dataset...", ncols=200):
-        for img in subject.get_images(intensity_only=False):
-            required += _size(img)
-            if required > available:
-                return False
-
-    return True
+    return None, 0, 0
 
 
-def _size(subject: ScalarImage, element_size=4):
-    """Size of a volume in MiB (assumes float32)."""
-    return element_size * prod(subject.spatial_shape) / (1024**2)
-
-
-def initialize_modules(
+def _initialize_modules(
     model_name,
     pretrained,
     parameterization,

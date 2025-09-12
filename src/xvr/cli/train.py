@@ -189,7 +189,13 @@ import click
     "--reuse_optimizer",
     default=False,
     is_flag=True,
-    help="Initialize the previous optimizer's state",
+    help="If ckptpath passed, initialize the previous optimizer's state",
+)
+@click.option(
+    "--preload_volumes",
+    default=False,
+    is_flag=True,
+    help="If directory of CTs are passed, load all into memory (speeds up training)",
 )
 @click.option(
     "--name",
@@ -235,6 +241,7 @@ def train(
     n_grad_accum_itrs,
     n_save_every_itrs,
     reuse_optimizer,
+    preload_volumes,
     name,
     project,
 ):
@@ -298,6 +305,7 @@ def train(
         n_grad_accum_itrs=n_grad_accum_itrs,
         n_save_every_itrs=n_save_every_itrs,
         reuse_optimizer=reuse_optimizer,
+        preload_volumes=preload_volumes,
     )
 
     # Set up logging
