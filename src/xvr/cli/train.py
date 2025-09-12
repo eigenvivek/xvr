@@ -186,6 +186,12 @@ import click
     help="Number of iterations before saving a new model checkpoint",
 )
 @click.option(
+    "--reuse_optimizer",
+    default=False,
+    is_flag=True,
+    help="Initialize the previous optimizer's state",
+)
+@click.option(
     "--name",
     default=None,
     type=str,
@@ -228,6 +234,7 @@ def train(
     n_warmup_itrs,
     n_grad_accum_itrs,
     n_save_every_itrs,
+    reuse_optimizer,
     name,
     project,
 ):
@@ -290,6 +297,7 @@ def train(
         n_warmup_itrs=n_warmup_itrs,
         n_grad_accum_itrs=n_grad_accum_itrs,
         n_save_every_itrs=n_save_every_itrs,
+        reuse_optimizer=reuse_optimizer,
     )
 
     # Set up logging
