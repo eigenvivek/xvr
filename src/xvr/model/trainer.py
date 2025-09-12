@@ -76,8 +76,7 @@ class Trainer:
         )
 
         # Initialize all deep learning modules
-        ckpt, self.start_itr, self.model_number = _load_checkpoint(ckpt, reuse_optimizer)
-        self.model, self.drr, self.transforms, self.optimizer, self.scheduler = (
+        self.model, self.drr, self.transforms, self.optimizer, self.scheduler, self.start_itr, self.model_number = (
             _initialize_modules(
                 model_name,
                 pretrained,
@@ -95,7 +94,7 @@ class Trainer:
                 n_warmup_itrs,
                 n_grad_accum_itrs,
                 self.subjects if self.single_subject else None,
-                ckpt,
+                ckptpath,
                 reuse_optimizer,
             )
         )
@@ -272,7 +271,7 @@ def _initialize_subjects(volpath, maskpath, orientation, preload_volumes):
     if volpath.is_file():
         subject = read(volpath, maskpath, orientation=orientation, center_volume=False)
         single_subject = True
-        return subject, (loaded := True), single_subject
+        return subject, single_subject
     else:
         single_subject = False
 
@@ -307,7 +306,6 @@ def _load_checkpoint(ckptpath, reuse_optimizer):
             return ckpt, ckpt["itr"], ckpt["model_number"]
         else:
             return ckpt, 0, 0
-
     return None, 0, 0
 
 
@@ -328,7 +326,7 @@ def _initialize_modules(
     n_warmup_itrs,
     n_grad_accum_itrs,
     subject,
-    ckpt,
+    ckptpath,
     reuse_optimizer,
 ):
     # Initialize the pose regression model
@@ -368,6 +366,7 @@ def _initialize_modules(
     scheduler = WarmupCosineSchedule(optimizer, warmup_itrs, total_itrs)
 
     # If a checkpoint is passed, reload the states for the model, optimizer, and scheduler
+    ckpt, start_itr, model_number = _load_checkpoint(ckptpath, reuse_optimizer)
     if ckpt is not None:
         print("Loading previous model weights...")
         model.load_state_dict(ckpt["model_state_dict"])
@@ -377,4 +376,4 @@ def _initialize_modules(
             scheduler.load_state_dict(ckpt["scheduler_state_dict"])
     model.train()
 
-    return model, drr, transforms, optimizer, scheduler
+    return model, drr, transforms, optimizer, scheduler, start_itr, model_number
