@@ -93,7 +93,9 @@ class Trainer:
                 n_warmup_itrs,
                 n_grad_accum_itrs,
                 self.subjects if self.single_subject else None,
-                torch.load(ckptpath, weights_only=False) if ckptpath is not None else None,
+                torch.load(ckptpath, weights_only=False)
+                if ckptpath is not None
+                else None,
             )
         )
 

@@ -7,8 +7,9 @@ from torchvision.transforms.functional import center_crop, pad
 from ..utils import Standardize
 
 
-def XrayAugmentations(p=0.5, max_crop=10, same_on_batch=False, transformation_matrix_mode="skip"):
-
+def XrayAugmentations(
+    p=0.5, max_crop=10, same_on_batch=False, transformation_matrix_mode="skip"
+):
     return K.AugmentationSequential(
         Standardize(),
         K.RandomBoxBlur(p=p),
@@ -25,6 +26,7 @@ def XrayAugmentations(p=0.5, max_crop=10, same_on_batch=False, transformation_ma
 
 class RandomCenterCrop(torch.nn.Module):
     """Simulate collimation."""
+
     def __init__(self, p, maxcrop):
         super().__init__()
         self.p = p

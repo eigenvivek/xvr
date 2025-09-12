@@ -51,7 +51,7 @@ def restart(
     name = ckptpath.split("/")[-1].split("_")[0] + addendum
     wandb.login(key=os.environ["WANDB_API_KEY"])
     run = wandb.init(project=project, name=name, config=config)
-    
+
     # Train the model
     trainer = Trainer(**config)
     trainer.train(run)
