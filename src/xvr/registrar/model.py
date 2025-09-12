@@ -76,16 +76,22 @@ class RegistrarModel(_RegistrarBase):
             },
         )
 
-    def initialize_pose(self, i2d):
+    def initialize_pose(self, i2d, return_resampled=False):
         # Preprocess X-ray image and get imaging system intrinsics
         gt, sdd, delx, dely, x0, y0, pf_to_af = read_xray(
             i2d, self.crop, self.subtract_background, self.linearize, self.reducefn
         )
 
         # Predict the pose of the X-ray image
-        init_pose = predict_pose(self.model, self.config, gt, sdd, delx, dely, x0, y0)
+        init_pose, resampled_gt = predict_pose(
+            self.model, self.config, gt, sdd, delx, dely, x0, y0
+        )
 
         # Optionally, correct the pose by warping the CT volume to the template
         init_pose = _correct_pose(init_pose, self.warp, self.volume, self.invert)
+
+        # For debugging, let the user return the resampled ground truth for comparison
+        if return_resampled:
+            return gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose, resampled_gt
 
         return gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose
