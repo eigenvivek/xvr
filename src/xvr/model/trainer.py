@@ -46,8 +46,8 @@ class Trainer:
         sdd,
         height,
         delx,
-        orientation="PA",
-        reverse_x_axis=False,
+        orientation,
+        reverse_x_axis,
         renderer="trilinear",
         parameterization="se3_log_map",
         convention=None,
@@ -300,14 +300,15 @@ def initialize_subjects(volpath, maskpath, orientation):
 
 def _subjects_fit_in_memory(subjects):
     available = virtual_memory().available / (1024**2)
-    required = sum(
-        [
-            _size(img)
-            for subject in subjects
-            for img in subject.get_images(intensity_only=False)
-        ]
-    )
-    return required < available
+
+    required = 0.0
+    for subject in tqdm(subjects, desc="Compute total size of dataset...", ncols=200):
+        for img in subject.get_images(intensity_only=False):
+            required += _size(img)
+            if required > available:
+                return False
+
+    return True
 
 
 def _size(subject: ScalarImage, element_size=4):
@@ -372,6 +373,7 @@ def initialize_modules(
 
     # If a checkpoint is passed, reload the states for the model, optimizer, and scheduler
     if ckpt is not None:
+        print("Loading checkpoint...")
         model.load_state_dict(ckpt["model_state_dict"])
         optimizer.load_state_dict(ckpt["optimizer_state_dict"])
         scheduler.load_state_dict(ckpt["scheduler_state_dict"])
