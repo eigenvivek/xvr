@@ -16,6 +16,13 @@ import click
     type=click.Path(exists=True),
 )
 @click.option(
+    "-c",
+    "--ckptpath",
+    required=False,
+    type=click.Path(exists=True),
+    help="Checkpoint of a pretrained pose regressor",
+)
+@click.option(
     "-o",
     "--outpath",
     required=True,
@@ -193,6 +200,7 @@ import click
 def train(
     volpath,
     maskpath,
+    ckptpath,
     outpath,
     r1,
     r2,
@@ -248,6 +256,7 @@ def train(
     config = dict(
         volpath=volpath,
         maskpath=maskpath,
+        ckptpath=ckptpath,
         outpath=outpath,
         alphamin=alphamin,
         alphamax=alphamax,
