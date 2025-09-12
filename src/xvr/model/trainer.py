@@ -1,6 +1,5 @@
 from datetime import datetime
 from itertools import zip_longest
-from math import prod
 from pathlib import Path
 from random import choice
 
@@ -11,7 +10,6 @@ from diffdrr.data import load_example_ct, read
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
 from diffdrr.visualization import plot_drr, plot_mask
-from psutil import virtual_memory
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from torchio import LabelMap, ScalarImage, Subject
 from tqdm import tqdm
