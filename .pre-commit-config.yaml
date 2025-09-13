@@ -8,6 +8,7 @@ repos:
     rev: v1.30.0
     hooks:
       - id: typos
+        args: ["--config", ".typos.toml"]
 
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.6.8
