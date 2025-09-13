@@ -71,7 +71,7 @@ class Trainer:
 
         # Initialize a lazy list of all 3D volumes
         self.preload_volumes = preload_volumes
-        self.subjects, self.single_subject = _initialize_subjects(
+        self.subjects, self.single_subject = initialize_subjects(
             volpath, maskpath, orientation, self.preload_volumes
         )
 
@@ -84,7 +84,7 @@ class Trainer:
             self.scheduler,
             self.start_itr,
             self.model_number,
-        ) = _initialize_modules(
+        ) = initialize_modules(
             model_name,
             pretrained,
             parameterization,
@@ -275,7 +275,7 @@ class Trainer:
         self.model_number += 1
 
 
-def _initialize_subjects(volpath, maskpath, orientation, preload_volumes):
+def initialize_subjects(volpath, maskpath, orientation, preload_volumes):
     # If only a single subject is passed, load it and return
     volpath = Path(volpath)
     if volpath.is_file():
@@ -309,17 +309,7 @@ def _initialize_subjects(volpath, maskpath, orientation, preload_volumes):
     return subjects, single_subject
 
 
-def _load_checkpoint(ckptpath, reuse_optimizer):
-    if ckptpath is not None:
-        ckpt = torch.load(ckptpath, weights_only=False)
-        if reuse_optimizer:
-            return ckpt, ckpt["itr"], ckpt["model_number"]
-        else:
-            return ckpt, 0, 0
-    return None, 0, 0
-
-
-def _initialize_modules(
+def initialize_modules(
     model_name,
     pretrained,
     parameterization,
@@ -387,3 +377,13 @@ def _initialize_modules(
     model.train()
 
     return model, drr, transforms, optimizer, scheduler, start_itr, model_number
+
+
+def _load_checkpoint(ckptpath, reuse_optimizer):
+    if ckptpath is not None:
+        ckpt = torch.load(ckptpath, weights_only=False)
+        if reuse_optimizer:
+            return ckpt, ckpt["itr"], ckpt["model_number"]
+        else:
+            return ckpt, 0, 0
+    return None, 0, 0
