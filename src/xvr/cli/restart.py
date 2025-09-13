@@ -16,6 +16,12 @@ import click
     help="Rescale the virtual detector plane",
 )
 @click.option(
+    "--name",
+    default=None,
+    type=str,
+    help="WandB run name",
+)
+@click.option(
     "--project",
     type=str,
     default=None,
@@ -24,6 +30,7 @@ import click
 def restart(
     ckptpath,
     rescale,
+    name,
     project,
 ):
     """
@@ -39,6 +46,7 @@ def restart(
     # Load the config from the previous model checkpoint
     config = torch.load(ckptpath, weights_only=False)["config"]
     config["ckptpath"] = ckptpath
+    config["reuse_optimizer"] = True
 
     # Rescale the detector plane
     config["batch_size"] = int(config["batch_size"] / (rescale**2))
@@ -46,12 +54,11 @@ def restart(
     config["delx"] /= rescale
 
     # Set up logging
-    addendum = f"-rescale{rescale}" if rescale != 1 else ""
     project = config["project"] if project is None else project
-    name = ckptpath.split("/")[-1].split("_")[0] + addendum
+    name += f"-rescale{rescale}" if rescale != 1 else ""
     wandb.login(key=os.environ["WANDB_API_KEY"])
     run = wandb.init(project=project, name=name, config=config)
-    
+
     # Train the model
     trainer = Trainer(**config)
     trainer.train(run)

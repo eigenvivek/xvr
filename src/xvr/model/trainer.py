@@ -1,6 +1,5 @@
 from datetime import datetime
 from itertools import zip_longest
-from math import prod
 from pathlib import Path
 from random import choice
 
@@ -11,7 +10,6 @@ from diffdrr.data import load_example_ct, read
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
 from diffdrr.visualization import plot_drr, plot_mask
-from psutil import virtual_memory
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from torchio import LabelMap, ScalarImage, Subject
 from tqdm import tqdm
@@ -46,55 +44,65 @@ class Trainer:
         sdd,
         height,
         delx,
-        orientation="PA",
-        reverse_x_axis=False,
+        orientation,
+        reverse_x_axis,
         renderer="trilinear",
         parameterization="se3_log_map",
         convention=None,
         model_name="resnet18",
         pretrained=False,
-        norm_layer="groupnorm",
+        norm_layer="batchnorm",
         p_augmentation=0.5,
         lr=5e-3,
         weight_geo=1e-2,
-        weight_dice=1.0,
+        weight_dice=0.25,
         batch_size=96,
         n_total_itrs=100_000,
         n_warmup_itrs=1_000,
         n_grad_accum_itrs=4,
         n_save_every_itrs=2_500,
         ckptpath=None,
+        reuse_optimizer=False,
+        preload_volumes=False,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.loaded, self.single_subject = initialize_subjects(
-            volpath, maskpath, orientation
+        self.preload_volumes = preload_volumes
+        self.subjects, self.single_subject = initialize_subjects(
+            volpath, maskpath, orientation, self.preload_volumes
         )
 
         # Initialize all deep learning modules
-        self.model, self.drr, self.transforms, self.optimizer, self.scheduler = (
-            initialize_modules(
-                model_name,
-                pretrained,
-                parameterization,
-                convention,
-                norm_layer,
-                sdd,
-                height,
-                delx,
-                orientation,
-                reverse_x_axis,
-                renderer,
-                lr,
-                n_total_itrs,
-                n_warmup_itrs,
-                n_grad_accum_itrs,
-                self.subjects if self.single_subject else None,
-                torch.load(ckptpath, weights_only=False) if ckptpath is not None else None,
-            )
+        (
+            self.model,
+            self.drr,
+            self.transforms,
+            self.optimizer,
+            self.scheduler,
+            self.start_itr,
+            self.model_number,
+        ) = initialize_modules(
+            model_name,
+            pretrained,
+            parameterization,
+            convention,
+            norm_layer,
+            sdd,
+            height,
+            delx,
+            orientation,
+            reverse_x_axis,
+            renderer,
+            lr,
+            n_total_itrs,
+            n_warmup_itrs,
+            n_grad_accum_itrs,
+            self.subjects if self.single_subject else None,
+            ckptpath,
+            reuse_optimizer,
         )
 
         # Initialize the loss function
@@ -126,10 +134,13 @@ class Trainer:
         self.n_save_every_itrs = n_save_every_itrs
 
         self.outpath = outpath
-        self.model_number = 0
 
     def train(self, run=None):
-        pbar = tqdm(range(self.n_total_itrs), desc="Training model...", ncols=200)
+        pbar = tqdm(
+            range(self.start_itr, self.n_total_itrs),
+            desc="Training model...",
+            ncols=200,
+        )
         for itr in pbar:
             # Checkpoint the model
             if itr % self.n_save_every_itrs == 0:
@@ -160,7 +171,7 @@ class Trainer:
 
     def _step_random_subject(self, itr):
         subject = choice(self.subjects)
-        if not self.loaded:
+        if not self.preload_volumes:
             subject.load()
             log, imgs, masks = self._run_iteration(itr, subject)
             subject.unload()
@@ -254,6 +265,7 @@ class Trainer:
                 "optimizer_state_dict": self.optimizer.state_dict(),
                 "scheduler_state_dict": self.scheduler.state_dict(),
                 "itr": itr,
+                "model_number": self.model_number,
                 "date": datetime.now(),
                 "config": self.config,
             },
@@ -263,13 +275,13 @@ class Trainer:
         self.model_number += 1
 
 
-def initialize_subjects(volpath, maskpath, orientation):
+def initialize_subjects(volpath, maskpath, orientation, preload_volumes):
     # If only a single subject is passed, load it and return
     volpath = Path(volpath)
     if volpath.is_file():
         subject = read(volpath, maskpath, orientation=orientation, center_volume=False)
         single_subject = True
-        return subject, (loaded := True), single_subject
+        return subject, single_subject
     else:
         single_subject = False
 
@@ -289,30 +301,12 @@ def initialize_subjects(volpath, maskpath, orientation):
         )
         subjects.append(subject)
 
-    # If the volumes can fit in memory, read all data now
-    # Else, volumes will be individually loaded/unloaded during training (slower but enables bigger training sets)
-    if loaded := _subjects_fit_in_memory(subjects):
+    # Optionally, load all volumes in memory
+    if preload_volumes:
         for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
             subject.load()
 
-    return subjects, loaded, single_subject
-
-
-def _subjects_fit_in_memory(subjects):
-    available = virtual_memory().available / (1024**2)
-    required = sum(
-        [
-            _size(img)
-            for subject in subjects
-            for img in subject.get_images(intensity_only=False)
-        ]
-    )
-    return required < available
-
-
-def _size(subject: ScalarImage, element_size=4):
-    """Size of a volume in MiB (assumes float32)."""
-    return element_size * prod(subject.spatial_shape) / (1024**2)
+    return subjects, single_subject
 
 
 def initialize_modules(
@@ -332,7 +326,8 @@ def initialize_modules(
     n_warmup_itrs,
     n_grad_accum_itrs,
     subject,
-    ckpt,
+    ckptpath,
+    reuse_optimizer,
 ):
     # Initialize the pose regression model
     model = PoseRegressor(
@@ -371,10 +366,24 @@ def initialize_modules(
     scheduler = WarmupCosineSchedule(optimizer, warmup_itrs, total_itrs)
 
     # If a checkpoint is passed, reload the states for the model, optimizer, and scheduler
+    ckpt, start_itr, model_number = _load_checkpoint(ckptpath, reuse_optimizer)
     if ckpt is not None:
+        print("Loading previous model weights...")
         model.load_state_dict(ckpt["model_state_dict"])
-        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-        scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+        if reuse_optimizer:
+            print("Reinitializing optimizer...")
+            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+            scheduler.load_state_dict(ckpt["scheduler_state_dict"])
     model.train()
 
-    return model, drr, transforms, optimizer, scheduler
+    return model, drr, transforms, optimizer, scheduler, start_itr, model_number
+
+
+def _load_checkpoint(ckptpath, reuse_optimizer):
+    if ckptpath is not None:
+        ckpt = torch.load(ckptpath, weights_only=False)
+        if reuse_optimizer:
+            return ckpt, ckpt["itr"], ckpt["model_number"]
+        else:
+            return ckpt, 0, 0
+    return None, 0, 0

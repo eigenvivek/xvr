@@ -14,6 +14,14 @@ import click
     "--maskpath",
     required=False,
     type=click.Path(exists=True),
+    help="Labelmaps for the CTs in volpath",
+)
+@click.option(
+    "-c",
+    "--ckptpath",
+    required=False,
+    type=click.Path(exists=True),
+    help="Checkpoint of a pretrained pose regressor",
 )
 @click.option(
     "-o",
@@ -120,7 +128,7 @@ import click
 )
 @click.option(
     "--norm_layer",
-    default="groupnorm",
+    default="batchnorm",
     type=str,
     help="Normalization layer",
 )
@@ -144,7 +152,7 @@ import click
 )
 @click.option(
     "--weight_dice",
-    default=1.0,
+    default=0.25,
     type=float,
     help="Weight on Dice loss term",
 )
@@ -179,6 +187,18 @@ import click
     help="Number of iterations before saving a new model checkpoint",
 )
 @click.option(
+    "--reuse_optimizer",
+    default=False,
+    is_flag=True,
+    help="If ckptpath passed, initialize the previous optimizer's state",
+)
+@click.option(
+    "--preload_volumes",
+    default=False,
+    is_flag=True,
+    help="If directory of CTs are passed, load all into memory (speeds up training)",
+)
+@click.option(
     "--name",
     default=None,
     type=str,
@@ -193,6 +213,7 @@ import click
 def train(
     volpath,
     maskpath,
+    ckptpath,
     outpath,
     r1,
     r2,
@@ -220,6 +241,8 @@ def train(
     n_warmup_itrs,
     n_grad_accum_itrs,
     n_save_every_itrs,
+    reuse_optimizer,
+    preload_volumes,
     name,
     project,
 ):
@@ -248,6 +271,7 @@ def train(
     config = dict(
         volpath=volpath,
         maskpath=maskpath,
+        ckptpath=ckptpath,
         outpath=outpath,
         alphamin=alphamin,
         alphamax=alphamax,
@@ -281,6 +305,8 @@ def train(
         n_warmup_itrs=n_warmup_itrs,
         n_grad_accum_itrs=n_grad_accum_itrs,
         n_save_every_itrs=n_save_every_itrs,
+        reuse_optimizer=reuse_optimizer,
+        preload_volumes=preload_volumes,
     )
 
     # Set up logging

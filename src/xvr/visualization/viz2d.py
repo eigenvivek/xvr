@@ -34,7 +34,11 @@ def plot_registration(drr, fiducials, gt, pred_pose, true_pose):
     # Plot the predicted, true, and error images
     plot_drr(
         torch.concat([pred_img, gt, error]),
-        title=["DRR from Predicted Pose", "Ground truth X-ray", f"Error (mTRE = {mtre:.2f} mm)"],
+        title=[
+            "DRR from Predicted Pose",
+            "Ground truth X-ray",
+            f"Error (mTREE = {mtre:.2f} mm)",
+        ],
         ticks=False,
         axs=axs,
     )

@@ -32,7 +32,9 @@ class PoseRegressionLoss(torch.nn.Module):
 class DiceLoss(torch.nn.Module):
     def __init__(self, include_background=False, reduction="none"):
         super().__init__()
-        self.dice = DiceMetric(include_background=include_background, reduction=reduction)
+        self.dice = DiceMetric(
+            include_background=include_background, reduction=reduction
+        )
 
     def forward(self, img1, img2):
         return 1 - self.dice(img1, img2).nanmean(dim=1).nan_to_num()
