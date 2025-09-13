@@ -51,7 +51,7 @@ class Trainer:
         convention=None,
         model_name="resnet18",
         pretrained=False,
-        norm_layer="groupnorm",
+        norm_layer="batchnorm",
         p_augmentation=0.5,
         lr=5e-3,
         weight_geo=1e-2,
