@@ -152,7 +152,7 @@ import click
 )
 @click.option(
     "--weight_dice",
-    default=1.0,
+    default=0.25,
     type=float,
     help="Weight on Dice loss term",
 )
