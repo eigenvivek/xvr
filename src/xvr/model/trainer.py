@@ -76,27 +76,33 @@ class Trainer:
         )
 
         # Initialize all deep learning modules
-        self.model, self.drr, self.transforms, self.optimizer, self.scheduler, self.start_itr, self.model_number = (
-            _initialize_modules(
-                model_name,
-                pretrained,
-                parameterization,
-                convention,
-                norm_layer,
-                sdd,
-                height,
-                delx,
-                orientation,
-                reverse_x_axis,
-                renderer,
-                lr,
-                n_total_itrs,
-                n_warmup_itrs,
-                n_grad_accum_itrs,
-                self.subjects if self.single_subject else None,
-                ckptpath,
-                reuse_optimizer,
-            )
+        (
+            self.model,
+            self.drr,
+            self.transforms,
+            self.optimizer,
+            self.scheduler,
+            self.start_itr,
+            self.model_number,
+        ) = _initialize_modules(
+            model_name,
+            pretrained,
+            parameterization,
+            convention,
+            norm_layer,
+            sdd,
+            height,
+            delx,
+            orientation,
+            reverse_x_axis,
+            renderer,
+            lr,
+            n_total_itrs,
+            n_warmup_itrs,
+            n_grad_accum_itrs,
+            self.subjects if self.single_subject else None,
+            ckptpath,
+            reuse_optimizer,
         )
 
         # Initialize the loss function
@@ -130,7 +136,11 @@ class Trainer:
         self.outpath = outpath
 
     def train(self, run=None):
-        pbar = tqdm(range(self.start_itr, self.n_total_itrs), desc="Training model...", ncols=200)
+        pbar = tqdm(
+            range(self.start_itr, self.n_total_itrs),
+            desc="Training model...",
+            ncols=200,
+        )
         for itr in pbar:
             # Checkpoint the model
             if itr % self.n_save_every_itrs == 0:
@@ -371,7 +381,7 @@ def _initialize_modules(
         print("Loading previous model weights...")
         model.load_state_dict(ckpt["model_state_dict"])
         if reuse_optimizer:
-            print("Reinitializing optimizer...")    
+            print("Reinitializing optimizer...")
             optimizer.load_state_dict(ckpt["optimizer_state_dict"])
             scheduler.load_state_dict(ckpt["scheduler_state_dict"])
     model.train()
