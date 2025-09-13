@@ -14,6 +14,7 @@ import click
     "--maskpath",
     required=False,
     type=click.Path(exists=True),
+    help="Labelmaps for the CTs in volpath",
 )
 @click.option(
     "-c",
