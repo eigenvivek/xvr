@@ -145,7 +145,7 @@ class _RegistrarBase:
             .tolist()
         ]
         nccs = []
-        times = []
+        times = [0.0]
         alphas = [[self.lr_rot, self.lr_xyz]]
 
         step_size_scalar = 1.0
