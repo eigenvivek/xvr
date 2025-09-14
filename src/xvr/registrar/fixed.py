@@ -51,6 +51,7 @@ class RegistrarFixed(_RegistrarBase):
             renderer,
             parameterization,
             convention,
+            voxel_shift,
             lr_rot,
             lr_xyz,
             patience,
