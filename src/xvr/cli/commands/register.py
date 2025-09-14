@@ -61,21 +61,21 @@ class BaseRegistrar(CategorizedCommand):
         CategorizedOption(
             ["--labels"],
             type=str,
-            help="Labels in mask to exclusively render (comma separated)",
+            help="Labels in mask to exclusively render (comma-separated)",
             category="Renderer",
         ),
         CategorizedOption(
             ["--scales"],
             default="8",
             type=str,
-            help="Scales of downsampling for multiscale registration (comma separated)",
+            help="Scales of downsampling for multiscale registration (comma-separated)",
             category="Optimizer",
         ),
         CategorizedOption(
             ["--n_itrs"],
             default=500,
             type=str,
-            help="Number of iterations to run at each scale (comma separated)",
+            help="Number of iterations to run at each scale (comma-separated)",
             category="Optimizer",
         ),
         CategorizedOption(
@@ -355,14 +355,14 @@ def dicom(
     "--rot",
     required=True,
     type=str,
-    help="Rotational parameters (comma separated); see `parameterization` and `convention`",
+    help="Rotation (comma-separated); see `parameterization` and `convention`",
     category="Required",
 )
 @categorized_option(
     "--xyz",
     required=True,
     type=str,
-    help="Translational parameters (comma separated); see `parameterization` and `convention`",
+    help="Translation (comma-separated); see `parameterization` and `convention`",
     category="Required",
 )
 def fixed(
