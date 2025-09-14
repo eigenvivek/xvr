@@ -81,6 +81,12 @@ import click
     help="Scales of downsampling for multiscale registration (comma separated)",
 )
 @click.option(
+    "--n_itrs",
+    default=500,
+    type=str,
+    help="Number of iterations to run at each scale (comma separated)",
+)
+@click.option(
     "--reverse_x_axis",
     default=False,
     is_flag=True,
@@ -129,12 +135,6 @@ import click
     help="Threshold for measuring the new optimum",
 )
 @click.option(
-    "--max_n_itrs",
-    default=500,
-    type=int,
-    help="Maximum number of iterations to run at each scale",
-)
-@click.option(
     "--max_n_plateaus",
     default=3,
     type=int,
@@ -178,6 +178,7 @@ def model(
     invert,
     labels,
     scales,
+    n_itrs,
     reverse_x_axis,
     renderer,
     parameterization,
@@ -186,7 +187,6 @@ def model(
     lr_xyz,
     patience,
     threshold,
-    max_n_itrs,
     max_n_plateaus,
     init_only,
     saveimg,
@@ -210,6 +210,7 @@ def model(
         warp,
         invert,
         scales,
+        n_itrs,
         reverse_x_axis,
         renderer,
         parameterization,
@@ -218,7 +219,6 @@ def model(
         lr_xyz,
         patience,
         threshold,
-        max_n_itrs,
         max_n_plateaus,
         init_only,
         saveimg,
