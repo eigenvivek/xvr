@@ -6,7 +6,7 @@ import click
 class CategorizedCommand(click.Command):
     """Click Command with support for categorized parameters."""
 
-    def __init__(self, category_order, *args, **kwargs):
+    def __init__(self, category_order=[], *args, **kwargs):
         # Set default context settings
         kwargs["context_settings"] = {
             "show_default": True,
@@ -16,7 +16,7 @@ class CategorizedCommand(click.Command):
         super().__init__(*args, **kwargs)
 
         # Get categories to use as section headers in the help page
-        self.category_order = category_order + ["Other"]
+        self.category_order = category_order + ["Miscellaneous"]
 
     def format_help(self, ctx, formatter):
         """Format help using categorized display."""
@@ -39,7 +39,7 @@ def format_categorized_help(command, ctx, formatter, category_order: list):
     for param in command.params:
         if isinstance(param, click.Argument):
             continue
-        category = getattr(param, "category", "Other")
+        category = getattr(param, "category", "Miscellaneous")
         categories[category].append(param)
 
     # Collect all help records first to calculate consistent spacing
@@ -57,7 +57,7 @@ def format_categorized_help(command, ctx, formatter, category_order: list):
             rows.append(rv)
 
         if rows:
-            section_name = f"{category} Options"
+            section_name = f"{category} Options" if len(categories) > 1 else "Options"
             category_sections.append((section_name, rows))
             all_rows.extend(rows)
 
@@ -74,12 +74,12 @@ def format_categorized_help(command, ctx, formatter, category_order: list):
 class CategorizedOption(click.Option):
     """Click Option with category support for grouped help display."""
 
-    def __init__(self, *args, category=None, **kwargs):
-        self.category = category or "Other"
+    def __init__(self, *args, category="Miscellaneous", **kwargs):
+        self.category = category
         super().__init__(*args, **kwargs)
 
 
-def categorized_option(*param_decls, category=None, **kwargs):
+def categorized_option(*param_decls, category="Miscellaneous", **kwargs):
     """Decorator to add a categorized option to a command."""
 
     def decorator(f):
