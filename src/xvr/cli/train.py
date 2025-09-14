@@ -128,7 +128,7 @@ import click
 )
 @click.option(
     "--norm_layer",
-    default="batchnorm",
+    default="groupnorm",
     type=str,
     help="Normalization layer",
 )

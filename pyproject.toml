@@ -29,6 +29,9 @@ Issues = "https://github.com/eigenvivek/xvr/issues"
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
 
+[tool.ruff.lint.isort]
+known-third-party = ["wandb"]
+
 [tool.uv.sources]
 diffdrr = { git = "https://github.com/eigenvivek/DiffDRR" }
 
