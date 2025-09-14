@@ -254,7 +254,7 @@ def train(
 
     import wandb
 
-    from ..model import Trainer
+    from ...model import Trainer
 
     # Create the output directory for saving model weights
     Path(outpath).mkdir(parents=True, exist_ok=True)

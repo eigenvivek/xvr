@@ -41,7 +41,7 @@ def restart(
     import torch
     import wandb
 
-    from ..model import Trainer
+    from ...model import Trainer
 
     # Load the config from the previous model checkpoint
     config = torch.load(ckptpath, weights_only=False)["config"]

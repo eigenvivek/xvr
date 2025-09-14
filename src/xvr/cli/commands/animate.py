@@ -40,9 +40,9 @@ def animate(inpath, outpath, skip, dpi, fps):
     import torch
     from imageio.v3 import imwrite
 
-    from ..dicom import read_xray
-    from ..registrar import _parse_scales
-    from ..renderer import initialize_drr
+    from ...dicom import read_xray
+    from ...registrar import _parse_scales
+    from ...renderer import initialize_drr
 
     # Initialize the renderer
     run = torch.load(inpath, weights_only=False)
@@ -65,7 +65,7 @@ def render(drr, gt, scales, run, skip):
     from diffdrr.pose import convert
     from tqdm import tqdm
 
-    from ..utils import XrayTransforms
+    from ...utils import XrayTransforms
 
     lowest_lr = 0.0
 

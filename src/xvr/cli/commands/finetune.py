@@ -129,7 +129,7 @@ def train_model(config, model_state_dict, run):
     from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
     from tqdm import tqdm
 
-    from ..utils import XrayAugmentations, get_random_pose, render
+    from ...utils import XrayAugmentations, get_random_pose, render
 
     # Load the subject-specific CT volume
     subject = read(config["inpath"], orientation=config["orientation"])
@@ -209,7 +209,7 @@ def initialize(config, model_state_dict, subject):
     from diffdrr.drr import DRR
     from diffdrr.registration import PoseRegressor
 
-    from ..utils import XrayTransforms
+    from ...utils import XrayTransforms
 
     # Load the pretrained pose regression model
     model = PoseRegressor(

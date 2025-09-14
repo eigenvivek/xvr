@@ -214,7 +214,7 @@ def model(
     invert,
 ):
     """Initialize from a pose regression model."""
-    from ..registrar import RegistrarModel
+    from ...registrar import RegistrarModel
 
     registrar = RegistrarModel(
         volume,
@@ -282,7 +282,7 @@ def dicom(
     orientation,
 ):
     """Initialize from pose parameters in the DICOM header."""
-    from ..registrar import RegistrarDicom
+    from ...registrar import RegistrarDicom
 
     registrar = RegistrarDicom(
         volume,
@@ -360,7 +360,7 @@ def fixed(
     xyz,
 ):
     """Initialize from a fixed pose."""
-    from ..registrar import RegistrarFixed
+    from ...registrar import RegistrarFixed
 
     rot = [float(x) for x in rot.split(",")]
     xyz = [float(x) for x in xyz.split(",")]
@@ -405,7 +405,7 @@ def run(registrar, xray, pattern, verbose, outpath):
 
     for i2d in dcmfiles:
         if verbose > 0:
-            print(f"\nRegistering {i2d} ...")
+            print(f"\nRegistering {i2d} ....")
         registrar(i2d, outpath)
 
 
