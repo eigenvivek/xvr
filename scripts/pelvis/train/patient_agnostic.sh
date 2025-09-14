@@ -5,9 +5,9 @@
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
 #SBATCH --account=vision-polina
-#SBATCH --gres=gpu:a6000:1
+#SBATCH --gres=gpu:rtx_6000_ada:1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=50G
+#SBATCH --mem=84G
 #SBATCH --time=96:00:00
 
 # Create logs directory if it doesn't exist
@@ -28,7 +28,8 @@ uv run xvr train \
     --delx 1.08821875 \
     --reverse_x_axis \
     --batch_size 28 \
-    --n_total_itrs 200000 \
+    --n_total_itrs 175000 \
     --n_save_every_itrs 1000 \
+    --preload_volumes \
     --name patient-agnostic \
     --project xvr-deepfluoro

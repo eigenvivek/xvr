@@ -30,7 +30,7 @@ uv run xvr train \
     --delx 1.08821875 \
     --reverse_x_axis \
     --batch_size 28 \
-    --n_total_itrs 100000 \
+    --n_total_itrs 30000 \
     --n_save_every_itrs 1000 \
     --name patient-specific-0$SLURM_ARRAY_TASK_ID \
     --project xvr-deepfluoro
