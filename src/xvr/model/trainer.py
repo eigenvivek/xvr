@@ -51,7 +51,7 @@ class Trainer:
         convention=None,
         model_name="resnet18",
         pretrained=False,
-        norm_layer="batchnorm",
+        norm_layer="groupnorm",
         p_augmentation=0.5,
         lr=5e-3,
         weight_geo=1e-2,
@@ -279,7 +279,7 @@ def initialize_subjects(volpath, maskpath, orientation, preload_volumes):
     # If only a single subject is passed, load it and return
     volpath = Path(volpath)
     if volpath.is_file():
-        subject = read(volpath, maskpath, orientation=orientation, center_volume=False)
+        subject = read(volpath, maskpath, orientation=orientation)
         single_subject = True
         return subject, single_subject
     else:
