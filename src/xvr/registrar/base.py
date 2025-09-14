@@ -29,6 +29,7 @@ class _RegistrarBase:
         linearize,
         reducefn,
         scales,
+        n_itrs,
         reverse_x_axis,
         renderer,
         parameterization,
@@ -37,7 +38,6 @@ class _RegistrarBase:
         lr_xyz,
         patience,
         threshold,
-        max_n_itrs,
         max_n_plateaus,
         init_only,
         saveimg,
@@ -67,12 +67,14 @@ class _RegistrarBase:
         self.convention = convention
 
         # Multiscale registration arguments
-        self.scales = scales
+        self.scales = scales.split(",")
+        self.n_itrs = [int(n_itr) for n_itr in n_itrs.split(",")]
+        assert len(self.scales) == len(self.n_itrs)
+
         self.lr_rot = lr_rot
         self.lr_xyz = lr_xyz
         self.patience = patience
         self.threshold = threshold
-        self.max_n_itrs = max_n_itrs
         self.max_n_plateaus = max_n_plateaus
 
         # Misc parameters
@@ -187,7 +189,7 @@ class _RegistrarBase:
         alphas = [[self.lr_rot, self.lr_xyz]]
 
         step_size_scalar = 1.0
-        for stage, scale in enumerate(scales, start=1):
+        for stage, (scale, n_itr) in enumerate(zip(scales, self.n_itrs), start=1):
             # Rescale DRR detector and ground truth image
             reg.drr.rescale_detector_(scale)
             transform = XrayTransforms(reg.drr.detector.height, reg.drr.detector.width)
@@ -214,7 +216,7 @@ class _RegistrarBase:
             n_plateaus = 0
             current_lr = torch.inf
 
-            pbar = range(self.max_n_itrs)
+            pbar = range(n_itr)
             if self.verbose > 0:
                 pbar = tqdm(pbar, ncols=100, desc=f"Stage {stage}")
 
@@ -374,7 +376,7 @@ class _RegistrarBase:
 
 
 def _parse_scales(scales: str, crop: int, height: int):
-    pyramid = [1.0] + [float(x) * (height / (height + crop)) for x in scales.split(",")]
+    pyramid = [1.0] + [float(x) * (height / (height + crop)) for x in scales]
     scales = []
     for idx in range(len(pyramid) - 1):
         scales.append(pyramid[idx] / pyramid[idx + 1])
