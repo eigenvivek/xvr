@@ -26,7 +26,7 @@ def register():
     """
     Use gradient-based optimization to register XRAY to a CT/MR.
 
-    Can pass multiple DICOM files or a directory in XRAY.
+    XRAY can be a space-separated list of DICOM files or a directory.
     """
 
 

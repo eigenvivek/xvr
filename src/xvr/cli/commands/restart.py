@@ -1,37 +1,39 @@
 import click
 
+from ..formatter import CategorizedCommand, categorized_option
 
-@click.command(context_settings=dict(show_default=True, max_content_width=120))
-@click.option(
+
+@click.command(cls=CategorizedCommand)
+@categorized_option(
     "-c",
     "--ckptpath",
     required=True,
     type=click.Path(exists=True),
     help="Checkpoint of a pretrained pose regressor",
 )
-@click.option(
+@categorized_option(
     "--rescale",
     default=1.0,
     type=float,
     help="Rescale the virtual detector plane",
 )
-@click.option(
+@categorized_option(
     "--name",
     default=None,
     type=str,
     help="WandB run name",
 )
-@click.option(
+@categorized_option(
     "--project",
     type=str,
     default=None,
     help="WandB project name",
 )
 def restart(
-    ckptpath,
-    rescale,
-    name,
-    project,
+    ckptpath: str,
+    rescale: float,
+    name: str,
+    project: str,
 ):
     """
     Restart model training from a checkpoint.

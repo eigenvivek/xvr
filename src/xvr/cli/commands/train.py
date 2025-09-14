@@ -1,214 +1,262 @@
 import click
 
+from ..formatter import CategorizedCommand, categorized_option
 
-@click.command(context_settings=dict(show_default=True, max_content_width=120))
-@click.option(
+
+@click.command(
+    cls=CategorizedCommand,
+    category_order=[
+        "Required",
+        "Data",
+        "Model",
+        "Checkpoint",
+        "Sampling",
+        "Renderer",
+        "Optimizer",
+        "Logging",
+    ],
+)
+@categorized_option(
     "-v",
     "--volpath",
     required=True,
     type=click.Path(exists=True),
     help="A single CT or a directory of CTs for pretraining",
+    category="Required",
 )
-@click.option(
+@categorized_option(
     "-m",
     "--maskpath",
     required=False,
     type=click.Path(exists=True),
-    help="Labelmaps for the CTs in volpath",
+    help="Optional labelmaps for the CTs passed in `volpath`",
+    category="Data",
 )
-@click.option(
+@categorized_option(
     "-c",
     "--ckptpath",
     required=False,
     type=click.Path(exists=True),
     help="Checkpoint of a pretrained pose regressor",
+    category="Checkpoint",
 )
-@click.option(
+@categorized_option(
     "-o",
     "--outpath",
     required=True,
     type=click.Path(),
     help="Directory in which to save model weights",
+    category="Required",
 )
-@click.option(
+@categorized_option(
     "--r1",
     required=True,
     type=(float, float),
     help="Range for primary angle (in degrees)",
+    category="Sampling",
 )
-@click.option(
+@categorized_option(
     "--r2",
     required=True,
     type=(float, float),
     help="Range for secondary angle (in degrees)",
+    category="Sampling",
 )
-@click.option(
+@categorized_option(
     "--r3",
     required=True,
     type=(float, float),
     help="Range for tertiary angle (in degrees)",
+    category="Sampling",
 )
-@click.option(
+@categorized_option(
     "--tx",
     required=True,
     type=(float, float),
     help="Range for x-offset (in millimeters)",
+    category="Sampling",
 )
-@click.option(
+@categorized_option(
     "--ty",
     required=True,
     type=(float, float),
     help="Range for y-offset (in millimeters)",
+    category="Sampling",
 )
-@click.option(
+@categorized_option(
     "--tz",
     required=True,
     type=(float, float),
     help="Range for z-offset (in millimeters)",
+    category="Sampling",
 )
-@click.option(
+@categorized_option(
     "--sdd",
     required=True,
     type=float,
     help="Source-to-detector distance (in millimeters)",
+    category="Renderer",
 )
-@click.option(
+@categorized_option(
     "--height",
     required=True,
     type=int,
     help="DRR height (in pixels)",
+    category="Renderer",
 )
-@click.option(
+@categorized_option(
     "--delx",
     required=True,
     type=float,
     help="DRR pixel size (in millimeters / pixel)",
+    category="Renderer",
 )
-@click.option(
+@categorized_option(
     "--renderer",
     default="trilinear",
     type=click.Choice(["siddon", "trilinear"]),
     help="Rendering equation",
+    category="Renderer",
 )
-@click.option(
+@categorized_option(
     "--orientation",
     default="PA",
     type=click.Choice(["AP", "PA"]),
     help="Orientation of CT volumes",
+    category="Renderer",
 )
-@click.option(
+@categorized_option(
     "--reverse_x_axis",
     default=False,
     is_flag=True,
     help="Enable to obey radiologic convention (e.g., heart on right)",
+    category="Renderer",
 )
-@click.option(
-    "--parameterization",
-    default="euler_angles",
-    type=str,
-    help="Parameterization of SO(3) for regression",
-)
-@click.option(
-    "--convention",
-    default="ZXY",
-    type=str,
-    help="If parameterization is Euler angles, specify order",
-)
-@click.option(
+@categorized_option(
     "--model_name",
     default="resnet18",
     type=str,
-    help="Name of model to instantiate",
+    help="Name of model to instantiate from the timm library",
+    category="Model",
 )
-@click.option(
-    "--pretrained",
-    default=False,
-    is_flag=True,
-    help="Load pretrained ImageNet-1k weights",
-)
-@click.option(
+@categorized_option(
     "--norm_layer",
     default="groupnorm",
     type=str,
     help="Normalization layer",
+    category="Model",
 )
-@click.option(
+@categorized_option(
+    "--pretrained",
+    default=False,
+    is_flag=True,
+    help="Load pretrained ImageNet-1k weights",
+    category="Model",
+)
+@categorized_option(
+    "--parameterization",
+    default="euler_angles",
+    type=str,
+    help="Parameterization of SO(3) for regression",
+    category="Model",
+)
+@categorized_option(
+    "--convention",
+    default="ZXY",
+    type=str,
+    help="If `parameterization='euler_angles'`, specify order",
+    category="Model",
+)
+@categorized_option(
     "--p_augmentation",
     default=0.5,
     type=float,
-    help="Probability of applying augmentations during training",
+    help="Base probability of image augmentations during training",
+    category="Model",
 )
-@click.option(
+@categorized_option(
     "--lr",
     default=5e-3,
     type=float,
     help="Maximum learning rate",
+    category="Optimizer",
 )
-@click.option(
+@categorized_option(
     "--weight_geo",
     default=1e-2,
     type=float,
     help="Weight on geodesic loss term",
+    category="Optimizer",
 )
-@click.option(
+@categorized_option(
     "--weight_dice",
     default=1e-1,
     type=float,
     help="Weight on Dice loss term",
+    category="Optimizer",
 )
-@click.option(
+@categorized_option(
     "--batch_size",
     default=116,
     type=int,
     help="Number of DRRs per batch",
+    category="Sampling",
 )
-@click.option(
+@categorized_option(
     "--n_total_itrs",
     default=int(1e6),
     type=int,
     help="Number of iterations for training the model",
+    category="Optimizer",
 )
-@click.option(
+@categorized_option(
     "--n_warmup_itrs",
     default=int(1e3),
     type=int,
     help="Number of iterations for warming up the learning rate",
+    category="Optimizer",
 )
-@click.option(
+@categorized_option(
     "--n_grad_accum_itrs",
     default=4,
     type=int,
     help="Number of iterations for gradient accumulation",
+    category="Optimizer",
 )
-@click.option(
+@categorized_option(
     "--n_save_every_itrs",
     default=int(2.5e3),
     type=int,
     help="Number of iterations before saving a new model checkpoint",
+    category="Optimizer",
 )
-@click.option(
+@categorized_option(
     "--reuse_optimizer",
     default=False,
     is_flag=True,
     help="If ckptpath passed, initialize the previous optimizer's state",
+    category="Checkpoint",
 )
-@click.option(
+@categorized_option(
     "--preload_volumes",
     default=False,
     is_flag=True,
-    help="If directory of CTs are passed, load all into memory (speeds up training)",
+    help="If directory of CTs are passed, try to load all into memory (speeds up training)",
+    category="Data",
 )
-@click.option(
+@categorized_option(
     "--name",
     default=None,
     type=str,
     help="WandB run name",
+    category="Logging",
 )
-@click.option(
+@categorized_option(
     "--project",
     default="xvr",
     type=str,
     help="WandB project name",
+    category="Logging",
 )
 def train(
     volpath,
@@ -227,11 +275,11 @@ def train(
     renderer,
     orientation,
     reverse_x_axis,
+    model_name,
+    norm_layer,
+    pretrained,
     parameterization,
     convention,
-    model_name,
-    pretrained,
-    norm_layer,
     p_augmentation,
     lr,
     weight_geo,
