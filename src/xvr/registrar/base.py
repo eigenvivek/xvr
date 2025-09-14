@@ -54,9 +54,10 @@ class _RegistrarBase:
         self.labels = labels
         self.reverse_x_axis = reverse_x_axis
         self.renderer = renderer
-        self.voxel_shift = voxel_shift
         self.read_kwargs = read_kwargs
         self.drr_kwargs = drr_kwargs
+
+        self.drr_kwargs["voxel_shift"] = voxel_shift
 
         # X-ray preprocessing
         self.crop = crop
@@ -101,7 +102,6 @@ class _RegistrarBase:
             y0=0.0,
             reverse_x_axis=self.reverse_x_axis,
             renderer=self.renderer,
-            voxel_shift=self.voxel_shift,
             read_kwargs=self.read_kwargs,
             drr_kwargs=self.drr_kwargs,
         )
