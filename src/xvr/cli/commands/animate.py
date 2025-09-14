@@ -1,34 +1,36 @@
 import click
 
+from ..formatter import CategorizedCommand, categorized_option
 
-@click.command(context_settings=dict(show_default=True, max_content_width=120))
-@click.option(
+
+@click.command(cls=CategorizedCommand)
+@categorized_option(
     "-i",
     "--inpath",
     required=True,
     type=click.Path(exists=True),
     help="Saved registration result from `xvr register`",
 )
-@click.option(
+@categorized_option(
     "-o",
     "--outpath",
     required=True,
     type=click.Path(),
     help="Savepath for iterative optimization animation",
 )
-@click.option(
+@categorized_option(
     "--skip",
     default=1,
     type=int,
     help="Animate every <skip> frames of the optimization",
 )
-@click.option(
+@categorized_option(
     "--dpi",
     default=192,
     type=int,
     help="DPI of individual animation frames",
 )
-@click.option(
+@categorized_option(
     "--fps",
     default=30,
     type=int,
@@ -40,9 +42,9 @@ def animate(inpath, outpath, skip, dpi, fps):
     import torch
     from imageio.v3 import imwrite
 
-    from ..dicom import read_xray
-    from ..registrar import _parse_scales
-    from ..renderer import initialize_drr
+    from ...dicom import read_xray
+    from ...registrar import _parse_scales
+    from ...renderer import initialize_drr
 
     # Initialize the renderer
     run = torch.load(inpath, weights_only=False)
@@ -65,7 +67,7 @@ def render(drr, gt, scales, run, skip):
     from diffdrr.pose import convert
     from tqdm import tqdm
 
-    from ..utils import XrayTransforms
+    from ...utils import XrayTransforms
 
     lowest_lr = 0.0
 

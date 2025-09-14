@@ -1,9 +1,9 @@
 import click
 
+from ..formatter import CategorizedCommand, CategorizedOption, categorized_option
 
-class BaseRegistrar(click.Command):
-    default_context_settings = {"show_default": True, "max_content_width": 120}
 
+class BaseRegistrar(CategorizedCommand):
     default_params = [
         click.Argument(
             ["xray"],
@@ -11,173 +11,201 @@ class BaseRegistrar(click.Command):
             required=True,
             type=click.Path(exists=True),
         ),
-        click.Option(
+        CategorizedOption(
             ["-v", "--volume"],
             required=True,
             type=click.Path(exists=True),
             help="Input CT volume (3D image)",
+            category="Required",
         ),
-        click.Option(
+        CategorizedOption(
             ["-m", "--mask"],
             type=click.Path(exists=True),
-            help="Labelmap for the CT volume (optional)",
+            help="Labelmap for the CT volume",
+            category="Renderer",
         ),
-        click.Option(
+        CategorizedOption(
             ["-o", "--outpath"],
             required=True,
             type=click.Path(),
             help="Directory for saving registration results",
+            category="Required",
         ),
-        click.Option(
+        CategorizedOption(
             ["--crop"],
             default=0,
             type=int,
-            help="Preprocessing: center crop the X-ray image",
+            help="Center crop the X-ray image",
+            category="Preprocessing",
         ),
-        click.Option(
+        CategorizedOption(
             ["--subtract_background"],
             default=False,
             is_flag=True,
-            help="Preprocessing: subtract mode X-ray image intensity",
+            help="Subtract mode X-ray image intensity",
+            category="Preprocessing",
         ),
-        click.Option(
+        CategorizedOption(
             ["--linearize"],
             default=False,
             is_flag=True,
-            help="Preprocessing: convert X-ray from exponential to linear form",
+            help="Convert X-ray from exponential to linear form",
+            category="Preprocessing",
         ),
-        click.Option(
+        CategorizedOption(
             ["--reducefn"],
             default="max",
             help="If DICOM is multiframe, method to extract a single 2D image",
+            category="Preprocessing",
         ),
-        click.Option(
+        CategorizedOption(
             ["--labels"],
             type=str,
-            help="Labels in mask to exclusively render (comma separated)",
+            help="Labels in mask to exclusively render (comma-separated)",
+            category="Renderer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--scales"],
             default="8",
             type=str,
-            help="Scales of downsampling for multiscale registration (comma separated)",
+            help="Scales of downsampling for multiscale registration (comma-separated)",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--n_itrs"],
             default=500,
             type=str,
-            help="Number of iterations to run at each scale (comma separated)",
+            help="Number of iterations to run at each scale (comma-separated)",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--reverse_x_axis"],
             default=False,
             is_flag=True,
             help="Enable to obey radiologic convention (e.g., heart on right)",
+            category="Renderer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--renderer"],
             default="trilinear",
             type=click.Choice(["siddon", "trilinear"]),
-            help="Rendering equation",
+            help="Renderer equation",
+            category="Renderer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--parameterization"],
             default="euler_angles",
             type=str,
             help="Parameterization of SO(3) for regression",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--convention"],
             default="ZXY",
             type=str,
             help="If parameterization is Euler angles, specify order",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--voxel_shift"],
             default=0.0,
             type=float,
             help="Position of voxel (top left corner or center)",
+            category="Renderer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--lr_rot"],
             default=1e-2,
             type=float,
             help="Initial step size for rotational parameters",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--lr_xyz"],
             default=1e0,
             type=float,
             help="Initial step size for translational parameters",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--patience"],
             default=10,
             type=int,
             help="Number of itrs without improvement before decreasing the learning rate",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--threshold"],
             default=1e-4,
             type=float,
             help="Threshold for measuring the new optimum",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--max_n_plateaus"],
             default=3,
             type=int,
             help="Number of times loss can plateau before moving to next scale",
+            category="Optimizer",
         ),
-        click.Option(
+        CategorizedOption(
             ["--init_only"],
             default=False,
             is_flag=True,
             help="Directly return the initial pose estimate (no iterative pose refinement)",
+            category="Logging",
         ),
-        click.Option(
+        CategorizedOption(
             ["--saveimg"],
             default=False,
             is_flag=True,
             help="Save ground truth X-ray and predicted DRRs",
+            category="Logging",
         ),
-        click.Option(
+        CategorizedOption(
             ["--pattern"],
             default="*.dcm",
             type=str,
             help="Pattern rule for glob is XRAY is directory",
+            category="Preprocessing",
         ),
-        click.Option(
+        CategorizedOption(
             ["--verbose"],
             default=1,
             type=click.IntRange(0, 3),
             help="Verbosity level for logging",
+            category="Logging",
         ),
     ]
 
     def __init__(self, *args, **kwargs):
-        # Apply default context settings
-        kwargs["context_settings"] = self.default_context_settings.copy()
-
-        super().__init__(*args, **kwargs)
-
-        # Add shared parameters for all registration methods
+        category_order = [
+            "Required",
+            "Model",
+            "Renderer",
+            "Preprocessing",
+            "Optimizer",
+            "Logging",
+        ]
+        super().__init__(category_order=category_order, *args, **kwargs)
         self.params.extend(self.default_params.copy())
 
 
 @click.command(cls=BaseRegistrar)
-@click.option(
+@categorized_option(
     "-c",
     "--ckptpath",
     required=True,
     type=click.Path(exists=True),
     help="Checkpoint of a pretrained pose regressor",
+    category="Required",
 )
-@click.option(
+@categorized_option(
     "--warp",
     type=click.Path(exists=True),
     help="SimpleITK transform to warp input CT to template reference frame",
 )
-@click.option(
+@categorized_option(
     "--invert",
     default=False,
     is_flag=True,
@@ -214,7 +242,7 @@ def model(
     invert,
 ):
     """Initialize from a pose regression model."""
-    from ..registrar import RegistrarModel
+    from ...registrar import RegistrarModel
 
     registrar = RegistrarModel(
         volume,
@@ -248,9 +276,11 @@ def model(
 
 
 @click.command(cls=BaseRegistrar)
-@click.option(
+@categorized_option(
     "--orientation",
+    required=True,
     type=click.Choice(["AP", "PA"]),
+    category="Required",
     help="Orientation of the C-arm",
 )
 def dicom(
@@ -282,7 +312,7 @@ def dicom(
     orientation,
 ):
     """Initialize from pose parameters in the DICOM header."""
-    from ..registrar import RegistrarDicom
+    from ...registrar import RegistrarDicom
 
     registrar = RegistrarDicom(
         volume,
@@ -314,20 +344,26 @@ def dicom(
 
 
 @click.command(cls=BaseRegistrar)
-@click.option(
+@categorized_option(
     "--orientation",
+    required=True,
     type=click.Choice(["AP", "PA"]),
+    category="Required",
     help="Orientation of the C-arm",
 )
-@click.option(
+@categorized_option(
     "--rot",
+    required=True,
     type=str,
-    help="Rotational parameters (comma separated); see `parameterization` and `convention`",
+    help="Rotation (comma-separated); see `parameterization` and `convention`",
+    category="Required",
 )
-@click.option(
+@categorized_option(
     "--xyz",
+    required=True,
     type=str,
-    help="Translational parameters (comma separated); see `parameterization` and `convention`",
+    help="Translation (comma-separated); see `parameterization` and `convention`",
+    category="Required",
 )
 def fixed(
     xray,
@@ -360,7 +396,7 @@ def fixed(
     xyz,
 ):
     """Initialize from a fixed pose."""
-    from ..registrar import RegistrarFixed
+    from ...registrar import RegistrarFixed
 
     rot = [float(x) for x in rot.split(",")]
     xyz = [float(x) for x in xyz.split(",")]
@@ -405,7 +441,7 @@ def run(registrar, xray, pattern, verbose, outpath):
 
     for i2d in dcmfiles:
         if verbose > 0:
-            print(f"\nRegistering {i2d} ...")
+            print(f"\nRegistering {i2d} ....")
         registrar(i2d, outpath)
 
 
