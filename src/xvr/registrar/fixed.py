@@ -24,6 +24,7 @@ class RegistrarFixed(_RegistrarBase):
         renderer="trilinear",
         parameterization="euler_angles",
         convention="ZXY",
+        voxel_shift=0.0,
         lr_rot=1e-2,
         lr_xyz=1e0,
         patience=10,
