@@ -18,6 +18,7 @@ class PoseRegressor(torch.nn.Module):
         convention=None,
         pretrained=False,
         height=256,
+        unit_conversion_factor=1000.0,
         **kwargs,
     ):
         super().__init__()
@@ -38,10 +39,13 @@ class PoseRegressor(torch.nn.Module):
         self.xyz_regression = torch.nn.Linear(output, 3)
         self.rot_regression = torch.nn.Linear(output, n_angular_components)
 
+        # E.g., if 1000.0, converts output from meters to millimeters
+        self.unit_conversion_factor = unit_conversion_factor
+
     def forward(self, x):
         x = self.backbone(x)
         rot = self.rot_regression(x)
-        xyz = 1000 * self.xyz_regression(x)  # Convert from meters to millimeters
+        xyz = self.unit_conversion_factor * self.xyz_regression(x)
         return convert(
             rot,
             xyz,
@@ -62,6 +66,7 @@ def load_model(ckptpath, meta=False):
         convention=config["convention"],
         norm_layer=config["norm_layer"],
         height=config["height"],
+        unit_conversion_factor=config.get("unit_conversion_factor", 1.0),
     ).cuda()
     model.load_state_dict(model_state_dict)
     model.eval()

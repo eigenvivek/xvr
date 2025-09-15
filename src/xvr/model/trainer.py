@@ -52,6 +52,7 @@ class Trainer:
         model_name="resnet18",
         pretrained=False,
         norm_layer="groupnorm",
+        unit_conversion_factor=1000.0,
         p_augmentation=0.5,
         lr=5e-3,
         weight_geo=1e-2,
@@ -90,6 +91,7 @@ class Trainer:
             parameterization,
             convention,
             norm_layer,
+            unit_conversion_factor,
             sdd,
             height,
             delx,
@@ -315,6 +317,7 @@ def initialize_modules(
     parameterization,
     convention,
     norm_layer,
+    unit_conversion_factor,
     sdd,
     height,
     delx,
@@ -337,6 +340,7 @@ def initialize_modules(
         convention=convention,
         norm_layer=norm_layer,
         height=height,
+        unit_conversion_factor=unit_conversion_factor,
     ).cuda()
 
     # If more than one subject is provided, initialize the DRR module with a dummy CT
