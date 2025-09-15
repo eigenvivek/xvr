@@ -11,12 +11,10 @@ requires-python = ">=3.10"
 dependencies = [
     "antspyx>=0.5.4",
     "click>=8.1.8",
-    "diffdrr>=0.5.0",
+    "diffdrr>=0.6.0rc3",
     "pydicom[pixeldata]>=3.0.1",
     "huggingface_hub[cli]>=0.32.0",
     "wandb>=0.21.1",
-    "monai>=1.5.0",
-    "totalsegmentator>=2.11.0",
 ]
 
 [project.scripts]
