@@ -277,7 +277,7 @@ class _RegistrarBase:
         i2d: str,
         outpath: str,
         patch_size: int = 9,
-        sigma: float = 5.0,
+        sigma: float = 0.0,
         beta: float = 0.5,
     ):
         # Make the savepath
