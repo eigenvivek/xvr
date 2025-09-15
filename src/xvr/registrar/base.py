@@ -277,7 +277,7 @@ class _RegistrarBase:
         i2d: str,
         outpath: str,
         patch_size: int = 9,
-        sigma: float = 5.0,
+        sigma: float = 0.0,
         beta: float = 0.5,
     ):
         # Make the savepath
@@ -354,12 +354,12 @@ class _RegistrarBase:
             "optimization": {
                 "init_only": self.init_only,
                 "scales": self.scales,
+                "n_itrs": self.n_itrs,
                 "parameterization": self.parameterization,
                 "convention": self.convention,
                 "lr_rot": self.lr_rot,
                 "lr_xyz": self.lr_xyz,
                 "patience": self.patience,
-                "max_n_itrs": self.max_n_itrs,
                 "max_n_plateaus": self.max_n_plateaus,
             },
             "init_pose": init_pose,
