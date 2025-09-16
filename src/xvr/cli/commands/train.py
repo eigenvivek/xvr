@@ -168,6 +168,13 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Model",
 )
 @categorized_option(
+    "--unit_conversion_factor",
+    default=1000.0,
+    type=float,
+    help="Scale factor for translation prediction (e.g., from m to mm)",
+    category="Model",
+)
+@categorized_option(
     "--p_augmentation",
     default=0.5,
     type=float,
@@ -280,6 +287,7 @@ def train(
     pretrained,
     parameterization,
     convention,
+    unit_conversion_factor,
     p_augmentation,
     lr,
     weight_geo,
@@ -344,6 +352,7 @@ def train(
         model_name=model_name,
         pretrained=pretrained,
         norm_layer=norm_layer,
+        unit_conversion_factor=unit_conversion_factor,
         p_augmentation=p_augmentation,
         lr=lr,
         weight_geo=weight_geo,

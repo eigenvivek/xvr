@@ -232,7 +232,7 @@ class _RegistrarBase:
                 loss = imagesim(img, pred_img)
                 loss.backward()
                 optimizer.step()
-                scheduler.step(loss)
+                scheduler.step(loss.detach())
                 torch.cuda.synchronize()
                 t1 = time.time()
 

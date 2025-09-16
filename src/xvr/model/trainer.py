@@ -52,6 +52,7 @@ class Trainer:
         model_name="resnet18",
         pretrained=False,
         norm_layer="groupnorm",
+        unit_conversion_factor=1000.0,
         p_augmentation=0.5,
         lr=5e-3,
         weight_geo=1e-2,
@@ -90,6 +91,7 @@ class Trainer:
             parameterization,
             convention,
             norm_layer,
+            unit_conversion_factor,
             sdd,
             height,
             delx,
@@ -183,7 +185,7 @@ class Trainer:
         # Sample a batch of DRRs
         img, mask, pose, keep, contrast = self._render_samples(subject)
 
-        # Keep only those samples with >80% intersection with the volume
+        # Only keep samples that capture the volume
         img = img[keep]
         mask = mask[keep]
         pose = RigidTransform(pose[keep])
@@ -225,7 +227,7 @@ class Trainer:
         }
         return log, imgs, masks
 
-    def _render_samples(self, subject, img_threshold=0.8, mask_threshold=0.05):
+    def _render_samples(self, subject, img_threshold=0.65, mask_threshold=0.05):
         # Sample a batch of random poses
         pose = get_random_pose(**self.pose_distribution).cuda()
 
@@ -235,7 +237,7 @@ class Trainer:
             img, mask, pose = render(self.drr, pose, subject, contrast, centerize=True)
 
             if mask.shape[1] == 1:
-                # Keep if >80% of the image is non-zero pixels
+                # Keep if >65% of the image is non-zero pixels
                 keep = mask.to(img).flatten(1).mean(1) > img_threshold
             else:
                 # Keep if >5% of the image contains pixels corresponding to masked structures
@@ -290,7 +292,7 @@ def initialize_subjects(volpath, maskpath, orientation, preload_volumes):
     volumes = sorted(volpath.glob("*.nii.gz"))
     masks = sorted(Path(maskpath).glob("*.nii.gz")) if maskpath is not None else []
     itr = zip_longest(volumes, masks)
-    pbar = tqdm(itr, desc="Reading CTs...", total=len(volumes), ncols=200)
+    pbar = tqdm(itr, desc="Lazily loading CTs...", total=len(volumes), ncols=200)
 
     # Lazily load a list of all subjects in the dataset
     subjects = []
@@ -315,6 +317,7 @@ def initialize_modules(
     parameterization,
     convention,
     norm_layer,
+    unit_conversion_factor,
     sdd,
     height,
     delx,
@@ -337,6 +340,7 @@ def initialize_modules(
         convention=convention,
         norm_layer=norm_layer,
         height=height,
+        unit_conversion_factor=unit_conversion_factor,
     ).cuda()
 
     # If more than one subject is provided, initialize the DRR module with a dummy CT
