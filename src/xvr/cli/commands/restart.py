@@ -12,16 +12,10 @@ from ..formatter import CategorizedCommand, categorized_option
     help="Checkpoint of a pretrained pose regressor",
 )
 @categorized_option(
-    "--rescale",
-    default=1.0,
-    type=float,
-    help="Rescale the virtual detector plane",
-)
-@categorized_option(
-    "--name",
+    "--id",
     default=None,
     type=str,
-    help="WandB run name",
+    help="WandB run ID",
 )
 @categorized_option(
     "--project",
@@ -31,8 +25,7 @@ from ..formatter import CategorizedCommand, categorized_option
 )
 def restart(
     ckptpath: str,
-    rescale: float,
-    name: str,
+    id: str,
     project: str,
 ):
     """
@@ -50,16 +43,10 @@ def restart(
     config["ckptpath"] = ckptpath
     config["reuse_optimizer"] = True
 
-    # Rescale the detector plane
-    config["batch_size"] = int(config["batch_size"] / (rescale**2))
-    config["height"] = int(config["height"] * rescale)
-    config["delx"] /= rescale
-
     # Set up logging
-    project = config["project"] if project is None else project
-    name += f"-rescale{rescale}" if rescale != 1 else ""
     wandb.login(key=os.environ["WANDB_API_KEY"])
-    run = wandb.init(project=project, name=name, config=config)
+    project = config["project"] if project is None else project
+    run = wandb.init(project=project, id=id, config=config, resume="must")
 
     # Train the model
     trainer = Trainer(**config)
