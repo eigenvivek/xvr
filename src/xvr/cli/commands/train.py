@@ -245,6 +245,19 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Checkpoint",
 )
 @categorized_option(
+    "--warp",
+    type=click.Path(exists=True),
+    help="SimpleITK transform to warp input CT to a template reference frame",
+    category="Data",
+)
+@categorized_option(
+    "--invert",
+    default=False,
+    is_flag=True,
+    help="Whether to invert the warp or not",
+    category="Data",
+)
+@categorized_option(
     "--preload_volumes",
     default=False,
     is_flag=True,
@@ -298,6 +311,8 @@ def train(
     n_grad_accum_itrs,
     n_save_every_itrs,
     reuse_optimizer,
+    warp,
+    invert,
     preload_volumes,
     name,
     project,
@@ -364,6 +379,8 @@ def train(
         n_save_every_itrs=n_save_every_itrs,
         reuse_optimizer=reuse_optimizer,
         preload_volumes=preload_volumes,
+        warp=warp,
+        invert=invert,
     )
 
     # Set up logging
