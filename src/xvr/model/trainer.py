@@ -15,7 +15,7 @@ from torchio import LabelMap, ScalarImage, Subject
 from tqdm import tqdm
 
 from ..renderer import render
-from ..utils import XrayTransforms
+from ..utils import XrayTransforms, get_4x4
 from .augmentations import XrayAugmentations
 from .loss import PoseRegressionLoss
 from .network import PoseRegressor
@@ -64,6 +64,8 @@ class Trainer:
         n_save_every_itrs=2_500,
         ckptpath=None,
         reuse_optimizer=False,
+        warp=None,
+        invert=False,
         preload_volumes=False,
     ):
         # Record all hyperparameters to be checkpointed
@@ -131,10 +133,13 @@ class Trainer:
             batch_size=batch_size,
         )
 
+        # Initialize a conversion between the template and canonical frames of reference
+        self.reframe = initialize_coordinate_frame(warp, self.subjects, invert)
+
+        # Save training config
         self.n_total_itrs = n_total_itrs
         self.n_grad_accum_itrs = n_grad_accum_itrs
         self.n_save_every_itrs = n_save_every_itrs
-
         self.outpath = outpath
 
     def train(self, run=None):
@@ -190,8 +195,12 @@ class Trainer:
         mask = mask[keep]
         pose = RigidTransform(pose[keep])
 
-        # Regress the poses and render the predicted DRRs
+        # Regress the poses (and optionally convert between reference frames)
         pred_pose = self.model(img)
+        if self.reframe is not None:
+            pred_pose = pred_pose.compose(self.reframe)
+
+        # Render DRRs from the predicted poses
         pred_img, pred_mask, _ = render(
             self.drr, pred_pose, subject, contrast, centerize=False
         )
@@ -391,3 +400,9 @@ def _load_checkpoint(ckptpath, reuse_optimizer):
         else:
             return ckpt, 0, 0
     return None, 0, 0
+
+
+def initialize_coordinate_frame(warp, img, invert):
+    if warp is None:
+        return None
+    return get_4x4(warp, img, invert)
