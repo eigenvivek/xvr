@@ -203,13 +203,13 @@ class BaseRegistrar(CategorizedCommand):
 @categorized_option(
     "--warp",
     type=click.Path(exists=True),
-    help="SimpleITK transform to warp input CT to template reference frame",
+    help="SimpleITK transform to warp input CT to a template reference frame",
 )
 @categorized_option(
     "--invert",
     default=False,
     is_flag=True,
-    help="Invert the warp",
+    help="Whether to invert the warp or not",
 )
 def model(
     xray,
