@@ -1,4 +1,4 @@
-from ..dicom.xray import _parse_dicom_pose, read_xray
+from ..io.xray import _parse_dicom_pose, read_xray
 from .base import _RegistrarBase
 
 

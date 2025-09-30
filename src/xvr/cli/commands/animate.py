@@ -42,7 +42,7 @@ def animate(inpath, outpath, skip, dpi, fps):
     import torch
     from imageio.v3 import imwrite
 
-    from ...dicom import read_xray
+    from ...io import read_xray
     from ...registrar import _parse_scales
     from ...renderer import initialize_drr
 

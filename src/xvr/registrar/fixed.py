@@ -1,7 +1,7 @@
 import torch
 from diffdrr.pose import convert
 
-from ..dicom import read_xray
+from ..io import read_xray
 from .base import _RegistrarBase
 
 
