@@ -120,7 +120,7 @@ from ..formatter import CategorizedCommand, categorized_option
 )
 @categorized_option(
     "--orientation",
-    default="PA",
+    default="AP",
     type=click.Choice(["AP", "PA"]),
     help="Orientation of CT volumes",
     category="Renderer",
