@@ -245,17 +245,18 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Checkpoint",
 )
 @categorized_option(
+    "-w",
     "--warp",
     type=click.Path(exists=True),
-    help="SimpleITK transform to warp input CT to a template reference frame",
-    category="Data",
+    help="SimpleITK transform to warp input CT to the checkpoint's reference frame",
+    category="Checkpoint",
 )
 @categorized_option(
     "--invert",
     default=False,
     is_flag=True,
     help="Whether to invert the warp or not",
-    category="Data",
+    category="Checkpoint",
 )
 @categorized_option(
     "--preload_volumes",
