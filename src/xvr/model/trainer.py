@@ -44,8 +44,8 @@ class Trainer:
         sdd,
         height,
         delx,
-        orientation,
-        reverse_x_axis,
+        orientation="AP",
+        reverse_x_axis=False,
         renderer="trilinear",
         parameterization="se3_log_map",
         convention=None,
@@ -134,7 +134,7 @@ class Trainer:
         )
 
         # Initialize a conversion between the template and canonical frames of reference
-        self.reframe = initialize_coordinate_frame(warp, self.subjects, invert)
+        self.reframe = initialize_coordinate_frame(warp, volpath, invert)
 
         # Save training config
         self.n_total_itrs = n_total_itrs
@@ -405,4 +405,4 @@ def _load_checkpoint(ckptpath, reuse_optimizer):
 def initialize_coordinate_frame(warp, img, invert):
     if warp is None:
         return None
-    return get_4x4(warp, img, invert)
+    return get_4x4(warp, img, invert).cuda()

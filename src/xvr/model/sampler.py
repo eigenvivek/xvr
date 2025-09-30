@@ -18,9 +18,9 @@ def get_random_pose(
     batch_size,
 ):
     """Generate a batch of random poses in SE(3) using specified ranges."""
-    alpha = uniform(alphamin, alphamax, batch_size)
-    beta = uniform(betamin, betamax, batch_size)
-    gamma = uniform(gammamin, gammamax, batch_size)
+    alpha = uniform(alphamin, alphamax, batch_size, circle_shift=True)
+    beta = uniform(betamin, betamax, batch_size, circle_shift=True)
+    gamma = uniform(gammamin, gammamax, batch_size, circle_shift=True)
     tx = uniform(txmin, txmax, batch_size)
     ty = uniform(tymin, tymax, batch_size)
     tz = uniform(tzmin, tzmax, batch_size)
@@ -31,5 +31,8 @@ def get_random_pose(
     )
 
 
-def uniform(low, high, n):
-    return (high - low) * torch.rand(n, 1) + low
+def uniform(low, high, n, circle_shift=False):
+    x = (high - low) * torch.rand(n, 1) + low
+    if circle_shift:
+        x = ((x + 180) % 360) - 180
+    return x
