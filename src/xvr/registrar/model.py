@@ -1,4 +1,4 @@
-from ..dicom import read_xray
+from ..io import read_xray
 from ..model.inference import _correct_pose, predict_pose
 from ..model.network import load_model
 from .base import _RegistrarBase
