@@ -156,7 +156,7 @@ class Trainer:
             # Run an iteration of the training loop
             try:
                 log, imgs, masks = self.step(itr)
-            except RuntimeError as e:
+            except Exception as e:
                 print(e)
                 continue
 
