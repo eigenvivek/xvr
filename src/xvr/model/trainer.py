@@ -168,6 +168,9 @@ class Trainer:
             if run is not None:
                 self._log_wandb(itr, log, imgs, masks)
 
+        # Save the final model
+        self._checkpoint(itr)
+
     def step(self, itr):
         if self.single_subject:
             log, imgs, masks = self._step_single_subject(itr)
