@@ -10,6 +10,7 @@ from diffdrr.data import load_example_ct, read
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
 from diffdrr.visualization import plot_drr, plot_mask
+from peft import LoraConfig, get_peft_model
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from torchio import LabelMap, ScalarImage, Subject
 from tqdm import tqdm
@@ -64,6 +65,7 @@ class Trainer:
         n_save_every_itrs=2_500,
         ckptpath=None,
         reuse_optimizer=False,
+        lora_target_modules=None,
         warp=None,
         invert=False,
         preload_volumes=False,
@@ -107,6 +109,7 @@ class Trainer:
             self.subjects if self.single_subject else None,
             ckptpath,
             reuse_optimizer,
+            lora_target_modules,
         )
 
         # Initialize the loss function
@@ -156,7 +159,7 @@ class Trainer:
             # Run an iteration of the training loop
             try:
                 log, imgs, masks = self.step(itr)
-            except RuntimeError as e:
+            except Exception as e:
                 print(e)
                 continue
 
@@ -340,6 +343,7 @@ def initialize_modules(
     subject,
     ckptpath,
     reuse_optimizer,
+    lora_target_modules,
 ):
     # Initialize the pose regression model
     model = PoseRegressor(
@@ -351,6 +355,39 @@ def initialize_modules(
         height=height,
         unit_conversion_factor=unit_conversion_factor,
     ).cuda()
+
+    # If a checkpoint is passed, reload the model state
+    ckpt, start_itr, model_number = _load_checkpoint(ckptpath, reuse_optimizer)
+    if ckpt is not None:
+        print("Loading previous model weights...")
+        model.load_state_dict(ckpt["model_state_dict"])
+
+    # Optionally, create the LoRA model
+    if lora_target_modules is not None:
+        print("Creating LoRA version of the model...")
+        config = LoraConfig(
+            r=16,
+            lora_alpha=32,
+            target_modules=lora_target_modules,
+            lora_dropout=0.1,
+            bias="none",
+            modules_to_save=["xyz_regression", "rot_regression"],
+        )
+        model = get_peft_model(model, config)
+        model.print_trainable_parameters()
+
+    # Initialize the optimizer and learning rate scheduler
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    warmup_itrs = n_warmup_itrs / n_grad_accum_itrs
+    total_itrs = n_total_itrs / n_grad_accum_itrs
+    scheduler = WarmupCosineSchedule(optimizer, warmup_itrs, total_itrs)
+
+    # Optionally, reload the optimizer and scheduler
+    if ckpt is not None and reuse_optimizer:
+        print("Reinitializing optimizer...")
+        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+    model.train()
 
     # If more than one subject is provided, initialize the DRR module with a dummy CT
     drr = DRR(
@@ -371,23 +408,6 @@ def initialize_modules(
         drr.register_buffer("volume", subject.volume.data.squeeze())
         drr.register_buffer("center", torch.tensor(subject.volume.get_center())[None])
     drr = drr.cuda().to(torch.float32)
-
-    # Initialize the optimizer and learning rate scheduler
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    warmup_itrs = n_warmup_itrs / n_grad_accum_itrs
-    total_itrs = n_total_itrs / n_grad_accum_itrs
-    scheduler = WarmupCosineSchedule(optimizer, warmup_itrs, total_itrs)
-
-    # If a checkpoint is passed, reload the states for the model, optimizer, and scheduler
-    ckpt, start_itr, model_number = _load_checkpoint(ckptpath, reuse_optimizer)
-    if ckpt is not None:
-        print("Loading previous model weights...")
-        model.load_state_dict(ckpt["model_state_dict"])
-        if reuse_optimizer:
-            print("Reinitializing optimizer...")
-            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-            scheduler.load_state_dict(ckpt["scheduler_state_dict"])
-    model.train()
 
     return model, drr, transforms, optimizer, scheduler, start_itr, model_number
 
