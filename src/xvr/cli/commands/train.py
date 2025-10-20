@@ -245,6 +245,13 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Checkpoint",
 )
 @categorized_option(
+    "--lora_target_modules",
+    default=None,
+    type=str,
+    help="Target modules for which to create LoRA adapters",
+    category="Model",
+)
+@categorized_option(
     "-w",
     "--warp",
     type=click.Path(exists=True),
@@ -312,6 +319,7 @@ def train(
     n_grad_accum_itrs,
     n_save_every_itrs,
     reuse_optimizer,
+    lora_target_modules,
     warp,
     invert,
     preload_volumes,
@@ -379,6 +387,7 @@ def train(
         n_grad_accum_itrs=n_grad_accum_itrs,
         n_save_every_itrs=n_save_every_itrs,
         reuse_optimizer=reuse_optimizer,
+        lora_target_modules=lora_target_modules,
         preload_volumes=preload_volumes,
         warp=warp,
         invert=invert,
