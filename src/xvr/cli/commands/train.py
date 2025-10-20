@@ -339,6 +339,12 @@ def train(
     # Create the output directory for saving model weights
     Path(outpath).mkdir(parents=True, exist_ok=True)
 
+    # If ckptpath is a directory, get the last saved model
+    ckptpath = Path(ckptpath)
+    if ckptpath.is_dir():
+        ckptpath = sorted(ckptpath.glob("*.pth"))[-1]
+    ckptpath = str(ckptpath)
+
     # Parse 6-DoF pose parameters
     alphamin, alphamax = r1
     betamin, betamax = r2
