@@ -32,11 +32,18 @@ def restart(
     Restart model training from a checkpoint.
     """
     import os
+    from pathlib import Path
 
     import torch
     import wandb
 
     from ...model import Trainer
+
+    # If ckptpath is a directory, get the last saved model
+    ckptpath = Path(ckptpath)
+    if ckptpath.is_dir():
+        ckptpath = sorted(ckptpath.glob("*.pth"))[-1]
+    ckptpath = str(ckptpath)
 
     # Load the config from the previous model checkpoint
     config = torch.load(ckptpath, weights_only=False)["config"]
