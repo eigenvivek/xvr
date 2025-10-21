@@ -326,9 +326,7 @@ def train(
     name,
     project,
 ):
-    """
-    Train a pose regression model from scratch.
-    """
+    """Train a pose regression model."""
     import os
     from pathlib import Path
 
