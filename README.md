@@ -89,73 +89,67 @@ $ xvr train --help
 
 Usage: xvr train [OPTIONS]
 
-  Train a pose regression model from scratch.
+  Train a pose regression model.
 
-Options:
-  -i, --inpath PATH              A single CT or a directory of CTs for pretraining  [required]
-  -o, --outpath PATH             Directory in which to save model weights  [required]
-  --r1 <FLOAT FLOAT>...          Range for primary angle (in degrees)  [required]
-  --r2 <FLOAT FLOAT>...          Range for secondary angle (in degrees)  [required]
-  --r3 <FLOAT FLOAT>...          Range for tertiary angle (in degrees)  [required]
-  --tx <FLOAT FLOAT>...          Range for x-offset (in millimeters)  [required]
-  --ty <FLOAT FLOAT>...          Range for y-offset (in millimeters)  [required]
-  --tz <FLOAT FLOAT>...          Range for z-offset (in millimeters)  [required]
-  --sdd FLOAT                    Source-to-detector distance (in millimeters)  [required]
-  --height INTEGER               DRR height (in pixels)  [required]
-  --delx FLOAT                   DRR pixel size (in millimeters / pixel)  [required]
-  --renderer [siddon|trilinear]  Rendering equation  [default: trilinear]
-  --orientation [AP|PA]          Orientation of CT volumes  [default: PA]
-  --reverse_x_axis               Enable to obey radiologic convention (e.g., heart on right)
-  --parameterization TEXT        Parameterization of SO(3) for regression  [default: euler_angles]
-  --convention TEXT              If parameterization is Euler angles, specify order  [default: ZXY]
-  --model_name TEXT              Name of model to instantiate  [default: resnet18]
-  --pretrained                   Load pretrained ImageNet-1k weights
-  --norm_layer TEXT              Normalization layer  [default: groupnorm]
-  --lr FLOAT                     Maximum learning rate  [default: 0.005]
-  --weight-geo FLOAT             Weight on geodesic loss term  [default: 0.01]
-  --batch_size INTEGER           Number of DRRs per batch  [default: 116]
-  --n_epochs INTEGER             Number of epochs  [default: 1000]
-  --n_batches_per_epoch INTEGER  Number of batches per epoch  [default: 100]
-  --name TEXT                    WandB run name
-  --project TEXT                 WandB project name  [default: xvr]
-  --help                         Show this message and exit.
+Required Options:
+  -v, --volpath PATH              A single CT or a directory of CTs for pretraining  [required]
+  -o, --outpath PATH              Directory in which to save model weights  [required]
+
+Data Options:
+  -m, --maskpath PATH             Optional labelmaps for the CTs passed in `volpath`
+  --preload_volumes               If directory of CTs are passed, try to load all into memory (speeds up training)
+
+Model Options:
+  --model_name TEXT               Name of model to instantiate from the timm library  [default: resnet18]
+  --norm_layer TEXT               Normalization layer  [default: groupnorm]
+  --pretrained                    Load pretrained ImageNet-1k weights
+  --parameterization TEXT         Parameterization of SO(3) for regression  [default: euler_angles]
+  --convention TEXT               If `parameterization='euler_angles'`, specify order  [default: ZXY]
+  --unit_conversion_factor FLOAT  Scale factor for translation prediction (e.g., from m to mm)  [default: 1000.0]
+  --p_augmentation FLOAT          Base probability of image augmentations during training  [default: 0.5]
+  --lora_target_modules TEXT      Target modules for which to create LoRA adapters
+
+Checkpoint Options:
+  -c, --ckptpath PATH             Checkpoint of a pretrained pose regressor
+  --reuse_optimizer               If ckptpath passed, initialize the previous optimizer's state
+  -w, --warp PATH                 SimpleITK transform to warp input CT to the checkpoint's reference frame
+  --invert                        Whether to invert the warp or not
+
+Sampling Options:
+  --r1 <FLOAT FLOAT>...           Range for primary angle (in degrees)  [required]
+  --r2 <FLOAT FLOAT>...           Range for secondary angle (in degrees)  [required]
+  --r3 <FLOAT FLOAT>...           Range for tertiary angle (in degrees)  [required]
+  --tx <FLOAT FLOAT>...           Range for x-offset (in millimeters)  [required]
+  --ty <FLOAT FLOAT>...           Range for y-offset (in millimeters)  [required]
+  --tz <FLOAT FLOAT>...           Range for z-offset (in millimeters)  [required]
+  --batch_size INTEGER            Number of DRRs per batch  [default: 116]
+
+Renderer Options:
+  --sdd FLOAT                     Source-to-detector distance (in millimeters)  [required]
+  --height INTEGER                DRR height (in pixels)  [required]
+  --delx FLOAT                    DRR pixel size (in millimeters / pixel)  [required]
+  --renderer [siddon|trilinear]   Rendering equation  [default: trilinear]
+  --orientation [AP|PA]           Orientation of CT volumes  [default: AP]
+  --reverse_x_axis                Enable to obey radiologic convention (e.g., heart on right)
+
+Optimizer Options:
+  --lr FLOAT                      Maximum learning rate  [default: 0.005]
+  --weight_geo FLOAT              Weight on geodesic loss term  [default: 0.01]
+  --weight_dice FLOAT             Weight on Dice loss term  [default: 0.1]
+  --n_total_itrs INTEGER          Number of iterations for training the model  [default: 1000000]
+  --n_warmup_itrs INTEGER         Number of iterations for warming up the learning rate  [default: 1000]
+  --n_grad_accum_itrs INTEGER     Number of iterations for gradient accumulation  [default: 4]
+  --n_save_every_itrs INTEGER     Number of iterations before saving a new model checkpoint  [default: 2500]
+
+Logging Options:
+  --name TEXT                     WandB run name
+  --project TEXT                  WandB project name  [default: xvr]
 ```
 
 #### Notes
-- The `--inpath` argument should point to a directory containing CT volumes for training.
+- The `--volpath` argument should point to a directory containing CT volumes for training.
   - If the directory contains a single CT scan, the resulting model be patient-specific.
   - If the directory contains multiple CTs, it's beneficial to preregister them to a common reference frame (e.g., using [ANTs](https://github.com/ANTsX/ANTs)). This will improve the accuracy of the model, but this isn't strictly necessary.
-
-### Finetuning
-
-To finetune a pretrained pose regression model on a new patient, use `xvr finetune`:
-
-```
-$ xvr finetune --help
-
-Usage: xvr finetune [OPTIONS]
-
-  Optimize a pose regression model for a specific patient.
-
-Options:
-  -i, --inpath PATH              Input CT volume for patient-specific pretraining  [required]
-  -o, --outpath PATH             Output directory for finetuned model weights  [required]
-  -c, --ckptpath PATH            Checkpoint of a pretrained pose regressor  [required]
-  --lr FLOAT                     Maximum learning rate  [default: 0.005]
-  --batch_size INTEGER           Number of DRRs per batch  [default: 116]
-  --n_epochs INTEGER             Number of epochs  [default: 10]
-  --n_batches_per_epoch INTEGER  Number of batches per epoch  [default: 25]
-  --rescale FLOAT                Rescale the virtual detector plane  [default: 1.0]
-  --name TEXT                    WandB run name
-  --project TEXT                 WandB project name  [default: xvr]
-  --help                         Show this message and exit.
-```
-
-#### Notes
-
-- The `--inpath` argument should point to a single CT volume for which the pose regression model will be finetuned.
-- The `--ckpt` argument specifies the path to a checkpoint of a pretrained pose regression model produced by `xvr train`.
-  - In addition to model weights, this checkpoint also contains the configurations used for training (e.g., pose parameters and intrinsic parameters), which are reused for finetuning.
  
 ### Registration (test-time optimization)
 
@@ -168,34 +162,44 @@ Usage: xvr register model [OPTIONS] XRAY...
 
   Initialize from a pose regression model.
 
-Options:
-  -v, --volume PATH              Input CT volume (3D image)  [required]
-  -m, --mask PATH                Labelmap for the CT volume (optional)
+Required Options:
   -c, --ckptpath PATH            Checkpoint of a pretrained pose regressor  [required]
+  -v, --volume PATH              Input CT volume (3D image)  [required]
   -o, --outpath PATH             Directory for saving registration results  [required]
-  --crop INTEGER                 Preprocessing: center crop the X-ray image  [default: 0]
-  --subtract_background          Preprocessing: subtract mode X-ray image intensity
-  --linearize                    Preprocessing: convert X-ray from exponential to linear form
-  --reducefn TEXT                If DICOM is multiframe, how to extract a single 2D image for registration  [default: max]
-  --warp PATH                    SimpleITK transform to warp input CT to template reference frame
-  --invert                       Invert the warp
-  --labels TEXT                  Labels in mask to exclusively render (comma separated)
-  --scales TEXT                  Scales of downsampling for multiscale registration (comma separated)  [default: 8]
+
+Renderer Options:
+  -m, --mask PATH                Labelmap for the CT volume
+  --labels TEXT                  Labels in mask to exclusively render (comma-separated)
   --reverse_x_axis               Enable to obey radiologic convention (e.g., heart on right)
-  --renderer [siddon|trilinear]  Rendering equation  [default: trilinear]
+  --renderer [siddon|trilinear]  Renderer equation  [default: trilinear]
+  --voxel_shift FLOAT            Position of voxel (top left corner or center)  [default: 0.0]
+
+Preprocessing Options:
+  --crop INTEGER                 Center crop the X-ray image  [default: 0]
+  --subtract_background          Subtract mode X-ray image intensity
+  --linearize                    Convert X-ray from exponential to linear form
+  --reducefn TEXT                If DICOM is multiframe, method to extract a single 2D image  [default: max]
+  --pattern TEXT                 Pattern rule for glob is XRAY is directory  [default: *.dcm]
+
+Optimizer Options:
+  --scales TEXT                  Scales of downsampling for multiscale registration (comma-separated)  [default: 8]
+  --n_itrs TEXT                  Number of iterations to run at each scale (comma-separated)  [default: 500]
   --parameterization TEXT        Parameterization of SO(3) for regression  [default: euler_angles]
   --convention TEXT              If parameterization is Euler angles, specify order  [default: ZXY]
   --lr_rot FLOAT                 Initial step size for rotational parameters  [default: 0.01]
   --lr_xyz FLOAT                 Initial step size for translational parameters  [default: 1.0]
-  --patience INTEGER             Number of allowed epochs with no improvement after which the learning rate will be reduced  [default: 10]
+  --patience INTEGER             Number of itrs without improvement before decreasing the learning rate  [default: 10]
   --threshold FLOAT              Threshold for measuring the new optimum  [default: 0.0001]
-  --max_n_itrs INTEGER           Maximum number of iterations to run at each scale  [default: 500]
   --max_n_plateaus INTEGER       Number of times loss can plateau before moving to next scale  [default: 3]
+
+Logging Options:
   --init_only                    Directly return the initial pose estimate (no iterative pose refinement)
   --saveimg                      Save ground truth X-ray and predicted DRRs
-  --pattern TEXT                 Pattern rule for glob is XRAY is directory  [default: *.dcm]
   --verbose INTEGER RANGE        Verbosity level for logging  [default: 1; 0<=x<=3]
-  --help                         Show this message and exit.
+
+Miscellaneous Options:
+  --warp PATH                    SimpleITK transform to warp input CT to a template reference frame
+  --invert                       Whether to invert the warp or not
 ```
 
 #### Notes
