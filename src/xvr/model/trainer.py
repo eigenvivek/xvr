@@ -21,7 +21,7 @@ from .augmentations import XrayAugmentations
 from .loss import PoseRegressionLoss
 from .network import PoseRegressor
 from .sampler import get_random_pose
-from .scheduler import WarmupCosineSchedule
+from .scheduler import IdentitySchedule, WarmupCosineSchedule
 
 
 class Trainer:
@@ -63,6 +63,7 @@ class Trainer:
         n_warmup_itrs=1_000,
         n_grad_accum_itrs=4,
         n_save_every_itrs=2_500,
+        disable_scheduler=False,
         ckptpath=None,
         reuse_optimizer=False,
         lora_target_modules=None,
@@ -107,6 +108,7 @@ class Trainer:
             n_warmup_itrs,
             n_grad_accum_itrs,
             self.subjects if self.single_subject else None,
+            disable_scheduler,
             ckptpath,
             reuse_optimizer,
             lora_target_modules,
@@ -344,6 +346,7 @@ def initialize_modules(
     n_warmup_itrs,
     n_grad_accum_itrs,
     subject,
+    disable_scheduler,
     ckptpath,
     reuse_optimizer,
     lora_target_modules,
@@ -381,9 +384,12 @@ def initialize_modules(
 
     # Initialize the optimizer and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    warmup_itrs = n_warmup_itrs / n_grad_accum_itrs
-    total_itrs = n_total_itrs / n_grad_accum_itrs
-    scheduler = WarmupCosineSchedule(optimizer, warmup_itrs, total_itrs)
+    if disable_scheduler:
+        scheduler = IdentitySchedule(optimizer)
+    else:
+        warmup_itrs = n_warmup_itrs / n_grad_accum_itrs
+        total_itrs = n_total_itrs / n_grad_accum_itrs
+        scheduler = WarmupCosineSchedule(optimizer, warmup_itrs, total_itrs)
 
     # Optionally, reload the optimizer and scheduler
     if ckpt is not None and reuse_optimizer:
