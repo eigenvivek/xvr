@@ -27,3 +27,11 @@ class WarmupCosineSchedule(LambdaLR):
             max(1, self.t_total - self.warmup_steps)
         )
         return max(0.0, 0.5 * (1.0 + cos(pi * float(self.cycles) * 2.0 * progress)))
+
+
+class IdentitySchedule(LambdaLR):
+    def __init__(self, optimizer, last_epoch=-1):
+        super().__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
+
+    def lr_lambda(self, step) -> float:
+        return 1.0

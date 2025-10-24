@@ -238,6 +238,13 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Optimizer",
 )
 @categorized_option(
+    "--disable_scheduler",
+    default=False,
+    is_flag=True,
+    help="Turn off cosine learning rate scheduler",
+    category="Optimizer",
+)
+@categorized_option(
     "--reuse_optimizer",
     default=False,
     is_flag=True,
@@ -318,6 +325,7 @@ def train(
     n_warmup_itrs,
     n_grad_accum_itrs,
     n_save_every_itrs,
+    disable_scheduler,
     reuse_optimizer,
     lora_target_modules,
     warp,
@@ -390,6 +398,7 @@ def train(
         n_warmup_itrs=n_warmup_itrs,
         n_grad_accum_itrs=n_grad_accum_itrs,
         n_save_every_itrs=n_save_every_itrs,
+        disable_scheduler=disable_scheduler,
         reuse_optimizer=reuse_optimizer,
         lora_target_modules=lora_target_modules,
         preload_volumes=preload_volumes,
