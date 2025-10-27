@@ -91,15 +91,15 @@ Usage: xvr train [OPTIONS]
 
   Train a pose regression model.
 
-Required Options:
+Required options:
   -v, --volpath PATH              A single CT or a directory of CTs for pretraining  [required]
   -o, --outpath PATH              Directory in which to save model weights  [required]
 
-Data Options:
+Data options:
   -m, --maskpath PATH             Optional labelmaps for the CTs passed in `volpath`
   --preload_volumes               If directory of CTs are passed, try to load all into memory (speeds up training)
 
-Model Options:
+Model options:
   --model_name TEXT               Name of model to instantiate from the timm library  [default: resnet18]
   --norm_layer TEXT               Normalization layer  [default: groupnorm]
   --pretrained                    Load pretrained ImageNet-1k weights
@@ -109,13 +109,13 @@ Model Options:
   --p_augmentation FLOAT          Base probability of image augmentations during training  [default: 0.5]
   --lora_target_modules TEXT      Target modules for which to create LoRA adapters
 
-Checkpoint Options:
+Checkpoint options:
   -c, --ckptpath PATH             Checkpoint of a pretrained pose regressor
   --reuse_optimizer               If ckptpath passed, initialize the previous optimizer's state
   -w, --warp PATH                 SimpleITK transform to warp input CT to the checkpoint's reference frame
   --invert                        Whether to invert the warp or not
 
-Sampling Options:
+Sampling options:
   --r1 <FLOAT FLOAT>...           Range for primary angle (in degrees)  [required]
   --r2 <FLOAT FLOAT>...           Range for secondary angle (in degrees)  [required]
   --r3 <FLOAT FLOAT>...           Range for tertiary angle (in degrees)  [required]
@@ -124,7 +124,7 @@ Sampling Options:
   --tz <FLOAT FLOAT>...           Range for z-offset (in millimeters)  [required]
   --batch_size INTEGER            Number of DRRs per batch  [default: 116]
 
-Renderer Options:
+Renderer options:
   --sdd FLOAT                     Source-to-detector distance (in millimeters)  [required]
   --height INTEGER                DRR height (in pixels)  [required]
   --delx FLOAT                    DRR pixel size (in millimeters / pixel)  [required]
@@ -132,7 +132,7 @@ Renderer Options:
   --orientation [AP|PA]           Orientation of CT volumes  [default: AP]
   --reverse_x_axis                Enable to obey radiologic convention (e.g., heart on right)
 
-Optimizer Options:
+Optimizer options:
   --lr FLOAT                      Maximum learning rate  [default: 0.005]
   --weight_geo FLOAT              Weight on geodesic loss term  [default: 0.01]
   --weight_dice FLOAT             Weight on Dice loss term  [default: 0.1]
@@ -140,8 +140,9 @@ Optimizer Options:
   --n_warmup_itrs INTEGER         Number of iterations for warming up the learning rate  [default: 1000]
   --n_grad_accum_itrs INTEGER     Number of iterations for gradient accumulation  [default: 4]
   --n_save_every_itrs INTEGER     Number of iterations before saving a new model checkpoint  [default: 2500]
+  --disable_scheduler             Turn off cosine learning rate scheduler
 
-Logging Options:
+Logging options:
   --name TEXT                     WandB run name
   --project TEXT                  WandB project name  [default: xvr]
 ```
@@ -162,26 +163,26 @@ Usage: xvr register model [OPTIONS] XRAY...
 
   Initialize from a pose regression model.
 
-Required Options:
+Required options:
   -c, --ckptpath PATH            Checkpoint of a pretrained pose regressor  [required]
   -v, --volume PATH              Input CT volume (3D image)  [required]
   -o, --outpath PATH             Directory for saving registration results  [required]
 
-Renderer Options:
+Renderer options:
   -m, --mask PATH                Labelmap for the CT volume
   --labels TEXT                  Labels in mask to exclusively render (comma-separated)
   --reverse_x_axis               Enable to obey radiologic convention (e.g., heart on right)
   --renderer [siddon|trilinear]  Renderer equation  [default: trilinear]
   --voxel_shift FLOAT            Position of voxel (top left corner or center)  [default: 0.0]
 
-Preprocessing Options:
+Preprocessing options:
   --crop INTEGER                 Center crop the X-ray image  [default: 0]
   --subtract_background          Subtract mode X-ray image intensity
   --linearize                    Convert X-ray from exponential to linear form
   --reducefn TEXT                If DICOM is multiframe, method to extract a single 2D image  [default: max]
   --pattern TEXT                 Pattern rule for glob is XRAY is directory  [default: *.dcm]
 
-Optimizer Options:
+Optimizer options:
   --scales TEXT                  Scales of downsampling for multiscale registration (comma-separated)  [default: 8]
   --n_itrs TEXT                  Number of iterations to run at each scale (comma-separated)  [default: 500]
   --parameterization TEXT        Parameterization of SO(3) for regression  [default: euler_angles]
@@ -192,12 +193,12 @@ Optimizer Options:
   --threshold FLOAT              Threshold for measuring the new optimum  [default: 0.0001]
   --max_n_plateaus INTEGER       Number of times loss can plateau before moving to next scale  [default: 3]
 
-Logging Options:
+Logging options:
   --init_only                    Directly return the initial pose estimate (no iterative pose refinement)
   --saveimg                      Save ground truth X-ray and predicted DRRs
   --verbose INTEGER RANGE        Verbosity level for logging  [default: 1; 0<=x<=3]
 
-Miscellaneous Options:
+Miscellaneous options:
   --warp PATH                    SimpleITK transform to warp input CT to a template reference frame
   --invert                       Whether to invert the warp or not
 ```

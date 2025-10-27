@@ -57,7 +57,7 @@ def format_categorized_help(command, ctx, formatter, category_order: list):
             rows.append(rv)
 
         if rows:
-            section_name = f"{category} Options" if len(categories) > 1 else "Options"
+            section_name = f"{category} options" if len(categories) > 1 else "Options"
             category_sections.append((section_name, rows))
             all_rows.extend(rows)
 
