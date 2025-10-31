@@ -16,6 +16,7 @@ dependencies = [
     "huggingface_hub[cli]>=0.32.0",
     "wandb>=0.21.1",
     "peft>=0.17.1",
+    "ultraplot>=1.63.0",
 ]
 
 [project.scripts]
