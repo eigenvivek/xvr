@@ -8,11 +8,11 @@ from ..formatter import CategorizedCommand, categorized_option
     category_order=[
         "Required",
         "Data",
-        "Model",
-        "Checkpoint",
         "Sampling",
         "Renderer",
+        "Model",
         "Optimizer",
+        "Checkpoint",
         "Logging",
     ],
 )
@@ -273,10 +273,17 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Checkpoint",
 )
 @categorized_option(
-    "--preload_volumes",
+    "--num_workers",
+    default=4,
+    type=int,
+    help="Number of subprocesses to use in the dataloader",
+    category="Data",
+)
+@categorized_option(
+    "--pin_memory",
     default=False,
     is_flag=True,
-    help="If directory of CTs are passed, try to load all into memory (speeds up training)",
+    help="Copy volumes from the dataloader into CUDA pinned memory before returning",
     category="Data",
 )
 @categorized_option(
@@ -330,7 +337,8 @@ def train(
     lora_target_modules,
     warp,
     invert,
-    preload_volumes,
+    num_workers,
+    pin_memory,
     name,
     project,
 ):
@@ -401,7 +409,8 @@ def train(
         disable_scheduler=disable_scheduler,
         reuse_optimizer=reuse_optimizer,
         lora_target_modules=lora_target_modules,
-        preload_volumes=preload_volumes,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
         warp=warp,
         invert=invert,
     )
