@@ -1,7 +1,6 @@
 from datetime import datetime
 from itertools import zip_longest
 from pathlib import Path
-from random import choice
 
 import matplotlib.pyplot as plt
 import torch

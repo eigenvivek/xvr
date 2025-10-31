@@ -409,7 +409,8 @@ def train(
         disable_scheduler=disable_scheduler,
         reuse_optimizer=reuse_optimizer,
         lora_target_modules=lora_target_modules,
-        preload_volumes=preload_volumes,
+        num_workers=num_workers,
+        pin_memory=pin_memory,
         warp=warp,
         invert=invert,
     )
