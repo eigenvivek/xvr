@@ -27,18 +27,18 @@ A PyTorch package for training patient-specific 2D/3D registration models **in 5
 ## Installation
 
 Install the Python API and CLI (should take ~5 min if installing PyTorch with CUDA):
-```
+```bash
 pip install git+https://github.com/eigenvivek/xvr.git
 ```
 
 Verify the installation version (should match the latest release on GitHub):
-```
+```bash
 xvr --version
 ```
 
 You can also enable tab-completion for `xvr` by adding this line to your `~/.bashrc` (instructions for other shells are [here](https://click.palletsprojects.com/en/stable/shell-completion/)):
 
-```
+```bash
 eval "$(_XVR_COMPLETE=bash_source xvr)"
 ```
 
@@ -248,7 +248,7 @@ If you use the [`Ljubljana`](https://lit.fe.uni-lj.si/en/research/resources/3D-2
 
 We use `wandb` to log experiments. To use this feature, set the `WANDB_API_KEY` environment variable by adding the following line to your `.zshrc` or `.bashrc` file:
 
-```zsh
+```bash
 export WANDB_API_KEY=your_api_key
 ```
 
@@ -258,7 +258,7 @@ export WANDB_API_KEY=your_api_key
 
 If you want to modify `xvr` (e.g., adding different loss functions, network architectures, etc.), `uv` makes it easy to set up a development environment:
 
-```
+```bash
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -276,13 +276,13 @@ uvx prek install -f
 
 To verify your virtual environment, you can run
 
-```
+```bash
 uv run xvr --version
 ```
 
 Alternatively, you can directly use the virtual environment that `uv` creates:
 
-```
+```bash
 source .venv/bin/activate
 xvr --version
 ```
@@ -295,7 +295,7 @@ First, set up your environment as described above.
 
 #### Download the datasets
 
-```
+```bash
 uv run hf download eigenvivek/xvr-data --repo-type dataset --local-dir data/
 ```
 
@@ -303,7 +303,7 @@ HuggingFace's internet connection can be spotty, so you sometimes have to run th
 
 #### Download the pretrained models
 
-```
+```bash
 uv run hf download eigenvivek/xvr --repo-type model --local-dir models/
 ```
 
