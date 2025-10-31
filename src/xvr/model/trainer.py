@@ -12,7 +12,8 @@ from diffdrr.pose import RigidTransform
 from diffdrr.visualization import plot_drr, plot_mask
 from peft import LoraConfig, get_peft_model
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
-from torchio import LabelMap, ScalarImage, Subject
+from torch.utils.data import RandomSampler
+from torchio import LabelMap, ScalarImage, Subject, SubjectsDataset, SubjectsLoader
 from tqdm import tqdm
 
 from ..renderer import render
@@ -76,9 +77,8 @@ class Trainer:
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.preload_volumes = preload_volumes
         self.subjects, self.single_subject = initialize_subjects(
-            volpath, maskpath, orientation, self.preload_volumes
+            volpath, maskpath, orientation
         )
 
         # Initialize all deep learning modules
@@ -155,14 +155,18 @@ class Trainer:
             desc="Training model...",
             ncols=200,
         )
-        for itr in pbar:
+
+        if self.single_subject:
+            self.subjects = (None for _ in range(self.n_total_itrs))
+
+        for itr, subject in zip(pbar, self.subjects):
             # Checkpoint the model
             if itr % self.n_save_every_itrs == 0:
                 self._checkpoint(itr)
 
             # Run an iteration of the training loop
             try:
-                log, imgs, masks = self.step(itr)
+                log, imgs, masks = self.step(itr, subject)
             except Exception as e:
                 print(e)
                 continue
@@ -175,28 +179,7 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
-    def step(self, itr):
-        if self.single_subject:
-            log, imgs, masks = self._step_single_subject(itr)
-        else:
-            log, imgs, masks = self._step_random_subject(itr)
-        return log, imgs, masks
-
-    def _step_single_subject(self, itr):
-        log, imgs, masks = self._run_iteration(itr)
-        return log, imgs, masks
-
-    def _step_random_subject(self, itr):
-        subject = choice(self.subjects)
-        if not self.preload_volumes:
-            subject.load()
-            log, imgs, masks = self._run_iteration(itr, subject)
-            subject.unload()
-        else:
-            log, imgs, masks = self._run_iteration(itr, subject)
-        return log, imgs, masks
-
-    def _run_iteration(self, itr, subject=None):
+    def step(self, itr, subject):
         # Sample a batch of DRRs
         img, mask, pose, keep, contrast = self._render_samples(subject)
 
@@ -296,19 +279,17 @@ class Trainer:
         self.model_number += 1
 
 
-def initialize_subjects(volpath, maskpath, orientation, preload_volumes):
+def initialize_subjects(volpath, maskpath, orientation, num_workers=4, pin_memory=True):
     # If only a single subject is passed, load it and return
-    volpath = Path(volpath)
-    if volpath.is_file():
-        subject = read(volpath, maskpath, orientation=orientation)
+    single_subject = False
+    if Path(volpath).is_file():
         single_subject = True
+        subject = read(volpath, maskpath, orientation=orientation)
         return subject, single_subject
-    else:
-        single_subject = False
 
     # Else, construct a list of all volumes and masks
     # We assume volumes and masks have the same name, but are in different folders
-    volumes = sorted(volpath.glob("*.nii.gz"))
+    volumes = sorted(Path(volpath).glob("*.nii.gz"))
     masks = sorted(Path(maskpath).glob("*.nii.gz")) if maskpath is not None else []
     itr = zip_longest(volumes, masks)
     pbar = tqdm(itr, desc="Lazily loading CTs...", total=len(volumes), ncols=200)
@@ -322,10 +303,14 @@ def initialize_subjects(volpath, maskpath, orientation, preload_volumes):
         )
         subjects.append(subject)
 
-    # Optionally, load all volumes in memory
-    if preload_volumes:
-        for subject in tqdm(subjects, desc="Preloading CTs into memory...", ncols=200):
-            subject.load()
+    # Construct an efficient random sampler of subjects
+    subjects = SubjectsDataset(subjects)
+    subjects = SubjectsLoader(
+        subjects,
+        sampler=RandomSampler(subjects, num_samples=int(1e10)),
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+    )
 
     return subjects, single_subject
 

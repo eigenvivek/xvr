@@ -4,13 +4,12 @@ import torch
 from diffdrr.data import transform_hu_to_density
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform, convert
-from torchio import Subject
 
 
 def render(
     drr: DRR,
     pose: RigidTransform,
-    subject: Optional[Subject] = None,
+    subject: Optional[dict] = None,
     contrast: float = 1.0,
     centerize: bool = True,
 ):
@@ -20,12 +19,9 @@ def render(
     """
 
     # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
-    if subject is not None:
+    if isinstance(subject, dict):
         volume, mask, affinv, offset = load(
-            subject.volume,
-            subject.mask,
-            dtype=pose.matrix.dtype,
-            device=pose.matrix.device,
+            subject, dtype=pose.matrix.dtype, device=pose.matrix.device
         )
     else:
         volume, mask, affinv = drr.volume, drr.mask, drr.affine_inverse
@@ -50,19 +46,26 @@ def render(
     return img, mask, pose
 
 
-def load(volume, mask, dtype, device):
+def load(subject, dtype, device):
     # Load the volume and optional mask into memory
-    data = volume.data.squeeze().to(dtype=dtype, device=device)
-    if mask is not None:
-        mask = mask.data.squeeze().to(dtype=dtype, device=device)
+    data = subject["volume"]["data"].squeeze().to(dtype=dtype, device=device)
+    if subject["mask"] is not None:
+        mask = subject["mask"]["data"].data.squeeze().to(dtype=dtype, device=device)
 
-    # Save the inverse affine for moving from world to voxel coordinates
-    affine = torch.from_numpy(volume.affine).to(dtype=dtype, device=device)
-    affinv = RigidTransform(affine.inverse())
+    # Get the volume's isocenter and construct a translation to it
+    affine = torch.from_numpy(subject["volume"]["affine"]).to(dtype=dtype)
+    affine = RigidTransform(affine)
 
-    # Make a transform from the origin in world coordinates to the volume's isocenter
-    center = torch.tensor(volume.get_center())[None].to(dtype=dtype, device=device)
+    center = (torch.tensor(data.shape)[None, None] - 1) / 2
+    center = affine(center)[0].to(dtype=dtype, device=device)
+
     offset = make_translation(center)
+
+    # Make the inverse affine
+    affine = torch.from_numpy(subject["volume"]["affine"]).to(
+        dtype=dtype, device=device
+    )
+    affinv = RigidTransform(affine.inverse())
 
     return data, mask, affinv, offset
 
