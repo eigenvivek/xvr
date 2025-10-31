@@ -70,7 +70,7 @@ class Trainer:
         lora_target_modules=None,
         warp=None,
         invert=False,
-        num_workers=8,
+        num_workers=4,
         pin_memory=True,
     ):
         # Record all hyperparameters to be checkpointed

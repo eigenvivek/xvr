@@ -97,23 +97,8 @@ Required options:
 
 Data options:
   -m, --maskpath PATH             Optional labelmaps for the CTs passed in `volpath`
-  --preload_volumes               If directory of CTs are passed, try to load all into memory (speeds up training)
-
-Model options:
-  --model_name TEXT               Name of model to instantiate from the timm library  [default: resnet18]
-  --norm_layer TEXT               Normalization layer  [default: groupnorm]
-  --pretrained                    Load pretrained ImageNet-1k weights
-  --parameterization TEXT         Parameterization of SO(3) for regression  [default: euler_angles]
-  --convention TEXT               If `parameterization='euler_angles'`, specify order  [default: ZXY]
-  --unit_conversion_factor FLOAT  Scale factor for translation prediction (e.g., from m to mm)  [default: 1000.0]
-  --p_augmentation FLOAT          Base probability of image augmentations during training  [default: 0.5]
-  --lora_target_modules TEXT      Target modules for which to create LoRA adapters
-
-Checkpoint options:
-  -c, --ckptpath PATH             Checkpoint of a pretrained pose regressor
-  --reuse_optimizer               If ckptpath passed, initialize the previous optimizer's state
-  -w, --warp PATH                 SimpleITK transform to warp input CT to the checkpoint's reference frame
-  --invert                        Whether to invert the warp or not
+  --num_workers INTEGER           Number of subprocesses to use in the dataloader  [default: 4]
+  --pin_memory                    Copy volumes from the dataloader into CUDA pinned memory before returning
 
 Sampling options:
   --r1 <FLOAT FLOAT>...           Range for primary angle (in degrees)  [required]
@@ -132,6 +117,16 @@ Renderer options:
   --orientation [AP|PA]           Orientation of CT volumes  [default: AP]
   --reverse_x_axis                Enable to obey radiologic convention (e.g., heart on right)
 
+Model options:
+  --model_name TEXT               Name of model to instantiate from the timm library  [default: resnet18]
+  --norm_layer TEXT               Normalization layer  [default: groupnorm]
+  --pretrained                    Load pretrained ImageNet-1k weights
+  --parameterization TEXT         Parameterization of SO(3) for regression  [default: euler_angles]
+  --convention TEXT               If `parameterization='euler_angles'`, specify order  [default: ZXY]
+  --unit_conversion_factor FLOAT  Scale factor for translation prediction (e.g., from m to mm)  [default: 1000.0]
+  --p_augmentation FLOAT          Base probability of image augmentations during training  [default: 0.5]
+  --lora_target_modules TEXT      Target modules for which to create LoRA adapters
+
 Optimizer options:
   --lr FLOAT                      Maximum learning rate  [default: 0.005]
   --weight_geo FLOAT              Weight on geodesic loss term  [default: 0.01]
@@ -141,6 +136,12 @@ Optimizer options:
   --n_grad_accum_itrs INTEGER     Number of iterations for gradient accumulation  [default: 4]
   --n_save_every_itrs INTEGER     Number of iterations before saving a new model checkpoint  [default: 2500]
   --disable_scheduler             Turn off cosine learning rate scheduler
+
+Checkpoint options:
+  -c, --ckptpath PATH             Checkpoint of a pretrained pose regressor
+  --reuse_optimizer               If ckptpath passed, initialize the previous optimizer's state
+  -w, --warp PATH                 SimpleITK transform to warp input CT to the checkpoint's reference frame
+  --invert                        Whether to invert the warp or not
 
 Logging options:
   --name TEXT                     WandB run name
