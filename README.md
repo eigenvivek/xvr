@@ -269,7 +269,8 @@ cd xvr
 uv sync --all-extras
 
 # Install pre-commit hooks locally
-uvx pre-commit install
+uv tool install prek
+uvx prek install -f
 ```
 
 To verify your virtual environment, you can run
