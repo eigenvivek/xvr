@@ -150,6 +150,8 @@ class Trainer:
     def train(self, run=None):
         pbar = tqdm(
             range(self.start_itr, self.n_total_itrs),
+            initial=self.start_itr,
+            total=self.n_total_itrs,
             desc="Training model...",
             ncols=200,
         )
