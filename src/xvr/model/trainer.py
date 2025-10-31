@@ -70,7 +70,8 @@ class Trainer:
         lora_target_modules=None,
         warp=None,
         invert=False,
-        preload_volumes=False,
+        num_workers=8,
+        pin_memory=True,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
@@ -78,7 +79,7 @@ class Trainer:
 
         # Initialize a lazy list of all 3D volumes
         self.subjects, self.single_subject = initialize_subjects(
-            volpath, maskpath, orientation
+            volpath, maskpath, orientation, n_total_itrs, num_workers, pin_memory
         )
 
         # Initialize all deep learning modules
@@ -279,7 +280,9 @@ class Trainer:
         self.model_number += 1
 
 
-def initialize_subjects(volpath, maskpath, orientation, num_workers=4, pin_memory=True):
+def initialize_subjects(
+    volpath, maskpath, orientation, num_samples, num_workers, pin_memory
+):
     # If only a single subject is passed, load it and return
     single_subject = False
     if Path(volpath).is_file():
@@ -307,7 +310,7 @@ def initialize_subjects(volpath, maskpath, orientation, num_workers=4, pin_memor
     subjects = SubjectsDataset(subjects)
     subjects = SubjectsLoader(
         subjects,
-        sampler=RandomSampler(subjects, num_samples=int(1e10)),
+        sampler=RandomSampler(subjects, replacement=True, num_samples=num_samples),
         num_workers=num_workers,
         pin_memory=pin_memory,
     )
