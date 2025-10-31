@@ -31,7 +31,7 @@ def render(
         volume, mask, affinv = drr.volume, drr.mask, drr.affine_inverse
         offset = make_translation(drr.center)
     if centerize:
-        pose = offset.compose(pose)
+        pose = pose.compose(offset)
 
     # Get the source and target locations for every ray in voxel coordinates
     source, target = drr.detector(pose, None)
@@ -58,8 +58,7 @@ def load(volume, mask, dtype, device):
 
     # Save the inverse affine for moving from world to voxel coordinates
     affine = torch.from_numpy(volume.affine).to(dtype=dtype, device=device)
-    affine = RigidTransform(affine)
-    affinv = affine.inverse()
+    affinv = RigidTransform(affine.inverse())
 
     # Make a transform from the origin in world coordinates to the volume's isocenter
     center = torch.tensor(volume.get_center())[None].to(dtype=dtype, device=device)
