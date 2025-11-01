@@ -197,8 +197,7 @@ class Trainer:
         pred_img, pred_mask, _ = render(
             self.drr, pred_pose, subject, contrast, centerize=False
         )
-        imgs = torch.concat([img[:4], pred_img[:4]])
-        masks = torch.concat([mask[:4], pred_mask[:4]])
+        pred_img = self.transforms(pred_img)
 
         # Compute the loss
         loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
@@ -227,6 +226,8 @@ class Trainer:
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
+        imgs = torch.concat([img[:4], pred_img[:4]])
+        masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
 
     def _render_samples(self, subject, img_threshold=0.65, mask_threshold=0.05):
