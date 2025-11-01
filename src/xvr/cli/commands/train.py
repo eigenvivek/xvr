@@ -354,10 +354,11 @@ def train(
     Path(outpath).mkdir(parents=True, exist_ok=True)
 
     # If ckptpath is a directory, get the last saved model
-    ckptpath = Path(ckptpath)
-    if ckptpath.is_dir():
-        ckptpath = sorted(ckptpath.glob("*.pth"))[-1]
-    ckptpath = str(ckptpath)
+    if ckptpath is not None:
+        ckptpath = Path(ckptpath)
+        if ckptpath.is_dir():
+            ckptpath = max(ckptpath.glob("*.pth"), key=lambda p: p.stat().st_mtime)
+        ckptpath = str(ckptpath)
 
     # Parse 6-DoF pose parameters
     alphamin, alphamax = r1
