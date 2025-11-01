@@ -252,11 +252,12 @@ class Trainer:
         return img, mask, pose, keep, contrast
 
     def _log_wandb(self, itr, log, imgs, masks):
-        if itr % 250 == 0:
-            fig, axs = plt.subplots(ncols=4, nrows=2)
+        ncols = len(imgs) // 2
+        if itr % 250 == 0 and ncols > 0:
+            fig, axs = plt.subplots(ncols=ncols, nrows=2)
             plot_drr(imgs, axs=axs.flatten(), ticks=False)
             if masks.shape[1] > 1:
-                plot_mask(masks[:, 1:], axs=axs.flatten())
+                plot_mask(masks[:, 1:], alpha=0.25, axs=axs.flatten())
             plt.tight_layout()
             log["imgs"] = fig
             plt.close()
