@@ -6,13 +6,17 @@ class PoseRegressionLoss(torch.nn.Module):
     def __init__(
         self,
         sdd: float,  # Source-to-detector distance (in mm)
-        weight_geo: float,  # Balancing term for geodesic loss (in mm) and NCC [-1, 1]
-        weight_dice: float,  # Balancing term for Dice loss and NCC
+        weight_ncc: float,  # Weight for mNCC loss
+        weight_geo: float,  # Weight for geodesic distance
+        weight_dice: float,  # Weight for Dice loss
     ):
         super().__init__()
+
         self.imagesim = MultiscaleNormalizedCrossCorrelation2d([None, 9], [0.5, 0.5])
         self.diceloss = DiceLoss()
         self.geodesic = DoubleGeodesicSE3(sdd)
+
+        self.weight_ncc = weight_ncc
         self.weight_geo = weight_geo
         self.weight_dice = weight_dice
 
@@ -20,7 +24,13 @@ class PoseRegressionLoss(torch.nn.Module):
         mncc = self.imagesim(img, pred_img)
         dice = self.diceloss(mask, pred_mask)
         rgeo, tgeo, dgeo = self.geodesic(pose, pred_pose)
-        loss = 1 - mncc + self.weight_dice * dice + self.weight_geo * dgeo
+
+        loss = (
+            self.weight_ncc * (1 - mncc)
+            + self.weight_dice * dice
+            + self.weight_geo * dgeo
+        )
+
         return loss, mncc, dgeo, rgeo, tgeo, dice
 
 

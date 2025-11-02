@@ -129,8 +129,9 @@ Model options:
 
 Optimizer options:
   --lr FLOAT                      Maximum learning rate  [default: 0.005]
+  --weight_ncc FLOAT              Weight on mNCC loss term  [default: 1.0]
   --weight_geo FLOAT              Weight on geodesic loss term  [default: 0.01]
-  --weight_dice FLOAT             Weight on Dice loss term  [default: 0.1]
+  --weight_dice FLOAT             Weight on Dice loss term  [default: 1.0]
   --n_total_itrs INTEGER          Number of iterations for training the model  [default: 1000000]
   --n_warmup_itrs INTEGER         Number of iterations for warming up the learning rate  [default: 1000]
   --n_grad_accum_itrs INTEGER     Number of iterations for gradient accumulation  [default: 4]
