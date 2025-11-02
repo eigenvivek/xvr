@@ -280,6 +280,13 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Checkpoint",
 )
 @categorized_option(
+    "--patch_size",
+    default=None,
+    type=str,
+    help="Optional random crop size (e.g., 'h,w,d'); if None, return entire volume",
+    category="Data",
+)
+@categorized_option(
     "--num_workers",
     default=4,
     type=int,
@@ -345,6 +352,7 @@ def train(
     lora_target_modules,
     warp,
     invert,
+    patch_size,
     num_workers,
     pin_memory,
     name,
@@ -367,6 +375,10 @@ def train(
         if ckptpath.is_dir():
             ckptpath = max(ckptpath.glob("*.pth"), key=lambda p: p.stat().st_mtime)
         ckptpath = str(ckptpath)
+
+    # Parse patch_size
+    if patch_size is not None:
+        patch_size = tuple(int(x) for x in patch_size.split(","))
 
     # Parse 6-DoF pose parameters
     alphamin, alphamax = r1
@@ -419,6 +431,7 @@ def train(
         disable_scheduler=disable_scheduler,
         reuse_optimizer=reuse_optimizer,
         lora_target_modules=lora_target_modules,
+        patch_size=patch_size,
         num_workers=num_workers,
         pin_memory=pin_memory,
         warp=warp,

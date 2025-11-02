@@ -12,7 +12,15 @@ from diffdrr.visualization import plot_drr, plot_mask
 from peft import LoraConfig, get_peft_model
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from torch.utils.data import RandomSampler
-from torchio import LabelMap, ScalarImage, Subject, SubjectsDataset, SubjectsLoader
+from torchio import (
+    LabelMap,
+    Queue,
+    ScalarImage,
+    Subject,
+    SubjectsDataset,
+    SubjectsLoader,
+    UniformSampler,
+)
 from tqdm import tqdm
 
 from ..renderer import render
@@ -70,6 +78,7 @@ class Trainer:
         lora_target_modules=None,
         warp=None,
         invert=False,
+        patch_size=None,
         num_workers=4,
         pin_memory=True,
     ):
@@ -79,7 +88,14 @@ class Trainer:
 
         # Initialize a lazy list of all 3D volumes
         self.subjects, self.single_subject = initialize_subjects(
-            volpath, maskpath, orientation, n_total_itrs, num_workers, pin_memory
+            volpath,
+            maskpath,
+            orientation,
+            patch_size,
+            n_grad_accum_itrs,
+            n_total_itrs,
+            num_workers,
+            pin_memory,
         )
 
         # Initialize all deep learning modules
@@ -283,7 +299,15 @@ class Trainer:
 
 
 def initialize_subjects(
-    volpath, maskpath, orientation, num_samples, num_workers, pin_memory
+    volpath,
+    maskpath,
+    orientation,
+    patch_size,
+    n_grad_accum_itrs,
+    num_samples,
+    num_workers,
+    pin_memory,
+    replacement=True,
 ):
     # If only a single subject is passed, load it and return
     single_subject = False
@@ -294,26 +318,50 @@ def initialize_subjects(
 
     # Else, construct a list of all volumes and masks
     # We assume volumes and masks have the same name, but are in different folders
-    volumes = sorted(Path(volpath).glob("*.nii.gz"))
-    masks = sorted(Path(maskpath).glob("*.nii.gz")) if maskpath is not None else []
+    volumes = sorted(Path(volpath).glob("[!.]*[!seg].nii.gz"))
+    masks = sorted(Path(maskpath).glob("[!.]*.nii.gz")) if maskpath is not None else []
     itr = zip_longest(volumes, masks)
     pbar = tqdm(itr, desc="Lazily loading CTs...", total=len(volumes), ncols=200)
 
     # Lazily load a list of all subjects in the dataset
     subjects = []
     for volpath, maskpath in pbar:
-        subject = Subject(
-            volume=ScalarImage(volpath),
-            mask=LabelMap(maskpath) if maskpath is not None else None,
-        )
+        volume = ScalarImage(volpath)
+        mask = LabelMap(maskpath) if maskpath is not None else None
+        subject = Subject(volume=volume, mask=mask)
         subjects.append(subject)
 
-    # Construct an efficient random sampler of subjects
+    # Construct a dataloader with efficient IO
     subjects = SubjectsDataset(subjects)
-    subjects = SubjectsLoader(
+    subject_sampler = RandomSampler(subjects, replacement, num_samples)
+
+    # Return entire volumes
+    if patch_size is None:
+        subjects = SubjectsLoader(
+            subjects,
+            sampler=subject_sampler,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
+        return subjects, single_subject
+
+    # Return random crops
+    patch_sampler = UniformSampler(patch_size)
+    patches_queue = Queue(
         subjects,
-        sampler=RandomSampler(subjects, replacement=True, num_samples=num_samples),
+        max_length=64,
+        samples_per_volume=max(n_grad_accum_itrs, 4),
+        sampler=patch_sampler,
+        subject_sampler=subject_sampler,
+        shuffle_patches=(n_grad_accum_itrs == 1),
+        shuffle_subjects=False,
         num_workers=num_workers,
+    )
+
+    subjects = SubjectsLoader(
+        patches_queue,
+        batch_size=1,
+        num_workers=0,
         pin_memory=pin_memory,
     )
 
