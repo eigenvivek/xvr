@@ -58,7 +58,7 @@ class Trainer:
         lr=5e-3,
         weight_ncc=1e0,
         weight_geo=1e-2,
-        weight_dice=1e-1,
+        weight_dice=1e0,
         batch_size=96,
         n_total_itrs=100_000,
         n_warmup_itrs=1_000,

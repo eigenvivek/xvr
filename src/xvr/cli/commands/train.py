@@ -204,7 +204,7 @@ from ..formatter import CategorizedCommand, categorized_option
 )
 @categorized_option(
     "--weight_dice",
-    default=1e-1,
+    default=1e0,
     type=float,
     help="Weight on Dice loss term",
     category="Optimizer",
