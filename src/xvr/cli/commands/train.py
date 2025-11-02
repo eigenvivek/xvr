@@ -189,6 +189,13 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Optimizer",
 )
 @categorized_option(
+    "--weight_ncc",
+    default=1e0,
+    type=float,
+    help="Weight on mNCC loss term",
+    category="Optimizer",
+)
+@categorized_option(
     "--weight_geo",
     default=1e-2,
     type=float,
@@ -325,6 +332,7 @@ def train(
     unit_conversion_factor,
     p_augmentation,
     lr,
+    weight_ncc,
     weight_geo,
     weight_dice,
     batch_size,
@@ -400,6 +408,7 @@ def train(
         unit_conversion_factor=unit_conversion_factor,
         p_augmentation=p_augmentation,
         lr=lr,
+        weight_ncc=weight_ncc,
         weight_geo=weight_geo,
         weight_dice=weight_dice,
         batch_size=batch_size,
