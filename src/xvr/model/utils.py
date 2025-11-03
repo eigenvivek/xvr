@@ -42,7 +42,7 @@ def initialize_subjects(
 
     # Else, construct a list of all volumes and masks
     # We assume volumes and masks have the same name, but are in different folders
-    volumes = sorted(Path(volpath).glob("[!.]*[!seg].nii.gz"))
+    volumes = sorted(Path(volpath).glob("[!.]*.nii.gz"))
     masks = sorted(Path(maskpath).glob("[!.]*.nii.gz")) if maskpath is not None else []
     itr = zip_longest(volumes, masks)
     pbar = tqdm(itr, desc="Lazily loading CTs...", total=len(volumes), ncols=200)
