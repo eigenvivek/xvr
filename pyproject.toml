@@ -1,6 +1,6 @@
 [project]
 name = "xvr"
-version = "0.0.0rc1"
+version = "0.0.0rc2"
 description = "Differentiable 2D/3D X-ray to volume registration"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -39,8 +39,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
-dev = [
-    "diffdrrdata>=0.0.7",
-    "jupyterlab-code-formatter>=3.0.2",
+jupyter = [
+    "jupyter-ruff>=0.3.0",
+    "jupyterlab>=4.4.10",
     "jupyterlab-execute-time>=3.2.0",
 ]
