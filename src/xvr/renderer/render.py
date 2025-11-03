@@ -46,25 +46,23 @@ def render(
     return img, mask, pose
 
 
-def load(subject, dtype, device):
+def load(subject, dtype, device, mask=None):
     # Load the volume and optional mask into memory
-    data = subject["volume"]["data"].squeeze().to(dtype=dtype, device=device)
-    if subject["mask"] is not None:
-        mask = subject["mask"]["data"].data.squeeze().to(dtype=dtype, device=device)
+    data = subject["volume"]["data"].squeeze().to(device, dtype)
+    try:
+        mask = subject["mask"]["data"].data.squeeze().to(device, dtype)
+    except TypeError:
+        pass
 
     # Get the volume's isocenter and construct a translation to it
     affine = torch.from_numpy(subject["volume"]["affine"]).to(dtype=dtype)
     affine = RigidTransform(affine)
-
     center = (torch.tensor(data.shape)[None, None] - 1) / 2
-    center = affine(center)[0].to(dtype=dtype, device=device)
-
+    center = affine(center)[0].to(device, dtype)
     offset = make_translation(center)
 
     # Make the inverse affine
-    affine = torch.from_numpy(subject["volume"]["affine"]).to(
-        dtype=dtype, device=device
-    )
+    affine = torch.from_numpy(subject["volume"]["affine"]).to(device, dtype)
     affinv = RigidTransform(affine.inverse())
 
     return data, mask, affinv, offset
