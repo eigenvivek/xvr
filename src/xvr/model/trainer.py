@@ -75,7 +75,6 @@ class Trainer:
             maskpath,
             orientation,
             patch_size,
-            n_grad_accum_itrs,
             n_total_itrs,
             num_workers,
             pin_memory,

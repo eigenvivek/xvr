@@ -28,7 +28,6 @@ def initialize_subjects(
     maskpath: Optional[str],  # Optional directory with corresponding labels
     orientation: Optional[str],  # "AP", "PA", or None
     patch_size: Optional[tuple],  # Tuple for random crop sizes (h, w, d)
-    n_grad_accum_itrs: int,
     num_samples: int,  # Total number of training iterations
     num_workers: int,
     pin_memory: bool,
@@ -43,7 +42,7 @@ def initialize_subjects(
 
     # Else, construct a list of all volumes and masks
     # We assume volumes and masks have the same name, but are in different folders
-    volumes = sorted(Path(volpath).glob("[!.]*.nii.gz"))
+    volumes = sorted(Path(volpath).glob("[!.]*[!seg].nii.gz"))
     masks = sorted(Path(maskpath).glob("[!.]*.nii.gz")) if maskpath is not None else []
     itr = zip_longest(volumes, masks)
     pbar = tqdm(itr, desc="Lazily loading CTs...", total=len(volumes), ncols=200)
@@ -75,10 +74,9 @@ def initialize_subjects(
     patches_queue = Queue(
         subjects,
         max_length=64,
-        samples_per_volume=max(n_grad_accum_itrs, 4),
+        samples_per_volume=4,
         sampler=patch_sampler,
         subject_sampler=subject_sampler,
-        shuffle_patches=(n_grad_accum_itrs == 1),
         shuffle_subjects=False,
         num_workers=num_workers,
     )
