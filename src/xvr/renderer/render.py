@@ -49,8 +49,10 @@ def render(
 def load(subject, dtype, device, mask=None):
     # Load the volume and optional mask into memory
     data = subject["volume"]["data"].squeeze().to(device, dtype)
-    if subject["mask"][0] is not None:
+    try:
         mask = subject["mask"]["data"].data.squeeze().to(device, dtype)
+    except TypeError:
+        pass
 
     # Get the volume's isocenter and construct a translation to it
     affine = torch.from_numpy(subject["volume"]["affine"]).to(dtype=dtype)
