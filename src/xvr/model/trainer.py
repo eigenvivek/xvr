@@ -187,8 +187,10 @@ class Trainer:
         mask = mask[keep]
         pose = RigidTransform(pose[keep])
 
-        # Regress the poses (and optionally convert between reference frames)
-        pred_pose = self.model(img)
+        # Augment images and regress their poses (and optionally convert between reference frames)
+        x = self.augmentations(img)
+        x = self.transforms(x)
+        pred_pose = self.model(x)
         if self.reframe is not None:
             pred_pose = pred_pose.compose(self.reframe)
 
@@ -196,9 +198,9 @@ class Trainer:
         pred_img, pred_mask, _ = render(
             self.drr, pred_pose, subject, contrast, centerize=False
         )
-        pred_img = self.transforms(pred_img)
 
         # Compute the loss
+        img, pred_img = self.transforms(img), self.transforms(pred_img)
         loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
             img, mask, pose, pred_img, pred_mask, pred_pose
         )
@@ -225,7 +227,7 @@ class Trainer:
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
-        imgs = torch.concat([img[:4], pred_img[:4]])
+        imgs = torch.concat([x[:4], pred_img[:4]])
         masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
 
@@ -245,9 +247,6 @@ class Trainer:
                 # Keep if >5% of the image contains pixels corresponding to masked structures
                 keep = mask[:, 1:].sum(dim=1, keepdim=True)
                 keep = (keep > 0).to(img).flatten(1).mean(1) > mask_threshold
-
-            img = self.augmentations(img)
-            img = self.transforms(img)
 
         return img, mask, pose, keep, contrast
 
