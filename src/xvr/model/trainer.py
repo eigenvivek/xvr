@@ -3,12 +3,12 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import torch
 import wandb
-from diffdrr.pose import RigidTransform
+from diffdrr.data import transform_hu_to_density
+from diffdrr.pose import RigidTransform, convert
 from diffdrr.visualization import plot_drr, plot_mask
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from tqdm import tqdm
 
-from ..renderer import render
 from .augmentations import XrayAugmentations
 from .loss import PoseRegressionLoss
 from .sampler import get_random_pose
@@ -179,25 +179,34 @@ class Trainer:
         self._checkpoint(itr)
 
     def step(self, itr, subject):
-        # Sample a batch of DRRs
-        img, mask, pose, keep, contrast = self._render_samples(subject)
+        # Sample a batch of random poses
+        pose = get_random_pose(**self.pose_distribution).cuda()
 
-        # Only keep samples that capture the volume
+        # Load the subject and translate the pose to its isocenter
+        vol, seg, affinv, offset = self.load(
+            subject, pose.matrix.dtype, pose.matrix.device
+        )
+        pose = pose.compose(offset)
+
+        # Render a batch of DRRs and keep samples that capture the volume
+        contrast = self.contrast_distribution.sample().item()
+        tmp = transform_hu_to_density(vol, contrast)
+
+        with torch.no_grad():
+            img, mask, keep = self.render_samples(tmp, seg, affinv, pose)
+
         img = img[keep]
         mask = mask[keep]
         pose = RigidTransform(pose[keep])
 
-        # Augment images and regress their poses (and optionally convert between reference frames)
-        x = self.augmentations(img)
-        x = self.transforms(x)
+        # Regress the poses of the DRRs (and optionally convert between reference frames)
+        x = self.transforms(self.augmentations(img))
         pred_pose = self.model(x)
         if self.reframe is not None:
             pred_pose = pred_pose.compose(self.reframe)
 
         # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = render(
-            self.drr, pred_pose, subject, contrast, centerize=False
-        )
+        pred_img, pred_mask, _ = self.render_samples(tmp, seg, affinv, pred_pose)
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
@@ -231,24 +240,63 @@ class Trainer:
         masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
 
-    def _render_samples(self, subject, img_threshold=0.65, mask_threshold=0.05):
-        # Sample a batch of random poses
-        pose = get_random_pose(**self.pose_distribution).cuda()
+    def load(self, subject, dtype, device):
+        # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
+        if subject is None:
+            volume, mask, affinv = (
+                self.drr.volume,
+                self.drr.mask,
+                self.drr.affine_inverse,
+            )
+            offset = make_translation(self.drr.center)
+            return volume, mask, affinv, offset
 
-        # Render random DRRs and apply augmentations/transforms
-        contrast = self.contrast_distribution.sample().item()
-        with torch.no_grad():
-            img, mask, pose = render(self.drr, pose, subject, contrast, centerize=True)
+        # Process torchio patch
+        volume = subject["volume"]["data"].squeeze().to(device, dtype)
+        try:
+            mask = subject["mask"]["data"].data.squeeze().to(device, dtype)
+        except TypeError:
+            mask = None
 
-            if mask.shape[1] == 1:
-                # Keep if >65% of the image is non-zero pixels
-                keep = mask.to(img).flatten(1).mean(1) > img_threshold
-            else:
-                # Keep if >5% of the image contains pixels corresponding to masked structures
-                keep = mask[:, 1:].sum(dim=1, keepdim=True)
-                keep = (keep > 0).to(img).flatten(1).mean(1) > mask_threshold
+        # Get the volume's isocenter and construct a translation to it
+        affine = torch.from_numpy(subject["volume"]["affine"]).to(dtype=dtype)
+        affine = RigidTransform(affine)
+        center = (torch.tensor(volume.shape)[None, None] - 1) / 2
+        center = affine(center)[0].to(device, dtype)
+        offset = make_translation(center)
 
-        return img, mask, pose, keep, contrast
+        # Make the inverse affine
+        affine = torch.from_numpy(subject["volume"]["affine"]).to(device, dtype)
+        affinv = RigidTransform(affine.inverse())
+
+        return volume, mask, affinv, offset
+
+    def render_samples(
+        self, tmp, seg, affinv, pose, img_threshold=0.65, mask_threshold=0.05
+    ):
+        # Get the source and target locations for every ray in voxel coordinates
+        source, target = self.drr.detector(pose, None)
+        img = (target - source).norm(dim=-1).unsqueeze(1)
+        source, target = affinv(source), affinv(target)
+
+        # Render a batch of DRRs
+        img = self.drr.renderer(tmp, source, target, img, mask=seg)
+        img = self.drr.reshape_transform(img, batch_size=len(pose))
+
+        # Create a foreground mask and collapse potentially multichannel images to a single DRR
+        mask = img > 0
+        img = img.sum(dim=1, keepdim=True)
+
+        # Discard empty imgs/masks
+        if mask.shape[1] == 1:
+            # Keep if >65% of the image is non-zero pixels
+            keep = mask.to(img).flatten(1).mean(1) > img_threshold
+        else:
+            # Keep if >5% of the image contains pixels corresponding to masked structures
+            keep = mask[:, 1:].sum(dim=1, keepdim=True)
+            keep = (keep > 0).to(img).flatten(1).mean(1) > mask_threshold
+
+        return img, mask, keep
 
     def _log_wandb(self, itr, log, imgs, masks):
         ncols = len(imgs) // 2
@@ -277,3 +325,8 @@ class Trainer:
         )
         tqdm.write(f"Saving checkpoint: {savepath}")
         self.model_number += 1
+
+
+def make_translation(xyz):
+    rot = torch.zeros_like(xyz)
+    return convert(rot, xyz, parameterization="euler_angles", convention="ZXY")
