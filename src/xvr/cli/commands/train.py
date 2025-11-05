@@ -20,16 +20,16 @@ from ..formatter import CategorizedCommand, categorized_option
     "-v",
     "--volpath",
     required=True,
-    type=click.Path(exists=True),
-    help="A single CT or a directory of CTs for pretraining",
+    type=str,
+    help="A single CT or a glob pattern representing multiple volumes",
     category="Required",
 )
 @categorized_option(
     "-m",
     "--maskpath",
     required=False,
-    type=click.Path(exists=True),
-    help="Optional labelmaps for the CTs passed in `volpath`",
+    type=str,
+    help="Optional labelmaps corresponding to the CTs passed in `volpath`",
     category="Data",
 )
 @categorized_option(
