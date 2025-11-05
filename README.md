@@ -92,11 +92,12 @@ Usage: xvr train [OPTIONS]
   Train a pose regression model.
 
 Required options:
-  -v, --volpath PATH              A single CT or a directory of CTs for pretraining  [required]
+  -v, --volpath TEXT              A single CT or a glob pattern representing multiple volumes  [required]
   -o, --outpath PATH              Directory in which to save model weights  [required]
 
 Data options:
-  -m, --maskpath PATH             Optional labelmaps for the CTs passed in `volpath`
+  -m, --maskpath TEXT             Optional labelmaps corresponding to the CTs passed in `volpath`
+  --patch_size TEXT               Optional random crop size (e.g., 'h,w,d'); if None, return entire volume
   --num_workers INTEGER           Number of subprocesses to use in the dataloader  [default: 4]
   --pin_memory                    Copy volumes from the dataloader into CUDA pinned memory before returning
 
