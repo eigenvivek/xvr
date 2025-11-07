@@ -308,6 +308,13 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Logging",
 )
 @categorized_option(
+    "--id",
+    default=None,
+    type=str,
+    help="WandB run ID (useful when restarting from a checkpoint)",
+    category="Logging",
+)
+@categorized_option(
     "--project",
     default="xvr",
     type=str,
@@ -356,6 +363,7 @@ def train(
     num_workers,
     pin_memory,
     name,
+    id,
     project,
 ):
     """Train a pose regression model."""
@@ -444,6 +452,8 @@ def train(
         project=project,
         name=name if name is not None else project,
         config=config,
+        id=id,
+        resume="must" if id is not None else None,
     )
 
     # Train the model

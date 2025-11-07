@@ -147,6 +147,7 @@ Checkpoint options:
 
 Logging options:
   --name TEXT                     WandB run name
+  --id TEXT                       WandB run ID (useful when restarting from a checkpoint)
   --project TEXT                  WandB project name  [default: xvr]
 ```
 
