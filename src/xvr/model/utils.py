@@ -1,4 +1,3 @@
-from glob import glob
 from itertools import zip_longest
 from pathlib import Path
 from typing import Optional
@@ -25,8 +24,8 @@ from .scheduler import IdentitySchedule, WarmupCosineSchedule
 
 
 def initialize_subjects(
-    volpath: str,  # Single volume of glob pattern for list of volumes
-    maskpath: Optional[str],  # Corresponding mask or glob patterns
+    volpath: str,  # A single CT or a directory with multiple volumes
+    maskpath: Optional[str],  # Optional labelmaps corresponding to the CTs
     orientation: Optional[str],  # "AP", "PA", or None
     patch_size: Optional[tuple],  # Tuple for random crop sizes (h, w, d)
     num_samples: int,  # Total number of training iterations
@@ -43,8 +42,8 @@ def initialize_subjects(
 
     # Else, construct a list of all volumes and masks
     # We assume volumes and masks have the same name, but are in different folders
-    volumes = sorted(glob(volpath))
-    masks = sorted(glob(maskpath)) if maskpath is not None else []
+    volumes = sorted(Path(volpath).glob("[!.]*.nii.gz"))
+    masks = sorted(Path(maskpath).glob("[!.]*.nii.gz")) if maskpath is not None else []
     itr = zip_longest(volumes, masks)
     pbar = tqdm(itr, desc="Lazily loading CTs...", total=len(volumes), ncols=200)
 
