@@ -110,15 +110,28 @@ class _RegistrarBase:
         """Get initial pose estimate and image intrinsics."""
         raise NotImplementedError
 
-    def initialize_imagesim(self, patch_size: int, sigma: float, beta: float):
+    def initialize_imagesim(
+        self, mncc_patch_size: int, gncc_patch_size: int, sigma: float, beta: float
+    ):
         """Initialize gradient multiscale normalized cross correlation."""
-        sim1 = MultiscaleNormalizedCrossCorrelation2d([None, patch_size], [0.5, 0.5])
-        sim2 = GradientNormalizedCrossCorrelation2d(patch_size, sigma).cuda()
+        sim1 = MultiscaleNormalizedCrossCorrelation2d(
+            [None, mncc_patch_size], [0.5, 0.5]
+        )
+        sim2 = GradientNormalizedCrossCorrelation2d(gncc_patch_size, sigma).cuda()
         return lambda x, y: beta * sim1(x, y) + (1 - beta) * sim2(x, y)
 
-    def run(self, i2d: str | Path, patch_size: int, sigma: float, beta: float):
+    def run(
+        self,
+        i2d: str | Path,
+        mncc_patch_size: int,
+        gncc_patch_size: int,
+        sigma: float,
+        beta: float,
+    ):
         # Initialize the image similarity metric
-        imagesim = self.initialize_imagesim(patch_size, sigma, beta)
+        imagesim = self.initialize_imagesim(
+            mncc_patch_size, gncc_patch_size, sigma, beta
+        )
 
         # Predict the initial pose with a pretrained network
         gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose = self.initialize_pose(i2d)
@@ -276,7 +289,8 @@ class _RegistrarBase:
         self,
         i2d: str,
         outpath: str,
-        patch_size: int = 9,
+        mncc_patch_size: int = 9,
+        gncc_patch_size: int = 11,
         sigma: float = 0.0,
         beta: float = 0.5,
     ):
@@ -287,7 +301,7 @@ class _RegistrarBase:
 
         # Run the registration
         gt, intrinsics, drr, init_pose, final_pose, kwargs = self.run(
-            i2d, patch_size, sigma, beta
+            i2d, mncc_patch_size, gncc_patch_size, sigma, beta
         )
 
         # Generate DRRs from the initial and final pose estimates
