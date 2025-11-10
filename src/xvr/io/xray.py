@@ -77,14 +77,15 @@ def _parse_dicom(filename):
 def _parse_dicom_pose(filename, orientation):
     multiplier = -1 if orientation == "PA" else 1
     ds = dcmread(filename)
-    alpha = float(ds.PositionerPrimaryAngle) / 180 * torch.pi
-    beta = float(ds.PositionerSecondaryAngle) / 180 * torch.pi
+    alpha = float(ds.PositionerPrimaryAngle)
+    beta = float(ds.PositionerSecondaryAngle)
     sid = multiplier * float(ds.DistanceSourceToPatient)
     pose = convert(
         torch.tensor([[alpha, beta, 0.0]]),
         torch.tensor([[0.0, sid, 0.0]]),
         parameterization="euler_angles",
         convention="ZXY",
+        degrees=True,
     )
     return pose
 

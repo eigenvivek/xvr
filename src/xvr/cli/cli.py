@@ -3,7 +3,12 @@ from importlib.metadata import version
 
 import click
 
-from .commands import animate, dcm2nii, dicom, finetune, fixed, model, restart, train
+from .commands.animate import animate
+from .commands.dcm2nii import dcm2nii
+from .commands.finetune import finetune
+from .commands.register import dicom, fixed, model
+from .commands.restart import restart
+from .commands.train import train
 
 
 # Taken from https://stackoverflow.com/a/58323807
@@ -21,7 +26,7 @@ def register():
     """
     Use gradient-based optimization to register XRAY to a CT/MR.
 
-    Can pass multiple DICOM files or a directory in XRAY.
+    XRAY can be a space-separated list of DICOM files or a directory.
     """
 
 

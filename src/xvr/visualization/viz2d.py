@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 from diffdrr.visualization import plot_drr
 
-from .metrics import Evaluator
-from .utils import XrayTransforms
+from ..metrics import Evaluator
+from ..utils import XrayTransforms
 
 
 def plot_registration(drr, fiducials, gt, pred_pose, true_pose):
@@ -17,8 +17,8 @@ def plot_registration(drr, fiducials, gt, pred_pose, true_pose):
         true_pts = drr.perspective_projection(true_pose, fiducials).cpu().squeeze()
         pred_img = drr(pred_pose).cpu()
         true_img = drr(true_pose).cpu()
-        error = (true_img - pred_img)
-    
+        error = true_img - pred_img
+
     xt = XrayTransforms(drr.detector.height, drr.detector.width)
     gt = xt(gt)
     pred_img = xt(pred_img)
@@ -34,12 +34,20 @@ def plot_registration(drr, fiducials, gt, pred_pose, true_pose):
     # Plot the predicted, true, and error images
     plot_drr(
         torch.concat([pred_img, gt, error]),
-        title=["DRR from Predicted Pose", "Ground truth X-ray",
-               f"Error (mTRE = {mtre:.2f} mm)"],
+        title=[
+            "DRR from Predicted Pose",
+            "Ground truth X-ray",
+            f"Error (mTREE = {mtre:.2f} mm)",
+        ],
         ticks=False,
         axs=axs,
     )
-    axs[2].imshow(error[0].permute(1, 2, 0), cmap="bwr", vmin=-error.abs().max(), vmax=error.abs().max())
-    
+    axs[2].imshow(
+        error[0].permute(1, 2, 0),
+        cmap="bwr",
+        vmin=-error.abs().max(),
+        vmax=error.abs().max(),
+    )
+
     plt.tight_layout()
     plt.show()

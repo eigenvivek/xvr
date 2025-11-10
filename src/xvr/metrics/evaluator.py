@@ -12,7 +12,7 @@ class Evaluator:
     def __init__(self, drr: DRR, fiducials: torch.Tensor):
         self.drr = drr
         self.fiducials = fiducials
-        self.geodesic = DoubleGeodesicSE3(drr.detector.sdd)
+        self.geodesic = DoubleGeodesicSE3(drr.detector.sdd, eps=0.0)
 
     def __call__(self, true_pose: RigidTransform, pred_pose: RigidTransform):
         # Mean projection error (mPE)

@@ -1,8 +1,9 @@
 data
+logs
+misc
+wandb
 models
 results
-logs
-wandb
 .last_checked
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,linux,macos
