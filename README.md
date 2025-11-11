@@ -126,7 +126,6 @@ Model options:
   --convention TEXT               If `parameterization='euler_angles'`, specify order  [default: ZXY]
   --unit_conversion_factor FLOAT  Scale factor for translation prediction (e.g., from m to mm)  [default: 1000.0]
   --p_augmentation FLOAT          Base probability of image augmentations during training  [default: 0.5]
-  --lora_target_modules TEXT      Target modules for which to create LoRA adapters
 
 Optimizer options:
   --lr FLOAT                      Maximum learning rate  [default: 0.005]

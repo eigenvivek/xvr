@@ -58,7 +58,6 @@ class Trainer:
         disable_scheduler=False,
         ckptpath=None,
         reuse_optimizer=False,
-        lora_target_modules=None,
         warp=None,
         invert=False,
         patch_size=None,
@@ -110,7 +109,6 @@ class Trainer:
             disable_scheduler,
             ckptpath,
             reuse_optimizer,
-            lora_target_modules,
         )
 
         # Initialize the loss function

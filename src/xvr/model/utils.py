@@ -5,7 +5,6 @@ from typing import Optional
 import torch
 from diffdrr.data import load_example_ct, read
 from diffdrr.drr import DRR
-from peft import LoraConfig, get_peft_model
 from torch.utils.data import RandomSampler
 from torchio import (
     LabelMap,
@@ -112,7 +111,6 @@ def initialize_modules(
     disable_scheduler,
     ckptpath,
     reuse_optimizer,
-    lora_target_modules,
 ):
     # Initialize the pose regression model
     model = PoseRegressor(
@@ -130,20 +128,6 @@ def initialize_modules(
     if ckpt is not None:
         print("Loading previous model weights...")
         model.load_state_dict(ckpt["model_state_dict"])
-
-    # Optionally, create the LoRA model
-    if lora_target_modules is not None:
-        print("Creating LoRA version of the model...")
-        config = LoraConfig(
-            r=16,
-            lora_alpha=32,
-            target_modules=lora_target_modules,
-            lora_dropout=0.1,
-            bias="none",
-            modules_to_save=["xyz_regression", "rot_regression"],
-        )
-        model = get_peft_model(model, config)
-        model.print_trainable_parameters()
 
     # Initialize the optimizer and learning rate scheduler
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
