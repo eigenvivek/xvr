@@ -4829,7 +4829,6 @@ dependencies = [
     { name = "antspyx" },
     { name = "click" },
     { name = "diffdrr" },
-    { name = "huggingface-hub" },
     { name = "pydicom", extra = ["pixeldata"] },
     { name = "wandb" },
 ]
@@ -4846,7 +4845,6 @@ requires-dist = [
     { name = "antspyx", specifier = ">=0.5.4" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "diffdrr", specifier = ">=0.6.0" },
-    { name = "huggingface-hub", specifier = ">=0.32.0" },
     { name = "pydicom", extras = ["pixeldata"], specifier = ">=3.0.1" },
     { name = "wandb", specifier = ">=0.21.1" },
 ]
