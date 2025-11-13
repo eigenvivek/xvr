@@ -373,7 +373,7 @@ def train(
     if ckptpath is not None:
         ckptpath = Path(ckptpath)
         if ckptpath.is_dir():
-            ckptpath = max(ckptpath.glob("*.pth"), key=lambda p: p.stat().st_mtime)
+            ckptpath = max(ckptpath.glob("*.pth"), key=lambda p: p.name)
         ckptpath = str(ckptpath)
 
     # Parse patch_size
