@@ -6,9 +6,10 @@ class PoseRegressionLoss(torch.nn.Module):
     def __init__(
         self,
         sdd: float,  # Source-to-detector distance (in mm)
-        weight_ncc: float,  # Weight for mNCC loss
-        weight_geo: float,  # Weight for geodesic distance
-        weight_dice: float,  # Weight for Dice loss
+        weight_ncc: float = 1e0,  # Weight for mNCC loss
+        weight_geo: float = 1e-2,  # Weight for geodesic distance
+        weight_dice: float = 1e0,  # Weight for Dice loss
+        weight_rel: float = 1e-2,  # Weight for relative geodesic distance
     ):
         super().__init__()
 
@@ -19,19 +20,34 @@ class PoseRegressionLoss(torch.nn.Module):
         self.weight_ncc = weight_ncc
         self.weight_geo = weight_geo
         self.weight_dice = weight_dice
+        self.weight_rel = weight_rel
 
     def forward(self, img, mask, pose, pred_img, pred_mask, pred_pose):
+        # Per-image losses
         mncc = self.imagesim(img, pred_img)
         dice = self.diceloss(mask, pred_mask)
         rgeo, tgeo, dgeo = self.geodesic(pose, pred_pose)
+
+        # Multiview consistency loss
+        dgeo_relative = self.relative_geodesic(pose, pred_pose)
 
         loss = (
             self.weight_ncc * (1 - mncc)
             + self.weight_dice * dice
             + self.weight_geo * dgeo
+            + self.weight_rel * dgeo_relative
         )
 
-        return loss, mncc, dgeo, rgeo, tgeo, dice
+        return loss, mncc, dgeo, rgeo, tgeo, dice, dgeo_relative
+
+    def relative_geodesic(self, pose, pred_pose):
+        B = len(pose)
+        idx, jdx = torch.triu_indices(B, B, offset=1)
+        _, _, dgeo_relative = self.geodesic(
+            pose[idx].inverse().compose(pose[jdx]),
+            pred_pose[idx].inverse().compose(pred_pose[jdx]),
+        )
+        return dgeo_relative.mean()
 
 
 class DiceLoss(torch.nn.Module):
