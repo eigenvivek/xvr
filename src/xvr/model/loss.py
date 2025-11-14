@@ -9,7 +9,7 @@ class PoseRegressionLoss(torch.nn.Module):
         weight_ncc: float = 1e0,  # Weight for mNCC loss
         weight_geo: float = 1e-2,  # Weight for geodesic distance
         weight_dice: float = 1e0,  # Weight for Dice loss
-        weight_rel: float = 1e-2,  # Weight for relative geodesic distance
+        weight_rel: float = 1e-3,  # Weight for relative geodesic distance
     ):
         super().__init__()
 
