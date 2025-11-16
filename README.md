@@ -122,20 +122,21 @@ Model options:
   --model_name TEXT               Name of model to instantiate from the timm library  [default: resnet18]
   --norm_layer TEXT               Normalization layer  [default: groupnorm]
   --pretrained                    Load pretrained ImageNet-1k weights
-  --parameterization TEXT         Parameterization of SO(3) for regression  [default: euler_angles]
+  --parameterization TEXT         Parameterization of SO(3) for regression  [default: quaternion_adjugate]
   --convention TEXT               If `parameterization='euler_angles'`, specify order  [default: ZXY]
   --unit_conversion_factor FLOAT  Scale factor for translation prediction (e.g., from m to mm)  [default: 1000.0]
-  --p_augmentation FLOAT          Base probability of image augmentations during training  [default: 0.5]
+  --p_augmentation FLOAT          Base probability of image augmentations during training  [default: 0.333]
 
 Optimizer options:
-  --lr FLOAT                      Maximum learning rate  [default: 0.005]
+  --lr FLOAT                      Maximum learning rate  [default: 0.0002]
   --weight_ncc FLOAT              Weight on mNCC loss term  [default: 1.0]
   --weight_geo FLOAT              Weight on geodesic loss term  [default: 0.01]
   --weight_dice FLOAT             Weight on Dice loss term  [default: 1.0]
+  --weight_mvc FLOAT              Weight on multiview consistency loss term  [default: 0]
   --n_total_itrs INTEGER          Number of iterations for training the model  [default: 1000000]
   --n_warmup_itrs INTEGER         Number of iterations for warming up the learning rate  [default: 1000]
   --n_grad_accum_itrs INTEGER     Number of iterations for gradient accumulation  [default: 4]
-  --n_save_every_itrs INTEGER     Number of iterations before saving a new model checkpoint  [default: 2500]
+  --n_save_every_itrs INTEGER     Number of iterations before saving a new model checkpoint  [default: 1000]
   --disable_scheduler             Turn off cosine learning rate scheduler
 
 Checkpoint options:
