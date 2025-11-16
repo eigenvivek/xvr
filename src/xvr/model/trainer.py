@@ -50,6 +50,7 @@ class Trainer:
         weight_ncc=1e0,
         weight_geo=1e-2,
         weight_dice=1e0,
+        weight_mvc=0,
         batch_size=96,
         n_total_itrs=100_000,
         n_warmup_itrs=1_000,
@@ -112,7 +113,9 @@ class Trainer:
         )
 
         # Initialize the loss function
-        self.lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice)
+        self.lossfn = PoseRegressionLoss(
+            sdd, weight_ncc, weight_geo, weight_dice, weight_mvc
+        )
 
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
@@ -195,7 +198,7 @@ class Trainer:
 
         img = img[keep]
         mask = mask[keep]
-        pose = RigidTransform(pose[keep])
+        pose = pose[keep]
 
         # Regress the poses of the DRRs (and optionally convert between reference frames)
         x = self.transforms(self.augmentations(img))
@@ -208,7 +211,7 @@ class Trainer:
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
+        loss, mncc, dgeo, rgeo, tgeo, dice, mvc = self.lossfn(
             img, mask, pose, pred_img, pred_mask, pred_pose
         )
         loss = loss / self.n_grad_accum_itrs
@@ -230,6 +233,7 @@ class Trainer:
             "rgeo": rgeo.mean().item(),
             "tgeo": tgeo.mean().item(),
             "dice": dice.mean().item(),
+            "mvc": mvc.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
