@@ -41,7 +41,7 @@ class PoseRegressionLoss(torch.nn.Module):
         return loss, mncc, dgeo, rgeo, tgeo, dice, mvc
 
     def multiview_consistency(self, true_pose, pred_pose):
-        assert (B := len(true_pose)) == pred_pose
+        assert (B := len(true_pose)) == len(pred_pose)
         idx, jdx = torch.triu_indices(B, B, offset=1)
         _, _, dgeo_relative = self.geodesic(
             true_pose[jdx] @ true_pose[idx].inverse(),
