@@ -210,6 +210,13 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Optimizer",
 )
 @categorized_option(
+    "--weight_mvc",
+    default=0,
+    type=float,
+    help="Weight on multiview consistency loss term",
+    category="Optimizer",
+)
+@categorized_option(
     "--batch_size",
     default=116,
     type=int,
@@ -342,6 +349,7 @@ def train(
     weight_ncc,
     weight_geo,
     weight_dice,
+    weight_mvc,
     batch_size,
     n_total_itrs,
     n_warmup_itrs,
@@ -423,6 +431,7 @@ def train(
         weight_ncc=weight_ncc,
         weight_geo=weight_geo,
         weight_dice=weight_dice,
+        weight_mvc=weight_mvc,
         batch_size=batch_size,
         n_total_itrs=n_total_itrs,
         n_warmup_itrs=n_warmup_itrs,
