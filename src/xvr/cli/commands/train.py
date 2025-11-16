@@ -155,7 +155,7 @@ from ..formatter import CategorizedCommand, categorized_option
 )
 @categorized_option(
     "--parameterization",
-    default="euler_angles",
+    default="quaternion_adjugate",
     type=str,
     help="Parameterization of SO(3) for regression",
     category="Model",
@@ -176,14 +176,14 @@ from ..formatter import CategorizedCommand, categorized_option
 )
 @categorized_option(
     "--p_augmentation",
-    default=0.5,
+    default=0.333,
     type=float,
     help="Base probability of image augmentations during training",
     category="Model",
 )
 @categorized_option(
     "--lr",
-    default=5e-3,
+    default=2e-4,
     type=float,
     help="Maximum learning rate",
     category="Optimizer",
@@ -246,7 +246,7 @@ from ..formatter import CategorizedCommand, categorized_option
 )
 @categorized_option(
     "--n_save_every_itrs",
-    default=int(2.5e3),
+    default=1000,
     type=int,
     help="Number of iterations before saving a new model checkpoint",
     category="Optimizer",
