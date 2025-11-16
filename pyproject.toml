@@ -33,7 +33,7 @@ extend-select = ["I"]
 known-third-party = ["wandb"]
 
 [tool.uv.sources]
-diffdrr = { path = "/data/vision/polina/users/vivekg/DiffDRR", editable = true }
+diffdrr = { git = "https://github.com/eigenvivek/DiffDRR" }
 
 [build-system]
 requires = ["hatchling"]
