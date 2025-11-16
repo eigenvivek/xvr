@@ -844,7 +844,7 @@ wheels = [
 [[package]]
 name = "diffdrr"
 version = "0.6.0"
-source = { git = "https://github.com/eigenvivek/DiffDRR#5587c766f8fe20682921114f0233603cacf6730a" }
+source = { git = "https://github.com/eigenvivek/DiffDRR#c4c72270dac27683a55f57e36ee5071f5b20efc6" }
 dependencies = [
     { name = "einops" },
     { name = "fastcore" },
