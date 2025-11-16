@@ -208,7 +208,7 @@ class Trainer:
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, mncc, dgeo, rgeo, tgeo, dice, dgeo_relative = self.lossfn(
+        loss, mncc, dgeo, rgeo, tgeo, dice, mvc = self.lossfn(
             img, mask, pose, pred_img, pred_mask, pred_pose
         )
         loss = loss / self.n_grad_accum_itrs
@@ -230,7 +230,7 @@ class Trainer:
             "rgeo": rgeo.mean().item(),
             "tgeo": tgeo.mean().item(),
             "dice": dice.mean().item(),
-            "dgeo_relative": dgeo_relative.item(),
+            "mvc": mvc.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
