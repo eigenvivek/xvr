@@ -214,6 +214,24 @@ class Trainer:
         loss, mncc, dgeo, rgeo, tgeo, dice, mvc = self.lossfn(
             img, mask, pose, pred_img, pred_mask, pred_pose
         )
+
+        # Construct the antipode and compute its loss
+        rot, xyz = pred_pose.convert("euler_angles", "ZXY")
+        rot[..., 0:2] *= -1
+        rot[..., 0] += torch.pi
+        pred_pose_anti = convert(
+            rot, xyz, parameterization="euler_angles", convention="ZXY"
+        )
+        pred_img_anti, pred_mask_anti, _ = self.render_samples(
+            tmp, seg, affinv, pred_pose_anti
+        )
+        loss_anti, *_ = self.lossfn(
+            img, mask, pose, pred_img_anti, pred_mask_anti, pred_pose_anti
+        )
+
+        # Make the final loss and update
+        losses = torch.stack([loss, loss_anti])
+        loss = -0.1 * torch.logsumexp(-losses / 0.1, dim=0)
         loss = loss / self.n_grad_accum_itrs
 
         # Optimize the model
