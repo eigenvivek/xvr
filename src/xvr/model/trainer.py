@@ -245,20 +245,25 @@ class Trainer:
             self.optimizer.zero_grad()
 
         # Return losses and imgs
-        log = {
-            "mncc": torch.stack([mncc, mncc_anti]).max(0).values.mean().item(),
-            "dgeo": torch.stack([dgeo, dgeo_anti]).min(0).values.mean().item(),
-            "rgeo": torch.stack([rgeo, rgeo_anti]).min(0).values.mean().item(),
-            "tgeo": torch.stack([tgeo, tgeo_anti]).min(0).values.mean().item(),
-            "dice": torch.stack([dice, dice_anti]).min(0).values.mean().item(),
-            "mvc": mvc.mean().item(),
-            "loss": loss.mean().item(),
-            "lr": self.scheduler.get_last_lr()[0],
-            "kept": keep.float().mean().item(),
-        }
-        imgs = torch.concat([x[:4], pred_img[:4]])
-        masks = torch.concat([mask[:4], pred_mask[:4]])
-        return log, imgs, masks
+        with torch.no_grad():
+            winner = losses.min(0).indices.bool()
+            log = {
+                "mncc": torch.where(winner, mncc, mncc_anti).mean().item(),
+                "dgeo": torch.where(winner, dgeo, dgeo_anti).mean().item(),
+                "rgeo": torch.where(winner, rgeo, rgeo_anti).mean().item(),
+                "tgeo": torch.where(winner, tgeo, tgeo_anti).mean().item(),
+                "dice": torch.where(winner, dice, dice_anti).mean().item(),
+                "mvc": mvc.mean().item(),
+                "loss": loss.mean().item(),
+                "lr": self.scheduler.get_last_lr()[0],
+                "kept": keep.float().mean().item(),
+            }
+            winner = winner[:, None, None, None]
+            pred_img = torch.where(winner, pred_img, pred_img_anti)
+            pred_mask = torch.where(winner, pred_mask, pred_mask_anti)
+            imgs = torch.concat([x[:4], pred_img[:4]])
+            masks = torch.concat([mask[:4], pred_mask[:4]])
+            return log, imgs, masks
 
     def load(self, subject, dtype, device):
         # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
