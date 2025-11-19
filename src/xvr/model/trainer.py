@@ -246,7 +246,7 @@ class Trainer:
 
         # Return losses and imgs
         log = {
-            "mncc": torch.stack([mncc, mncc_anti]).min(0).values.mean().item(),
+            "mncc": torch.stack([mncc, mncc_anti]).max(0).values.mean().item(),
             "dgeo": torch.stack([dgeo, dgeo_anti]).min(0).values.mean().item(),
             "rgeo": torch.stack([rgeo, rgeo_anti]).min(0).values.mean().item(),
             "tgeo": torch.stack([tgeo, tgeo_anti]).min(0).values.mean().item(),
