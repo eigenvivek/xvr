@@ -225,8 +225,8 @@ class Trainer:
         pred_img_anti, pred_mask_anti, _ = self.render_samples(
             tmp, seg, affinv, pred_pose_anti
         )
-        loss_anti, *_ = self.lossfn(
-            img, mask, pose, pred_img_anti, pred_mask_anti, pred_pose_anti
+        loss_anti, mncc_anti, dgeo_anti, rgeo_anti, tgeo_anti, dice_anti, _ = (
+            self.lossfn(img, mask, pose, pred_img_anti, pred_mask_anti, pred_pose_anti)
         )
 
         # Make the final loss and update
@@ -246,11 +246,11 @@ class Trainer:
 
         # Return losses and imgs
         log = {
-            "mncc": mncc.mean().item(),
-            "dgeo": dgeo.mean().item(),
-            "rgeo": rgeo.mean().item(),
-            "tgeo": tgeo.mean().item(),
-            "dice": dice.mean().item(),
+            "mncc": torch.stack([mncc, mncc_anti]).min(0).values.mean().item(),
+            "dgeo": torch.stack([dgeo, dgeo_anti]).min(0).values.mean().item(),
+            "rgeo": torch.stack([rgeo, rgeo_anti]).min(0).values.mean().item(),
+            "tgeo": torch.stack([tgeo, tgeo_anti]).min(0).values.mean().item(),
+            "dice": torch.stack([dice, dice_anti]).min(0).values.mean().item(),
             "mvc": mvc.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
