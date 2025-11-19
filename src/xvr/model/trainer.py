@@ -246,7 +246,7 @@ class Trainer:
 
         # Return losses and imgs
         with torch.no_grad():
-            winner = losses.min(0).indices.bool()
+            winner = ~losses.min(0).indices.bool()
             log = {
                 "mncc": torch.where(winner, mncc, mncc_anti).mean().item(),
                 "dgeo": torch.where(winner, dgeo, dgeo_anti).mean().item(),
