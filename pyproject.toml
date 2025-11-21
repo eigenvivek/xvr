@@ -39,3 +39,6 @@ dev = [
     "jupyterlab-code-formatter>=3.0.2",
     "jupyterlab-execute-time>=3.2.0",
 ]
+docs = [
+    "zensical>=0.0.9",
+]
