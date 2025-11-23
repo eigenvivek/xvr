@@ -14,6 +14,7 @@ from .commands.train import train
 # Taken from https://stackoverflow.com/a/58323807
 class OrderedGroup(click.Group):
     def __init__(self, name=None, commands=None, **attrs):
+        attrs["context_settings"] = {"help_option_names": ["-h", "--help"]}
         super().__init__(name, commands, **attrs)
         self.commands = commands or OrderedDict()
 
@@ -36,7 +37,7 @@ register.add_command(fixed)
 
 
 @click.group(cls=OrderedGroup)
-@click.version_option(version("xvr"))
+@click.version_option(version("xvr"), "--version", "-v")
 @click.pass_context
 def cli(ctx):
     """
