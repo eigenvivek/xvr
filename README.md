@@ -57,24 +57,25 @@ In the future, extensive documentation, tutorials, and usability improvements (e
 
 ## Usage
 
-`xvr` provides a command-line interface for training, finetuning, and performing registration (i.e., test-time optimization) with pose regression models. The API is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations.
+`xvr` provides a command-line interface for training/finetuning pose regression models and registering clinical data with gradient-based iterative optimization with trained models. The API is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations.
 
 ```
 $ xvr --help
 
 Usage: xvr [OPTIONS] COMMAND [ARGS]...
 
-  xvr is a PyTorch package for training, fine-tuning, and performing 2D/3D
-  X-ray to CT/MR registration with pose regression models.
+  A PyTorch package for 2D/3D XRAY to CT/MR registration.
+
+  Provides functionality for rapidly training pose regression models and
+  registering clinical data with gradient-based iterative optimization.
 
 Options:
-  --version  Show the version and exit.
-  --help     Show this message and exit.
+  -v, --version  Show the version and exit.
+  -h, --help     Show this message and exit.
 
 Commands:
-  train     Train a pose regression model from scratch.
+  train     Train a pose regression model.
   restart   Restart model training from a checkpoint.
-  finetune  Optimize a pose regression model for a specific patient.
   register  Use gradient-based optimization to register XRAY to a CT/MR.
   animate   Animate the trajectory of iterative optimization.
   dcm2nii   Convert a DICOMDIR to a NIfTI file.
