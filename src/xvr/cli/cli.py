@@ -5,7 +5,6 @@ import click
 
 from .commands.animate import animate
 from .commands.dcm2nii import dcm2nii
-from .commands.finetune import finetune
 from .commands.register import dicom, fixed, model
 from .commands.restart import restart
 from .commands.train import train
@@ -47,7 +46,6 @@ def cli(ctx):
 
 cli.add_command(train)
 cli.add_command(restart)
-cli.add_command(finetune)
 cli.add_command(register)
 cli.add_command(animate)
 cli.add_command(dcm2nii)
