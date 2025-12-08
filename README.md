@@ -271,7 +271,7 @@ git clone https://github.com/eigenvivek/xvr
 cd xvr
 
 # Set up the virtual environment with all dev requirements
-uv sync --all-extras
+uv sync --all-groups
 
 # Install pre-commit hooks locally
 uv tool install prek
