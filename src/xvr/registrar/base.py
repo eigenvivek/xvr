@@ -27,6 +27,7 @@ class _RegistrarBase:
         crop,
         subtract_background,
         linearize,
+        equalize,
         reducefn,
         scales,
         n_itrs,
@@ -63,6 +64,7 @@ class _RegistrarBase:
         self.crop = crop
         self.subtract_background = subtract_background
         self.linearize = linearize
+        self.equalize = equalize
         self.reducefn = reducefn
 
         # Registration SE(3) parameterization
@@ -208,7 +210,11 @@ class _RegistrarBase:
         for stage, (scale, n_itr) in enumerate(zip(scales, self.n_itrs), start=1):
             # Rescale DRR detector and ground truth image
             reg.drr.rescale_detector_(scale)
-            transform = XrayTransforms(reg.drr.detector.height, reg.drr.detector.width)
+            transform = XrayTransforms(
+                reg.drr.detector.height,
+                reg.drr.detector.width,
+                equalize=self.equalize,
+            )
             img = transform(gt).cuda()
 
             # Initialize the optimizer and scheduler
