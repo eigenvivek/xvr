@@ -274,7 +274,7 @@ class Trainer:
         return volume, mask, affinv, offset
 
     def render_samples(
-        self, tmp, seg, affinv, pose, img_threshold=0.65, mask_threshold=0.05
+        self, tmp, seg, affinv, pose, img_threshold=0.10, mask_threshold=0.05
     ):
         # Get the source and target locations for every ray in voxel coordinates
         source, target = self.drr.detector(pose, None)
@@ -291,7 +291,7 @@ class Trainer:
 
         # Discard empty imgs/masks
         if mask.shape[1] == 1:
-            # Keep if >65% of the image is non-zero pixels
+            # Keep if >10% of the image is non-zero pixels
             keep = mask.to(img).flatten(1).mean(1) > img_threshold
         else:
             # Keep if >5% of the image contains pixels corresponding to masked structures
