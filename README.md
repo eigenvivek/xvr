@@ -184,6 +184,7 @@ Preprocessing options:
   --crop INTEGER                 Center crop the X-ray image  [default: 0]
   --subtract_background          Subtract mode X-ray image intensity
   --linearize                    Convert X-ray from exponential to linear form
+  --equalize                     Apply histogram equalization to X-rays/DRRs during optimization
   --reducefn TEXT                If DICOM is multiframe, method to extract a single 2D image  [default: max]
   --pattern TEXT                 Pattern rule for glob is XRAY is directory  [default: *.dcm]
 
