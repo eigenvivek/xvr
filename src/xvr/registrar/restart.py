@@ -1,4 +1,3 @@
-import torch
 from diffdrr.pose import RigidTransform
 
 from ..io import read_xray
@@ -11,7 +10,7 @@ class RegistrarRestart(_RegistrarBase):
         volume,
         mask,
         orientation,
-        ckpt,
+        init_pose: RigidTransform,
         labels=None,
         reducefn="max",
         crop=0,
@@ -63,11 +62,9 @@ class RegistrarRestart(_RegistrarBase):
             verbose,
             read_kwargs,
             drr_kwargs,
-            save_kwargs={"type": "fixed"},
+            save_kwargs={"type": "restart"},
         )
-
-        ckpt = torch.load(ckpt, weights_only=False)
-        self.init_pose = RigidTransform(ckpt["final_pose"]).cuda()
+        self.init_pose = init_pose.cuda()
 
     def initialize_pose(self, i2d):
         # Preprocess X-ray image and get imaging system intrinsics

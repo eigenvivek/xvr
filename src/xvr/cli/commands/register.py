@@ -491,13 +491,19 @@ def restart(
     ckpt,
 ):
     """Initialize from a previous final pose estimate."""
+    import torch
+    from diffdrr.pose import RigidTransform
+
     from ...registrar import RegistrarRestart
+
+    ckpt = torch.load(ckpt, weights_only=False)
+    pose = RigidTransform(ckpt["final_pose"])
 
     registrar = RegistrarRestart(
         volume,
         mask,
         orientation,
-        ckpt,
+        pose,
         labels,
         crop,
         subtract_background,
