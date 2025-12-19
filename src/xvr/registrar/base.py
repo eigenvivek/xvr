@@ -372,6 +372,7 @@ class _RegistrarBase:
                 "reducefn": self.reducefn,
             },
             "optimization": {
+                "equalize": self.equalize,
                 "init_only": self.init_only,
                 "scales": self.scales,
                 "n_itrs": self.n_itrs,
