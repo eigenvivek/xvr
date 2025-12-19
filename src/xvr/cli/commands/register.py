@@ -388,6 +388,7 @@ def fixed(
     reducefn,
     labels,
     scales,
+    n_itrs,
     reverse_x_axis,
     renderer,
     parameterization,
@@ -397,7 +398,6 @@ def fixed(
     lr_xyz,
     patience,
     threshold,
-    max_n_itrs,
     max_n_plateaus,
     init_only,
     saveimg,
@@ -426,6 +426,7 @@ def fixed(
         equalize,
         reducefn,
         scales,
+        n_itrs,
         reverse_x_axis,
         renderer,
         parameterization,
@@ -435,7 +436,92 @@ def fixed(
         lr_xyz,
         patience,
         threshold,
-        max_n_itrs,
+        max_n_plateaus,
+        init_only,
+        saveimg,
+        verbose,
+    )
+
+    run(registrar, xray, pattern, verbose, outpath)
+
+
+@click.command(cls=BaseRegistrar)
+@categorized_option(
+    "--orientation",
+    required=True,
+    type=click.Choice(["AP", "PA"]),
+    category="Required",
+    help="Orientation of the C-arm",
+)
+@categorized_option(
+    "-c",
+    "--ckpt",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to `parameters.pt` for previous iterative optimization run",
+    category="Required",
+)
+def restart(
+    xray,
+    volume,
+    mask,
+    outpath,
+    crop,
+    subtract_background,
+    linearize,
+    equalize,
+    reducefn,
+    labels,
+    scales,
+    n_itrs,
+    reverse_x_axis,
+    renderer,
+    parameterization,
+    convention,
+    voxel_shift,
+    lr_rot,
+    lr_xyz,
+    patience,
+    threshold,
+    max_n_plateaus,
+    init_only,
+    saveimg,
+    pattern,
+    verbose,
+    orientation,
+    ckpt,
+):
+    """Initialize from a previous final pose estimate."""
+    import torch
+    from diffdrr.pose import RigidTransform
+
+    from ...registrar import RegistrarRestart
+
+    ckpt = torch.load(ckpt, weights_only=False)
+    pose = RigidTransform(ckpt["final_pose"])
+
+    registrar = RegistrarRestart(
+        volume,
+        mask,
+        orientation,
+        pose,
+        labels,
+        crop,
+        subtract_background,
+        linearize,
+        equalize,
+        reducefn,
+        scales,
+        n_itrs,
+        reverse_x_axis,
+        renderer,
+        parameterization,
+        convention,
+        voxel_shift,
+        lr_rot,
+        lr_xyz,
+        patience,
+        threshold,
         max_n_plateaus,
         init_only,
         saveimg,
