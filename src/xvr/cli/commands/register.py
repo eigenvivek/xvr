@@ -445,6 +445,85 @@ def fixed(
     run(registrar, xray, pattern, verbose, outpath)
 
 
+@click.command(cls=BaseRegistrar)
+@categorized_option(
+    "--orientation",
+    required=True,
+    type=click.Choice(["AP", "PA"]),
+    category="Required",
+    help="Orientation of the C-arm",
+)
+@categorized_option(
+    "--ckpt",
+    required=True,
+    type=click.Path(exists=True),
+    help="Path to `parameters.pt` for previous iterative optimization run",
+    category="Required",
+)
+def restart(
+    xray,
+    volume,
+    mask,
+    outpath,
+    crop,
+    subtract_background,
+    linearize,
+    equalize,
+    reducefn,
+    labels,
+    scales,
+    reverse_x_axis,
+    renderer,
+    parameterization,
+    convention,
+    voxel_shift,
+    lr_rot,
+    lr_xyz,
+    patience,
+    threshold,
+    max_n_itrs,
+    max_n_plateaus,
+    init_only,
+    saveimg,
+    pattern,
+    verbose,
+    orientation,
+    ckpt,
+):
+    """Initialize from a previous final pose estimate."""
+    from ...registrar import RegistrarRestart
+
+    registrar = RegistrarRestart(
+        volume,
+        mask,
+        orientation,
+        ckpt,
+        labels,
+        crop,
+        subtract_background,
+        linearize,
+        equalize,
+        reducefn,
+        scales,
+        reverse_x_axis,
+        renderer,
+        parameterization,
+        convention,
+        voxel_shift,
+        lr_rot,
+        lr_xyz,
+        patience,
+        threshold,
+        max_n_itrs,
+        max_n_plateaus,
+        init_only,
+        saveimg,
+        verbose,
+    )
+
+    run(registrar, xray, pattern, verbose, outpath)
+
+
 def run(registrar, xray, pattern, verbose, outpath):
     from tqdm import tqdm
 
