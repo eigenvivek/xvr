@@ -1,4 +1,5 @@
 import torch
+from diffdrr.pose import RigidTransform, convert
 from diffdrr.utils import resample
 from torchvision.transforms.functional import center_crop
 
@@ -45,3 +46,10 @@ def _correct_pose(pose, warp, volume, invert):
     # Get the closest SE(3) transformation relating the CT to some reference frame
     T = get_4x4(warp, volume, invert).cuda()
     return pose.compose(T)
+
+
+def _construct_antipode(pose: RigidTransform) -> RigidTransform:
+    rot, xyz = pose.convert("euler_angles", "ZXY")
+    rot[..., 0:2] *= -1
+    rot[..., 0] += torch.pi
+    return convert(rot, xyz, parameterization="euler_angles", convention="ZXY")

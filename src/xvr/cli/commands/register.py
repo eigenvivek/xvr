@@ -218,6 +218,12 @@ class BaseRegistrar(CategorizedCommand):
     is_flag=True,
     help="Whether to invert the warp or not",
 )
+@categorized_option(
+    "--antipodal",
+    default=False,
+    is_flag=True,
+    help="Initialize from antipode of predicted pose",
+)
 def model(
     xray,
     volume,
@@ -248,6 +254,7 @@ def model(
     ckptpath,
     warp,
     invert,
+    antipodal,
 ):
     """Initialize from a pose regression model."""
     from ...registrar import RegistrarModel
@@ -264,6 +271,7 @@ def model(
         reducefn,
         warp,
         invert,
+        antipodal,
         scales,
         n_itrs,
         reverse_x_axis,

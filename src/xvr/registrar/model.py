@@ -1,5 +1,5 @@
 from ..io import read_xray
-from ..model.inference import _correct_pose, predict_pose
+from ..model.inference import _construct_antipode, _correct_pose, predict_pose
 from ..model.network import load_model
 from .base import _RegistrarBase
 
@@ -18,6 +18,7 @@ class RegistrarModel(_RegistrarBase):
         reducefn="max",
         warp=None,
         invert=False,
+        antipodal=False,
         scales="8",
         n_itrs="100",
         reverse_x_axis=True,
@@ -43,6 +44,7 @@ class RegistrarModel(_RegistrarBase):
         # Initial pose correction
         self.warp = warp
         self.invert = invert
+        self.antipodal = antipodal
 
         super().__init__(
             volume,
@@ -93,6 +95,10 @@ class RegistrarModel(_RegistrarBase):
 
         # Optionally, correct the pose by warping the CT volume to the template
         init_pose = _correct_pose(init_pose, self.warp, self.volume, self.invert)
+
+        # Optionally, construct the antipodal pose to the initial estimate
+        if self.antipodal:
+            init_pose = _construct_antipode(init_pose)
 
         # For debugging, let the user return the resampled ground truth for comparison
         if return_resampled:
