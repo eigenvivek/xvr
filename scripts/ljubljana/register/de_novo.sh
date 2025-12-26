@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-ljubljana-finetuned-ttopt
-#SBATCH --output=logs/xvr_ljubljana_finetuned_ttopt_%A_%a.out
-#SBATCH --error=logs/xvr_ljubljana_finetuned_ttopt_%A_%a.err
+#SBATCH --job-name=xvr-ljubljana-de-novo-ttopt
+#SBATCH --output=logs/xvr_ljubljana_de_novo_ttopt_%A_%a.out
+#SBATCH --error=logs/xvr_ljubljana_de_novo_ttopt_%A_%a.err
 #SBATCH --array=1-10
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -22,8 +22,8 @@ SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 xvr register model \
     data/ljubljana/$SUBJECT/xrays \
     -v data/ljubljana/$SUBJECT/volume.nii.gz \
-    -c models/ljubljana/finetuned/$SUBJECT/0001.pth \
-    -o results/ljubljana/register/finetuned/$SUBJECT \
+    -c models/ljubljana/de_novo/$SUBJECT/0030.pth \
+    -o results/ljubljana/register/de_novo/$SUBJECT \
     --linearize \
     --subtract_background \
     --scales 16,8,4,2 \

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-wbct-ljubljana-foundation-ttopt
-#SBATCH --output=logs/xvr_wbct_ljubljana_foundation_ttopt_%A_%a.out
-#SBATCH --error=logs/xvr_wbct_ljubljana_foundation_ttopt_%A_%a.err
+#SBATCH --job-name=xvr-ljubljana-foundation-ttopt
+#SBATCH --output=logs/xvr_ljubljana_foundation_ttopt_%A_%a.out
+#SBATCH --error=logs/xvr_ljubljana_foundation_ttopt_%A_%a.err
 #SBATCH --array=1-10
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
