@@ -21,7 +21,7 @@ xvr train \
     -v data/deepfluoro/$SUBJECT/volume.nii.gz \
     -m data/deepfluoro/$SUBJECT/mask.nii.gz \
     -o models/deepfluoro/de_novo/$SUBJECT \
-    --r1 -45.0 45.0 \
+    --r1 135.0 225.0 \
     --r2 -45.0 45.0 \
     --r3 -15.0 15.0 \
     --tx -150.0 150.0 \

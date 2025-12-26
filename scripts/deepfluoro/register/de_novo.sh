@@ -29,5 +29,4 @@ xvr register model \
     --linearize \
     --labels 1,2,3,4,7 \
     --scales 24,12,6 \
-    --n_itrs 500,500,500 \
-    --warp data/deepfluoro/$SUBJECT/warp2template.txt
+    --n_itrs 500,500,500
