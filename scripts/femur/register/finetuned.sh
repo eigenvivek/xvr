@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-wbct-femur-finetuned-ttopt
-#SBATCH --output=logs/xvr_wbct_femur_finetuned_ttopt_%A_%a.out
-#SBATCH --error=logs/xvr_wbct_femur_finetuned_ttopt_%A_%a.err
+#SBATCH --job-name=xvr-ttopt-femur-finetuned
+#SBATCH --output=logs/xvr_femur_finetuned_ttopt_%A_%a.out
+#SBATCH --error=logs/xvr_femur_finetuned_ttopt_%A_%a.err
 #SBATCH --array=1-5
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main

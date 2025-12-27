@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-ljubljana-finetuned-ttopt
+#SBATCH --job-name=xvr-ttopt-ljubljana-finetuned
 #SBATCH --output=logs/xvr_ljubljana_finetuned_ttopt_%A_%a.out
 #SBATCH --error=logs/xvr_ljubljana_finetuned_ttopt_%A_%a.err
 #SBATCH --array=1-10

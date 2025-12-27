@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-femur-finetuning
+#SBATCH --job-name=xvr-train-femur-finetuning
 #SBATCH --output=logs/femur_finetuning_%A_%a.out
 #SBATCH --error=logs/femur_finetuning_%A_%a.err
 #SBATCH --array=1-5
