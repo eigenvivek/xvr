@@ -301,6 +301,13 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Data",
 )
 @categorized_option(
+    "--sample_weights",
+    default=None,
+    type=click.Path(exists=True),
+    help="Probability for sampling each volume in `volpath`",
+    category="Data",
+)
+@categorized_option(
     "--name",
     default=None,
     type=str,
@@ -362,6 +369,7 @@ def train(
     patch_size,
     num_workers,
     pin_memory,
+    sample_weights,
     name,
     id,
     project,
@@ -395,6 +403,10 @@ def train(
     txmin, txmax = tx
     tymin, tymax = ty
     tzmin, tzmax = tz
+
+    # Parse the sample weights
+    with open(sample_weights, "r") as f:
+        weights = [float(line.strip()) for line in f]
 
     # Parse configuration parameters
     config = dict(
@@ -442,6 +454,7 @@ def train(
         patch_size=patch_size,
         num_workers=num_workers,
         pin_memory=pin_memory,
+        weights=weights,
         warp=warp,
         invert=invert,
     )
