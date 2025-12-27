@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-deepfluoro-de-novo-ttopt
+#SBATCH --job-name=xvr-ttopt-deepfluoro-de-novo
 #SBATCH --output=logs/xvr_deepfluoro_de_novo_ttopt_%A_%a.out
 #SBATCH --error=logs/xvr_deepfluoro_de_novo_ttopt_%A_%a.err
 #SBATCH --array=1-6

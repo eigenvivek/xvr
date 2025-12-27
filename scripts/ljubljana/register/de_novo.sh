@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-ljubljana-de-novo-ttopt
+#SBATCH --job-name=xvr-ttopt-ljubljana-de-novo
 #SBATCH --output=logs/xvr_ljubljana_de_novo_ttopt_%A_%a.out
 #SBATCH --error=logs/xvr_ljubljana_de_novo_ttopt_%A_%a.err
 #SBATCH --array=1-10

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-deepfluoro-foundation-ttopt
+#SBATCH --job-name=xvr-ttopt-deepfluoro-foundation
 #SBATCH --output=logs/xvr_deepfluoro_foundation_ttopt_%A_%a.out
 #SBATCH --error=logs/xvr_deepfluoro_foundation_ttopt_%A_%a.err
 #SBATCH --array=1-6

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-deepfluoro-finetuning
+#SBATCH --job-name=xvr-train-deepfluoro-finetuning
 #SBATCH --output=logs/deepfluoro_finetuning_%A_%a.out
 #SBATCH --error=logs/deepfluoro_finetuning_%A_%a.err
 #SBATCH --array=1-6

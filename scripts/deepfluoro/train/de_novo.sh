@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-deepfluoro-de-novo
+#SBATCH --job-name=xvr-train-deepfluoro-de-novo
 #SBATCH --output=logs/deepfluoro_de_novo_%A_%a.out
 #SBATCH --error=logs/deepfluoro_de_novo_%A_%a.err
 #SBATCH --array=1-6
