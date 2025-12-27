@@ -64,6 +64,7 @@ class Trainer:
         patch_size=None,
         num_workers=4,
         pin_memory=True,
+        weights=None,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
@@ -78,6 +79,7 @@ class Trainer:
             n_total_itrs,
             num_workers,
             pin_memory,
+            weights,
         )
 
         # Initialize all deep learning modules

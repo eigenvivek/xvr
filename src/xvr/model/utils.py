@@ -5,7 +5,7 @@ from typing import Optional
 import torch
 from diffdrr.data import load_example_ct, read
 from diffdrr.drr import DRR
-from torch.utils.data import RandomSampler
+from torch.utils.data import WeightedRandomSampler
 from torchio import (
     LabelMap,
     Queue,
@@ -28,9 +28,10 @@ def initialize_subjects(
     orientation: Optional[str],  # "AP", "PA", or None
     patch_size: Optional[tuple],  # Tuple for random crop sizes (h, w, d)
     num_samples: int,  # Total number of training iterations
-    num_workers: int,
-    pin_memory: bool,
-    replacement: bool = True,
+    num_workers: int,  # Number of workers for the dataloader
+    pin_memory: bool,  # Pin memory for the dataloader
+    weights: Optional[tuple[float, ...]] = None,  # Sampling probability for each volume
+    replacement: bool = True,  # Sample with replacement
 ):
     # If only a single subject is passed, load it and return
     single_subject = False
@@ -56,7 +57,11 @@ def initialize_subjects(
 
     # Construct a dataloader with efficient IO
     subjects = SubjectsDataset(subjects)
-    subject_sampler = RandomSampler(subjects, replacement, num_samples)
+    if weights is None:
+        weights = [1 / len(volumes) for _ in range(len(volumes))]
+    subject_sampler = WeightedRandomSampler(
+        weights, replacement=replacement, num_samples=num_samples
+    )
 
     # Return entire volumes
     if patch_size is None:
