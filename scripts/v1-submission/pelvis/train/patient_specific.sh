@@ -14,16 +14,19 @@
 # Create logs directory if it doesn't exist
 mkdir -p logs
 
+# Load the subject
+SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
+
 # Start training!
 uv run xvr train \
-    -v data/deepfluoro/subject0$SLURM_ARRAY_TASK_ID/volume.nii.gz \
-    -m data/deepfluoro/subject0$SLURM_ARRAY_TASK_ID/mask.nii.gz \
-    -o models/deepfluoro/patient_specific/subject0$SLURM_ARRAY_TASK_ID \
+    -v data/deepfluoro/$SUBJECT/volume.nii.gz \
+    -m data/deepfluoro/$SUBJECT/mask.nii.gz \
+    -o models/deepfluoro/patient_specific/$SUBJECT \
     --r1 -45.0 45.0 \
     --r2 -45.0 45.0 \
     --r3 -15.0 15.0 \
     --tx -150.0 150.0 \
-    --ty -1000.0 -450.0 \
+    --ty 450.0 1000.0 \
     --tz -150.0 150.0 \
     --sdd 1020.0 \
     --height 256 \
