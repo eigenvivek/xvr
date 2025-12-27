@@ -2,7 +2,7 @@
 #SBATCH --job-name=xvr-ljubljana-de_novo
 #SBATCH --output=logs/ljubljana_de_novo_%A_%a.out
 #SBATCH --error=logs/ljubljana_de_novo_%A_%a.err
-#SBATCH --array=10-10
+#SBATCH --array=1-10
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
 #SBATCH --account=vision-polina

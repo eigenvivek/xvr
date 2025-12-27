@@ -28,5 +28,4 @@ xvr register model \
     --subtract_background \
     --scales 16,8,4,2 \
     --n_itrs 500,500,500,100 \
-    --pattern *[!_max].dcm \
-    --warp data/ljubljana/$SUBJECT/warp2template.txt
+    --pattern *[!_max].dcm
