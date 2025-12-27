@@ -9,7 +9,7 @@ def XrayAugmentations(
 ):
     return K.AugmentationSequential(
         Standardize(),
-        K.RandomClahe(clip_limit=(1.0, 40.0), p=(2 * p)),
+        K.RandomClahe(clip_limit=(1.0, 40.0), p=p),
         K.RandomGamma(gamma=(0.7, 1.8), p=p),
         K.RandomBoxBlur(p=p),
         K.RandomGaussianNoise(std=0.01, p=p),
