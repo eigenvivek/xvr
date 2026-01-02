@@ -67,21 +67,41 @@ def read_pred(
 ) -> tuple[RigidTransform, float, RigidTransform, float, float]:
     ckpt = torch.load(filename, weights_only=False)
     pred_pose_init = RigidTransform(ckpt["init_pose"])
-    pred_pose_final = RigidTransform(ckpt["final_pose"])
-    ncc = ckpt["trajectory"]["ncc"]
-    ncc_init = ncc.iloc[0].item()
-    ncc_final = ncc.iloc[-1].item()
-    runtime = ckpt["runtime"]
+
+    try:
+        pred_pose_final = RigidTransform(ckpt["final_pose"])
+        ncc = ckpt["trajectory"]["ncc"]
+        ncc_init = ncc.iloc[0].item()
+        ncc_final = ncc.iloc[-1].item()
+        runtime = ckpt["runtime"]
+    except AttributeError:
+        pred_pose_final = None
+        ncc_init = None
+        ncc_final = None
+        runtime = None
+
     return pred_pose_init, ncc_init, pred_pose_final, ncc_final, runtime
 
 
 def process_filenames(filenames: tuple[Path, ...]) -> pd.DataFrame:
     metaparams = []
     for filename in filenames:
-        *_, dataset, _, partition, subject, xray, _ = str(filename).split("/")
-        metaparams.append([filename, dataset, partition, subject, xray])
+        components = str(filename).split("/")
+        if "femur" in str(filename):
+            *_, dataset, _, partition, stage, subject, xray, _ = components
+            partition = f"{partition}-{stage}"
+            epoch = None
+        elif len(components) == 7:
+            *_, dataset, _, partition, subject, xray, _ = components
+            epoch = None
+        elif len(components) == 8:
+            *_, dataset, _, partition, subject, epoch, xray, _ = components
+        else:
+            raise ValueError(f"Funky filename : {filename}")
+        metaparams.append([filename, dataset, partition, subject, epoch, xray])
     df = pd.DataFrame(
-        metaparams, columns=["filename", "dataset", "partition", "subject", "xray"]
+        metaparams,
+        columns=["filename", "dataset", "partition", "subject", "epoch", "xray"],
     )
     df = df.sort_values(by=["dataset", "subject", "xray"], ignore_index=True)
     return df
@@ -96,7 +116,7 @@ def main(filepath, savepath):
 
     results = []
     old_key = None
-    for _, (filename, dataset, partition, subject, xray) in tqdm(
+    for _, (filename, dataset, partition, subject, epoch, xray) in tqdm(
         df.iterrows(), total=len(df)
     ):
         current_key = (dataset, subject, xray)
@@ -113,6 +133,7 @@ def main(filepath, savepath):
             [
                 dataset,
                 subject,
+                epoch,
                 xray,
                 partition,
                 "initial",
@@ -124,28 +145,31 @@ def main(filepath, savepath):
                 dgeo,
             ]
         )
-        mpd, mrpe, mtre, dgeo = evaluator(true_pose, pred_pose_final)
-        results.append(
-            [
-                dataset,
-                subject,
-                xray,
-                partition,
-                "final",
-                ncc_final,
-                runtime,
-                mpd,
-                mrpe,
-                mtre,
-                dgeo,
-            ]
-        )
+        if pred_pose_final is not None:
+            mpd, mrpe, mtre, dgeo = evaluator(true_pose, pred_pose_final)
+            results.append(
+                [
+                    dataset,
+                    subject,
+                    epoch,
+                    xray,
+                    partition,
+                    "final",
+                    ncc_final,
+                    runtime,
+                    mpd,
+                    mrpe,
+                    mtre,
+                    dgeo,
+                ]
+            )
 
     results = pd.DataFrame(
         results,
         columns=[
             "dataset",
             "subject",
+            "epoch",
             "xray",
             "partition",
             "estimate",
