@@ -4898,6 +4898,9 @@ jupyter = [
     { name = "jupyterlab" },
     { name = "jupyterlab-execute-time" },
 ]
+docs = [
+    { name = "zensical" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -4914,6 +4917,7 @@ jupyter = [
     { name = "jupyterlab", specifier = ">=4.4.10" },
     { name = "jupyterlab-execute-time", specifier = ">=3.2.0" },
 ]
+docs = [{ name = "zensical", specifier = ">=0.0.9" }]
 
 [[package]]
 name = "yarl"

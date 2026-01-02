@@ -1,0 +1,66 @@
+[project]
+site_name = "xvr"
+site_description = "A new project generated from the default template project."
+site_author = "Vivek Gopalakrishnan"
+site_url = "https://xvr.csail.mit.edu/"
+repo_url = "https://github.com/eigenvivek/xvr"
+repo_name = "eigenvivek/xvr"
+edit_uri = "edit/main/docs/"
+copyright = "Copyright &copy; 2025 Vivek Gopalakrishnan"
+
+nav = [
+  {"Pretrained Models" = "https://huggingface.co/eigenvivek/xvr"},
+  {"Datasets" = "https://huggingface.co/datasets/eigenvivek/xvr-data"},
+]
+
+[project.theme]
+logo = "assets/images/favicon.png"
+favicon = "assets/images/favicon.png"
+
+features = [
+    "announce.dismiss",
+    "content.action.edit",
+    "content.action.view",
+    "content.code.annotate",
+    "content.code.copy",
+    # "content.code.select",
+    "content.footnote.tooltips",
+    "content.tabs.link",
+    # "content.tooltips",
+    # "header.autohide",
+    "navigation.expand",
+    "navigation.footer",
+    "navigation.indexes",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    # "navigation.instant.progress",
+    "navigation.path",
+    #"navigation.prune",
+    "navigation.sections",
+    # "navigation.tabs",
+    # "navigation.tabs.sticky",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+    "toc.follow",
+    # "toc.integrate",
+]
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+accent = "orange"
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+# [project.theme.font]
+# text = "Inter"
+# code = "Jetbrains Mono"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/eigenvivek/xvr"

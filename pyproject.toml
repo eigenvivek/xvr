@@ -45,3 +45,6 @@ jupyter = [
     "jupyterlab>=4.4.10",
     "jupyterlab-execute-time>=3.2.0",
 ]
+docs = [
+    "zensical>=0.0.9",
+]
