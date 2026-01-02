@@ -19,9 +19,9 @@ source .venv/bin/activate
 
 xvr train \
     -v data/ljubljana/$SUBJECT/volume.nii.gz \
-    -o models/ljubljana/finetuned/$SUBJECT \
     -c models/wbct/model.pth \
     -w data/ljubljana/$SUBJECT/warp2template.txt \
+    -o models/ljubljana/finetuned/$SUBJECT \
     --r1 -45.0 105.0 \
     --r2 -5.0 5.0 \
     --r3 -5.0 5.0 \
