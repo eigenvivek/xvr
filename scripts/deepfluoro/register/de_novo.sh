@@ -23,7 +23,7 @@ xvr register model \
     data/deepfluoro/$SUBJECT/xrays \
     -v data/deepfluoro/$SUBJECT/volume.nii.gz \
     -m data/deepfluoro/$SUBJECT/mask.nii.gz \
-    -c models/deepfluoro/de_novo/$SUBJECT/0030.pth \
+    -c models/deepfluoro/de_novo/$SUBJECT/0120.pth \
     -o results/deepfluoro/register/de_novo/$SUBJECT \
     --crop 100 \
     --linearize \

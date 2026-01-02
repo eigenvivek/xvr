@@ -6,7 +6,7 @@
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
 #SBATCH --account=vision-polina
-#SBATCH --gres=gpu:rtx_6000_ada:1
+#SBATCH --gres=gpu:a6000:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=50G
 #SBATCH --time=24:00:00
@@ -30,9 +30,9 @@ xvr train \
     --height 128 \
     --delx 2.31 \
     --model_name resnet34 \
-    --lr 0.00025 \
-    --batch_size 96 \
+    --lr 0.001 \
+    --batch_size 116 \
     --n_total_itrs 30000 \
-    --n_save_every_itrs 1000 \
+    --n_save_every_itrs 250 \
     --name ljubljana-$SUBJECT-de_novo \
     --project xvr

@@ -19,9 +19,9 @@ source .venv/bin/activate
 
 xvr train \
     -v data/ljubljana/$SUBJECT/volume.nii.gz \
-    -o models/ljubljana/finetuned/$SUBJECT \
     -c models/wbct/model.pth \
     -w data/ljubljana/$SUBJECT/warp2template.txt \
+    -o models/ljubljana/finetuned/$SUBJECT \
     --r1 -45.0 105.0 \
     --r2 -5.0 5.0 \
     --r3 -5.0 5.0 \
@@ -32,11 +32,11 @@ xvr train \
     --height 128 \
     --delx 2.31 \
     --model_name resnet34 \
-    --lr 0.00025 \
-    --p_augmentation 0.5 \
-    --batch_size 96 \
+    --lr 0.001 \
+    --p_augmentation 0.333 \
+    --batch_size 116 \
     --n_warmup_itrs 10 \
-    --n_total_itrs 300 \
+    --n_total_itrs 500 \
     --n_grad_accum_itrs 1 \
     --name ljubljana-$SUBJECT-finetuned \
     --project xvr

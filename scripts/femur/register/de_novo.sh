@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-ttopt-femur-finetuned
-#SBATCH --output=logs/xvr_femur_finetuned_ttopt_%A_%a.out
-#SBATCH --error=logs/xvr_femur_finetuned_ttopt_%A_%a.err
+#SBATCH --job-name=xvr-ttopt-femur-de-novo
+#SBATCH --output=logs/xvr_femur_de_novo_ttopt_%A_%a.out
+#SBATCH --error=logs/xvr_femur_de_novo_ttopt_%A_%a.err
 #SBATCH --array=1-5
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -34,16 +34,15 @@ xvr register model \
     data/femur/$SUBJECT/xrays \
     -v data/femur/$SUBJECT/volume.nii.gz \
     -m data/femur/$SUBJECT/mask_all.nii.gz \
-    -c models/femur/finetuned/$SUBJECT/0001.pth \
-    -o results/femur/register/finetuned/femur/$SUBJECT \
+    -c models/femur/de_novo/$SUBJECT/0120.pth \
+    -o results/femur/register/de_novo/femur/$SUBJECT \
     --labels 1,2,3,4 \
     --crop 20 \
     $LINEARIZE_FLAG \
     $SUBTRACT_BACKGROUND_FLAG \
     $EQUALIZE_FLAG \
     --scales 16,8,4 \
-    --n_itrs 500,250,100 \
-    --warp data/femur/$SUBJECT/warp2template.txt
+    --n_itrs 500,250,100\
 
 for FILE in data/femur/$SUBJECT/xrays/*.dcm; do
     XRAY=$(basename "$FILE" .dcm)
@@ -51,8 +50,8 @@ for FILE in data/femur/$SUBJECT/xrays/*.dcm; do
         "$FILE" \
         -v data/femur/$SUBJECT/volume.nii.gz \
         -m data/femur/$SUBJECT/mask_all.nii.gz \
-        -c results/femur/register/finetuned/femur/$SUBJECT/$XRAY/parameters.pt \
-        -o results/femur/register/finetuned/femur-restart/$SUBJECT \
+        -c results/femur/register/de_novo/femur/$SUBJECT/$XRAY/parameters.pt \
+        -o results/femur/register/de_novo/femur-restart/$SUBJECT \
         --orientation AP \
         --crop 20 \
         $LINEARIZE_FLAG \
