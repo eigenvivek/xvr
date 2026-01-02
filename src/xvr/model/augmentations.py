@@ -4,22 +4,27 @@ import torch
 from ..utils import Standardize
 
 
-def XrayAugmentations(
-    p=0.333, max_crop=10, same_on_batch=False, transformation_matrix_mode="skip"
-):
-    return K.AugmentationSequential(
-        Standardize(),
-        K.RandomClahe(clip_limit=(1.0, 40.0), p=p),
-        K.RandomGamma(gamma=(0.7, 1.8), p=p),
-        K.RandomBoxBlur(p=p),
-        K.RandomGaussianNoise(std=0.01, p=p),
-        K.RandomSharpness(p=p),
-        K.RandomErasing(p=p),
-        RandomCenterCrop(p=p, maxcrop=max_crop),
-        keepdim=True,
-        same_on_batch=same_on_batch,
-        transformation_matrix_mode=transformation_matrix_mode,
-    )
+class XrayAugmentations:
+    def __new__(
+        cls,
+        p=0.333,
+        max_crop=10,
+        same_on_batch=False,
+        transformation_matrix_mode="skip",
+    ):
+        return K.AugmentationSequential(
+            Standardize(),
+            K.RandomClahe(clip_limit=(1.0, 10.0), p=p),
+            K.RandomGamma(gamma=(0.7, 1.8), p=p),
+            K.RandomBoxBlur(p=p),
+            K.RandomGaussianNoise(std=0.01, p=p),
+            K.RandomSharpness(p=p),
+            K.RandomErasing(p=p),
+            RandomCenterCrop(p=p, maxcrop=max_crop),
+            keepdim=True,
+            same_on_batch=same_on_batch,
+            transformation_matrix_mode=transformation_matrix_mode,
+        )
 
 
 class RandomCenterCrop(K.IntensityAugmentationBase2D):
