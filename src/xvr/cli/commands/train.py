@@ -405,8 +405,11 @@ def train(
     tzmin, tzmax = tz
 
     # Parse the sample weights
-    with open(sample_weights, "r") as f:
-        weights = [float(line.strip()) for line in f]
+    weights = (
+        [float(line) for line in Path(sample_weights).read_text().splitlines()]
+        if sample_weights is not None
+        else None
+    )
 
     # Parse configuration parameters
     config = dict(
