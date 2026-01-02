@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-train-femur-finetuning
-#SBATCH --output=logs/femur_finetuning_%A_%a.out
-#SBATCH --error=logs/femur_finetuning_%A_%a.err
+#SBATCH --job-name=xvr-train-femur-de-novo
+#SBATCH --output=logs/femur_de_novo_%A_%a.out
+#SBATCH --error=logs/femur_de_novo_%A_%a.err
 #SBATCH --array=1-5
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:rtx_6000_ada:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=50G
-#SBATCH --time=03:00:00
+#SBATCH --time=24:00:00
 
 mkdir -p logs
 
@@ -19,10 +19,8 @@ source .venv/bin/activate
 
 xvr train \
     -v data/femur/$SUBJECT/volume.nii.gz \
-    -m data/femur/$SUBJECT/mask_all.nii.gz \
-    -c models/wbct/model.pth \
-    -w data/femur/$SUBJECT/warp2template.txt \
-    -o models/femur/finetuned/$SUBJECT \
+    -m data/femur/$SUBJECT/mask.nii.gz \
+    -o models/femur/de_novo/$SUBJECT \
     --r1 75.0 270.0 \
     --r2 -20.0 20.0 \
     --r3 -20.0 20.0 \
@@ -33,11 +31,9 @@ xvr train \
     --height 128 \
     --delx 2.31796875 \
     --model_name resnet34 \
-    --lr 0.001 \
     --batch_size 116 \
-    --n_warmup_itrs 10 \
-    --n_total_itrs 500 \
-    --n_save_every_itrs 10 \
-    --n_grad_accum_itrs 1 \
-    --name femur-$SUBJECT-finetuned \
+    --lr 0.001 \
+    --n_total_itrs 30000 \
+    --n_save_every_itrs 250 \
+    --name femur-$SUBJECT-de-novo \
     --project xvr

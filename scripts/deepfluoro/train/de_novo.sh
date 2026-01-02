@@ -31,8 +31,9 @@ xvr train \
     --height 128 \
     --delx 2.1764375 \
     --model_name resnet34 \
-    --batch_size 96 \
+    --batch_size 116 \
+    --lr 0.001 \
     --n_total_itrs 30000 \
-    --n_save_every_itrs 1000 \
+    --n_save_every_itrs 250 \
     --name deepfluoro-$SUBJECT-de-novo \
     --project xvr

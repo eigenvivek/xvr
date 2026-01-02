@@ -22,7 +22,7 @@ SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 xvr register model \
     data/ljubljana/$SUBJECT/xrays \
     -v data/ljubljana/$SUBJECT/volume.nii.gz \
-    -c models/ljubljana/de_novo/$SUBJECT/0030.pth \
+    -c models/ljubljana/de_novo/$SUBJECT/0120.pth \
     -o results/ljubljana/register/de_novo/$SUBJECT \
     --linearize \
     --subtract_background \
