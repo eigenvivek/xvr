@@ -1,0 +1,53 @@
+from types import SimpleNamespace
+
+# Training configuration
+train = SimpleNamespace(
+    lr=0.001,
+    batch_size=116,
+    num_workers=4,
+    pin_memory=False,
+    model_name="resnet34",
+    pretrained=False,
+    norm_layer="groupnorm",
+    parameterization="quaternion_adjugate",
+    convention="ZXY",
+    unit_conversion_factor=1000.0,
+    p_augmentation=0.333,
+    weight_ncc=1.0,
+    weight_geo=0.01,
+    weight_dice=1.0,
+    weight_mvc=0.0,
+    n_total_itrs=1000000,
+    n_warmup_itrs=1000,
+    n_grad_accum_itrs=4,
+    n_save_every_itrs=1000,
+    disable_scheduler=False,
+    reuse_optimizer=False,
+    renderer="trilinear",
+    orientation="AP",
+    reverse_x_axis=False,
+)
+
+# Registration configuration
+register = SimpleNamespace(
+    crop=0,
+    subtract_background=False,
+    linearize=True,
+    equalize=False,
+    reducefn="max",
+    scales="16,8,4",
+    n_itrs="500,250,100",
+    parameterization="euler_angles",
+    convention="ZXY",
+    lr_rot=0.01,
+    lr_xyz=1.0,
+    patience=10,
+    threshold=0.0001,
+    max_n_plateaus=3,
+    init_only=False,
+    saveimg=False,
+    verbose=1,
+    renderer="trilinear",
+    orientation="AP",
+    reverse_x_axis=False,
+)

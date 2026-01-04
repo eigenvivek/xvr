@@ -1,5 +1,6 @@
 import click
 
+from ...config import train as cfg
 from ..formatter import CategorizedCommand, categorized_option
 
 
@@ -113,154 +114,154 @@ from ..formatter import CategorizedCommand, categorized_option
 )
 @categorized_option(
     "--renderer",
-    default="trilinear",
+    default=cfg.renderer,
     type=click.Choice(["siddon", "trilinear"]),
     help="Rendering equation",
     category="Renderer",
 )
 @categorized_option(
     "--orientation",
-    default="AP",
+    default=cfg.orientation,
     type=click.Choice(["AP", "PA"]),
     help="Orientation of CT volumes",
     category="Renderer",
 )
 @categorized_option(
     "--reverse_x_axis",
-    default=False,
+    default=cfg.reverse_x_axis,
     is_flag=True,
     help="Enable to obey radiologic convention (e.g., heart on right)",
     category="Renderer",
 )
 @categorized_option(
     "--model_name",
-    default="resnet18",
+    default=cfg.model_name,
     type=str,
     help="Name of model to instantiate from the timm library",
     category="Model",
 )
 @categorized_option(
     "--norm_layer",
-    default="groupnorm",
+    default=cfg.norm_layer,
     type=str,
     help="Normalization layer",
     category="Model",
 )
 @categorized_option(
     "--pretrained",
-    default=False,
+    default=cfg.pretrained,
     is_flag=True,
     help="Load pretrained ImageNet-1k weights",
     category="Model",
 )
 @categorized_option(
     "--parameterization",
-    default="quaternion_adjugate",
+    default=cfg.parameterization,
     type=str,
     help="Parameterization of SO(3) for regression",
     category="Model",
 )
 @categorized_option(
     "--convention",
-    default="ZXY",
+    default=cfg.convention,
     type=str,
     help="If `parameterization='euler_angles'`, specify order",
     category="Model",
 )
 @categorized_option(
     "--unit_conversion_factor",
-    default=1000.0,
+    default=cfg.unit_conversion_factor,
     type=float,
     help="Scale factor for translation prediction (e.g., from m to mm)",
     category="Model",
 )
 @categorized_option(
     "--p_augmentation",
-    default=0.333,
+    default=cfg.p_augmentation,
     type=float,
     help="Base probability of image augmentations during training",
     category="Model",
 )
 @categorized_option(
     "--lr",
-    default=2e-4,
+    default=cfg.lr,
     type=float,
     help="Maximum learning rate",
     category="Optimizer",
 )
 @categorized_option(
     "--weight_ncc",
-    default=1e0,
+    default=cfg.weight_ncc,
     type=float,
     help="Weight on mNCC loss term",
     category="Optimizer",
 )
 @categorized_option(
     "--weight_geo",
-    default=1e-2,
+    default=cfg.weight_geo,
     type=float,
     help="Weight on geodesic loss term",
     category="Optimizer",
 )
 @categorized_option(
     "--weight_dice",
-    default=1e0,
+    default=cfg.weight_dice,
     type=float,
     help="Weight on Dice loss term",
     category="Optimizer",
 )
 @categorized_option(
     "--weight_mvc",
-    default=0,
+    default=cfg.weight_mvc,
     type=float,
     help="Weight on multiview consistency loss term",
     category="Optimizer",
 )
 @categorized_option(
     "--batch_size",
-    default=116,
+    default=cfg.batch_size,
     type=int,
     help="Number of DRRs per batch",
     category="Sampling",
 )
 @categorized_option(
     "--n_total_itrs",
-    default=int(1e6),
+    default=cfg.n_total_itrs,
     type=int,
     help="Number of iterations for training the model",
     category="Optimizer",
 )
 @categorized_option(
     "--n_warmup_itrs",
-    default=int(1e3),
+    default=cfg.n_warmup_itrs,
     type=int,
     help="Number of iterations for warming up the learning rate",
     category="Optimizer",
 )
 @categorized_option(
     "--n_grad_accum_itrs",
-    default=4,
+    default=cfg.n_grad_accum_itrs,
     type=int,
     help="Number of iterations for gradient accumulation",
     category="Optimizer",
 )
 @categorized_option(
     "--n_save_every_itrs",
-    default=1000,
+    default=cfg.n_save_every_itrs,
     type=int,
     help="Number of iterations before saving a new model checkpoint",
     category="Optimizer",
 )
 @categorized_option(
     "--disable_scheduler",
-    default=False,
+    default=cfg.disable_scheduler,
     is_flag=True,
     help="Turn off cosine learning rate scheduler",
     category="Optimizer",
 )
 @categorized_option(
     "--reuse_optimizer",
-    default=False,
+    default=cfg.reuse_optimizer,
     is_flag=True,
     help="If ckptpath passed, initialize the previous optimizer's state",
     category="Checkpoint",
@@ -288,14 +289,14 @@ from ..formatter import CategorizedCommand, categorized_option
 )
 @categorized_option(
     "--num_workers",
-    default=4,
+    default=cfg.num_workers,
     type=int,
     help="Number of subprocesses to use in the dataloader",
     category="Data",
 )
 @categorized_option(
     "--pin_memory",
-    default=False,
+    default=cfg.pin_memory,
     is_flag=True,
     help="Copy volumes from the dataloader into CUDA pinned memory before returning",
     category="Data",

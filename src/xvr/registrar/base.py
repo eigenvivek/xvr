@@ -13,6 +13,7 @@ from diffdrr.visualization import plot_drr
 from torchvision.utils import save_image
 from tqdm import tqdm
 
+from ..config import register as cfg
 from ..renderer import initialize_drr
 from ..utils import XrayTransforms
 
@@ -24,29 +25,29 @@ class _RegistrarBase:
         mask,
         orientation,
         labels,
-        crop,
-        subtract_background,
-        linearize,
-        equalize,
-        reducefn,
-        scales,
-        n_itrs,
-        reverse_x_axis,
-        renderer,
-        parameterization,
-        convention,
-        voxel_shift,
-        lr_rot,
-        lr_xyz,
-        patience,
-        threshold,
-        max_n_plateaus,
-        init_only,
-        saveimg,
-        verbose,
-        read_kwargs,
-        drr_kwargs,
-        save_kwargs,
+        crop=cfg.crop,
+        subtract_background=cfg.subtract_background,
+        linearize=cfg.linearize,
+        equalize=cfg.equalize,
+        reducefn=cfg.reducefn,
+        scales=cfg.scales,
+        n_itrs=cfg.n_itrs,
+        reverse_x_axis=cfg.reverse_x_axis,
+        renderer=cfg.renderer,
+        parameterization=cfg.parameterization,
+        convention=cfg.convention,
+        voxel_shift=0,
+        lr_rot=cfg.lr_rot,
+        lr_xyz=cfg.lr_xyz,
+        patience=cfg.patience,
+        threshold=cfg.threshold,
+        max_n_plateaus=cfg.max_n_plateaus,
+        init_only=cfg.init_only,
+        saveimg=cfg.saveimg,
+        verbose=cfg.verbose,
+        read_kwargs=None,
+        drr_kwargs=None,
+        save_kwargs=None,
     ):
         # DRR arguments
         self.volume = volume
