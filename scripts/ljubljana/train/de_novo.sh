@@ -29,9 +29,6 @@ xvr train \
     --sdd 1250.0 \
     --height 128 \
     --delx 2.31 \
-    --model_name resnet34 \
-    --lr 0.001 \
-    --batch_size 116 \
     --n_total_itrs 30000 \
     --n_save_every_itrs 250 \
     --name ljubljana-$SUBJECT-de_novo \

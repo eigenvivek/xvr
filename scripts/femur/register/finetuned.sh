@@ -41,8 +41,6 @@ xvr register model \
     $LINEARIZE_FLAG \
     $SUBTRACT_BACKGROUND_FLAG \
     $EQUALIZE_FLAG \
-    --scales 16,8,4 \
-    --n_itrs 500,250,100 \
     --warp data/femur/$SUBJECT/warp2template.txt
 
 for FILE in data/femur/$SUBJECT/xrays/*.dcm; do

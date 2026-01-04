@@ -40,9 +40,7 @@ xvr register model \
     --crop 20 \
     $LINEARIZE_FLAG \
     $SUBTRACT_BACKGROUND_FLAG \
-    $EQUALIZE_FLAG \
-    --scales 16,8,4 \
-    --n_itrs 500,250,100\
+    $EQUALIZE_FLAG
 
 for FILE in data/femur/$SUBJECT/xrays/*.dcm; do
     XRAY=$(basename "$FILE" .dcm)

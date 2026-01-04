@@ -32,9 +32,6 @@ xvr train \
     --sdd 1150.0 \
     --height 128 \
     --delx 2.31796875 \
-    --model_name resnet34 \
-    --lr 0.001 \
-    --batch_size 116 \
     --n_warmup_itrs 10 \
     --n_total_itrs 500 \
     --n_save_every_itrs 10 \

@@ -30,9 +30,6 @@ xvr train \
     --sdd 1150.0 \
     --height 128 \
     --delx 2.31796875 \
-    --model_name resnet34 \
-    --batch_size 116 \
-    --lr 0.001 \
     --n_total_itrs 30000 \
     --n_save_every_itrs 250 \
     --name femur-$SUBJECT-de-novo \
