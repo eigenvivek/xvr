@@ -35,7 +35,7 @@ xvr register model \
     -v data/femur/$SUBJECT/volume.nii.gz \
     -m data/femur/$SUBJECT/mask_all.nii.gz \
     -c models/femur/finetuned/$SUBJECT/0001.pth \
-    -o results/femur/register/finetuned/femur/$SUBJECT \
+    -o results/femur/register/finetuned/$SUBJECT \
     --labels 1,2,3,4 \
     --crop 20 \
     $LINEARIZE_FLAG \
@@ -51,8 +51,8 @@ for FILE in data/femur/$SUBJECT/xrays/*.dcm; do
         "$FILE" \
         -v data/femur/$SUBJECT/volume.nii.gz \
         -m data/femur/$SUBJECT/mask_all.nii.gz \
-        -c results/femur/register/finetuned/femur/$SUBJECT/$XRAY/parameters.pt \
-        -o results/femur/register/finetuned/femur-restart/$SUBJECT \
+        -c results/femur/register/finetuned/$SUBJECT/$XRAY/parameters.pt \
+        -o results/femur/register/finetuned_restart/$SUBJECT \
         --orientation AP \
         --crop 20 \
         $LINEARIZE_FLAG \
