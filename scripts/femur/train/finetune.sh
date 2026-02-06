@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-train-femur-finetuning
-#SBATCH --output=logs/femur_finetuning_%A_%a.out
-#SBATCH --error=logs/femur_finetuning_%A_%a.err
+#SBATCH --job-name=xvr-train-femur-finetuned
+#SBATCH --output=logs/femur_finetuned_%A_%a.out
+#SBATCH --error=logs/femur_finetuned_%A_%a.err
 #SBATCH --array=1-5
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main

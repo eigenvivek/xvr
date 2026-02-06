@@ -34,5 +34,5 @@ xvr train \
     --batch_size 116 \
     --n_total_itrs 30000 \
     --n_save_every_itrs 250 \
-    --name ljubljana-$SUBJECT-de_novo \
+    --name ljubljana-$SUBJECT-de-novo \
     --project xvr

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-train-ljubljana-finetuning
-#SBATCH --output=logs/ljubljana_finetuning_%A_%a.out
-#SBATCH --error=logs/ljubljana_finetuning_%A_%a.err
+#SBATCH --job-name=xvr-train-ljubljana-finetuned
+#SBATCH --output=logs/ljubljana_finetuned_%A_%a.out
+#SBATCH --error=logs/ljubljana_finetuned_%A_%a.err
 #SBATCH --array=1-10
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
