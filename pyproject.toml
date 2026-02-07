@@ -1,6 +1,6 @@
 [project]
 name = "xvr"
-version = "0.0.0rc1"
+version = "0.0.0rc2"
 description = "Differentiable 2D/3D X-ray to volume registration"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -11,10 +11,9 @@ requires-python = ">=3.10"
 dependencies = [
     "antspyx>=0.5.4",
     "click>=8.1.8",
-    "diffdrr==0.5.1",
+    "diffdrr>=0.6.0",
     "pydicom[pixeldata]>=3.0.1",
-    "wandb>=0.19.8",
-    "huggingface-hub>=0.29.3",
+    "wandb>=0.21.1",
 ]
 
 [project.scripts]
@@ -27,16 +26,23 @@ Issues = "https://github.com/eigenvivek/xvr/issues"
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
 
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+known-third-party = ["wandb"]
+
+[tool.uv.sources]
+diffdrr = { git = "https://github.com/eigenvivek/DiffDRR" }
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
-dev = [
-    "black>=25.1.0",
-    "diffdrrdata>=0.0.7",
-    "isort>=6.0.1",
-    "jupyterlab-code-formatter>=3.0.2",
+jupyter = [
+    "jupyter-ruff>=0.3.0",
+    "jupyterlab>=4.4.10",
     "jupyterlab-execute-time>=3.2.0",
 ]
 docs = [

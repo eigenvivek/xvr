@@ -1,9 +1,11 @@
 data
+logs
+misc
+wandb
 models
 results
-logs
-wandb
 .last_checked
+scripts/*/evaluate
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,linux,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,jupyternotebooks,linux,macos
