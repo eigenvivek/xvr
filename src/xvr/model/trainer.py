@@ -110,7 +110,6 @@ class Trainer:
             n_total_itrs,
             n_warmup_itrs,
             n_grad_accum_itrs,
-            self.subjects if self.single_subject else None,
             disable_scheduler,
             ckptpath,
             reuse_optimizer,
