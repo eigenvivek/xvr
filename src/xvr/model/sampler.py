@@ -23,21 +23,35 @@ def get_random_pose(
     orientation: str,
 ) -> Float[torch.Tensor, "batch_size 4 4"]:
     """Generate a batch of random poses in SE(3) using specified ranges."""
-    alpha = uniform(alphamin, alphamax, batch_size, circle_shift=True)
-    beta = uniform(betamin, betamax, batch_size, circle_shift=True)
-    gamma = uniform(gammamin, gammamax, batch_size, circle_shift=True)
-    tx = uniform(txmin, txmax, batch_size)
-    ty = uniform(tymin, tymax, batch_size)
-    tz = uniform(tzmin, tzmax, batch_size)
+    dtype = subject.isocenter.dtype
+    device = subject.isocenter.device
+
+    alpha = uniform(
+        alphamin, alphamax, batch_size, circle_shift=True, dtype=dtype, device=device
+    )
+    beta = uniform(
+        betamin, betamax, batch_size, circle_shift=True, dtype=dtype, device=device
+    )
+    gamma = uniform(
+        gammamin, gammamax, batch_size, circle_shift=True, dtype=dtype, device=device
+    )
+    tx = uniform(txmin, txmax, batch_size, dtype=dtype, device=device)
+    ty = uniform(tymin, tymax, batch_size, dtype=dtype, device=device)
+    tz = uniform(tzmin, tzmax, batch_size, dtype=dtype, device=device)
     rot = torch.concat([alpha, beta, gamma], dim=1)
     xyz = torch.concat([tx, ty, tz], dim=1)
     return make_rt_inv(rot, xyz, orientation, subject.isocenter)
 
 
 def uniform(
-    low: float, high: float, n: int, circle_shift: bool = False
+    low: float,
+    high: float,
+    n: int,
+    circle_shift: bool = False,
+    dtype: torch.dtype = torch.float32,
+    device: torch.device = "cuda",
 ) -> Float[torch.Tensor, "n 1"]:
-    x = (high - low) * torch.rand(n, 1) + low
+    x = (high - low) * torch.rand(n, 1, dtype=dtype, device=device) + low
     if circle_shift:
         x = ((x + 180) % 360) - 180
     return x
