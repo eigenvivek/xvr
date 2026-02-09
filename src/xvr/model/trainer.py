@@ -203,7 +203,7 @@ class Trainer:
         x = self.transforms(self.augmentations(img))
         pred_pose = self.model(x)
         if self.reframe is not None:
-            pred_pose = pred_pose.compose(self.reframe)
+            pred_pose = self.reframe @ pred_pose
 
         # Render DRRs from the predicted poses
         pred_img, pred_mask, _ = self.render_samples(subject, pred_pose.matrix)
@@ -211,7 +211,7 @@ class Trainer:
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
         loss, mncc, dgeo, rgeo, tgeo, dice, mvc = self.lossfn(
-            img, mask, RigidTransform(pose), pred_img, pred_mask, pred_pose
+            img, mask, pose, pred_img, pred_mask, pred_pose
         )
         loss = loss / self.n_grad_accum_itrs
 

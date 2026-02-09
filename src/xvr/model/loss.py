@@ -1,5 +1,6 @@
 import torch
 from diffdrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelation2d
+from diffdrr.pose import RigidTransform
 
 
 class PoseRegressionLoss(torch.nn.Module):
@@ -19,13 +20,14 @@ class PoseRegressionLoss(torch.nn.Module):
         self.weight_ncc = weight_ncc
         self.weight_geo = weight_geo
         self.weight_dice = weight_dice
-        self.weight_mvc = weight_mvc
 
     def forward(self, img, mask, pose, pred_img, pred_mask, pred_pose):
         # Per-image losses
         mncc = self.imagesim(img, pred_img)
         dice = self.diceloss(mask, pred_mask)
-        rgeo, tgeo, dgeo = self.geodesic(pose, pred_pose)
+        rgeo, tgeo, dgeo = self.geodesic(
+            RigidTransform(pose), RigidTransform(pred_pose)
+        )
         loss = (
             self.weight_ncc * (1 - mncc)
             + self.weight_dice * dice
