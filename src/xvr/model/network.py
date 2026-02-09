@@ -51,7 +51,7 @@ class PoseRegressor(torch.nn.Module):
             xyz,
             convention=self.convention,
             parameterization=self.parameterization,
-        )
+        ).matrix
 
 
 def load_model(ckptpath, meta=False):

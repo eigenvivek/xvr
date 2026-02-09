@@ -3,11 +3,13 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import torch
 import wandb
-from diffdrr.data import transform_hu_to_density
-from diffdrr.pose import RigidTransform, convert
 from diffdrr.visualization import plot_drr, plot_mask
+from jaxtyping import Float
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
+from torchio import LabelMap, ScalarImage
 from tqdm import tqdm
+
+from nanodrr.data import Subject
 
 from ..config.trainer import args
 from .augmentations import XrayAugmentations
@@ -75,7 +77,6 @@ class Trainer:
         self.subjects, self.single_subject = initialize_subjects(
             volpath,
             maskpath,
-            orientation,
             patch_size,
             n_total_itrs,
             num_workers,
@@ -116,9 +117,7 @@ class Trainer:
         )
 
         # Initialize the loss function
-        self.lossfn = PoseRegressionLoss(
-            sdd, weight_ncc, weight_geo, weight_dice, weight_mvc
-        )
+        self.lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice)
 
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
@@ -139,6 +138,7 @@ class Trainer:
             tzmin=tzmin,
             tzmax=tzmax,
             batch_size=batch_size,
+            orientation=orientation,
         )
 
         # Initialize a conversion between the template and canonical frames of reference
@@ -182,22 +182,18 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
-    def step(self, itr, subject):
-        # Sample a batch of random poses
-        pose = get_random_pose(**self.pose_distribution).cuda()
+    def step(self, itr: int, subject: dict):
+        # Load the subject
+        subject = self.load(
+            subject, mu_water=0.019
+        )  # TODO: augment water attenuation here
 
-        # Load the subject and translate the pose to its isocenter
-        vol, seg, affinv, offset = self.load(
-            subject, pose.matrix.dtype, pose.matrix.device
-        )
-        pose = pose.compose(offset)
+        # Sample a batch of random poses relative to the subject's coordinate frame
+        pose = get_random_pose(subject=subject, **self.pose_distribution)
 
-        # Render a batch of DRRs and keep samples that capture the volume
-        contrast = self.contrast_distribution.sample().item()
-        tmp = transform_hu_to_density(vol, contrast)
-
+        # Render a batch of images and only keep samples with sufficient anatomy?
         with torch.no_grad():
-            img, mask, keep = self.render_samples(tmp, seg, affinv, pose)
+            img, mask, keep = self.render_samples(subject, pose)
 
         img = img[keep]
         mask = mask[keep]
@@ -207,10 +203,10 @@ class Trainer:
         x = self.transforms(self.augmentations(img))
         pred_pose = self.model(x)
         if self.reframe is not None:
-            pred_pose = pred_pose.compose(self.reframe)
+            pred_pose = self.reframe @ pred_pose
 
         # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = self.render_samples(tmp, seg, affinv, pred_pose)
+        pred_img, pred_mask, _ = self.render_samples(subject, pred_pose.matrix)
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
@@ -245,48 +241,29 @@ class Trainer:
         masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
 
-    def load(self, subject, dtype, device):
-        # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
-        if subject is None:
-            volume, mask, affinv = (
-                self.drr.volume,
-                self.drr.mask,
-                self.drr.affine_inverse,
-            )
-            offset = make_translation(self.drr.center)
-            return volume, mask, affinv, offset
-
-        # Process torchio patch
-        volume = subject["volume"]["data"].squeeze().to(device, dtype)
+    def load(self, subject: dict, mu_water: float) -> Subject:
+        image = ScalarImage(
+            tensor=subject["volume"]["data"][0], affine=subject["volume"]["affine"][0]
+        )
         try:
-            mask = subject["mask"]["data"].data.squeeze().to(device, dtype)
-        except TypeError:
-            mask = None
-
-        # Get the volume's isocenter and construct a translation to it
-        affine = torch.from_numpy(subject["volume"]["affine"]).to(dtype=dtype)
-        affine = RigidTransform(affine)
-        center = (torch.tensor(volume.shape)[None, None] - 1) / 2
-        center = affine(center)[0].to(device, dtype)
-        offset = make_translation(center)
-
-        # Make the inverse affine
-        affine = torch.from_numpy(subject["volume"]["affine"]).to(device, dtype)
-        affinv = RigidTransform(affine.inverse())
-
-        return volume, mask, affinv, offset
+            label = LabelMap(
+                tensor=subject["mask"]["data"][0], affine=subject["mask"]["affine"][0]
+            )
+        except (KeyError, TypeError):
+            label = None
+        return Subject.from_images(
+            image, label, convert_to_mu=True, mu_water=mu_water
+        ).cuda()
 
     def render_samples(
-        self, tmp, seg, affinv, pose, img_threshold=0.10, mask_threshold=0.05
+        self,
+        subject: Subject,
+        pose: Float[torch.Tensor, "B 4 4"],
+        img_threshold: float = 0.10,
+        mask_threshold: float = 0.05,
     ):
-        # Get the source and target locations for every ray in voxel coordinates
-        source, target = self.drr.detector(pose, None)
-        img = (target - source).norm(dim=-1).unsqueeze(1)
-        source, target = affinv(source), affinv(target)
-
         # Render a batch of DRRs
-        img = self.drr.renderer(tmp, source, target, img, mask=seg)
-        img = self.drr.reshape_transform(img, batch_size=len(pose))
+        img = self.drr(subject, pose)
 
         # Create a foreground mask and collapse potentially multichannel images to a single DRR
         mask = img > 0
@@ -330,8 +307,3 @@ class Trainer:
         )
         tqdm.write(f"Saving checkpoint: {savepath}")
         self.model_number += 1
-
-
-def make_translation(xyz):
-    rot = torch.zeros_like(xyz)
-    return convert(rot, xyz, parameterization="euler_angles", convention="ZXY")

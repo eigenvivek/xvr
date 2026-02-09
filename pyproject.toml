@@ -12,6 +12,8 @@ dependencies = [
     "antspyx>=0.5.4",
     "click>=8.1.8",
     "diffdrr>=0.6.0",
+    "jaxtyping>=0.3.7",
+    "nanodrr",
     "pydicom[pixeldata]>=3.0.1",
     "wandb>=0.21.1",
 ]
@@ -25,15 +27,22 @@ Issues = "https://github.com/eigenvivek/xvr/issues"
 
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
-
-[tool.ruff.lint]
-extend-select = ["I"]
+lint.extend-select = ["I"]
+lint.ignore = [
+    "F722",  # Forward annotation false positive from jaxtyping
+    "F821",  # Forward annotation false positive from jaxtyping
+]
 
 [tool.ruff.lint.isort]
 known-third-party = ["wandb"]
 
+[tool.uv.workspace]
+members = [
+    "nanodrr",
+]
+
 [tool.uv.sources]
-diffdrr = { git = "https://github.com/eigenvivek/DiffDRR" }
+nanodrr = { workspace = true, editable = true }
 
 [build-system]
 requires = ["hatchling"]
