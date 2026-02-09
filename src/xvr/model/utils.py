@@ -157,6 +157,8 @@ def initialize_modules(
         dely=delx,
         height=height,
         width=height,
+        x0=0.0,
+        y0=0.0,
         dtype=torch.float32,
         device="cuda",
     )

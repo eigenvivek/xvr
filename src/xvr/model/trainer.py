@@ -3,10 +3,10 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import torch
 import wandb
-from diffdrr.pose import RigidTransform
 from diffdrr.visualization import plot_drr, plot_mask
 from jaxtyping import Float
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
+from torchio import LabelMap, ScalarImage
 from tqdm import tqdm
 
 from nanodrr.data import Subject
@@ -164,6 +164,7 @@ class Trainer:
         if self.single_subject:
             self.subjects = (None for _ in range(self.n_total_itrs))
 
+
         for itr, subject in zip(pbar, self.subjects):
             # Checkpoint the model
             if itr % self.n_save_every_itrs == 0:
@@ -184,15 +185,14 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
-    def step(self, itr, subject):
+    def step(self, itr: int, subject: dict):
         # Load the subject
-        # contrast = self.contrast_distribution.sample().item()
-        subject = Subject(
-            subject.volume, subject.mask, mu_water=0.019
-        ).cuda()  # TODO: augment water attenuation here
+        subject = self.load(
+            subject, mu_water=0.019
+        )  # TODO: augment water attenuation here
 
         # Sample a batch of random poses relative to the subject's coordinate frame
-        pose = get_random_pose(subject=subject, **self.pose_distribution).cuda()
+        pose = get_random_pose(subject=subject, **self.pose_distribution)
 
         # Render a batch of images and only keep samples with sufficient anatomy?
         with torch.no_grad():
@@ -243,6 +243,20 @@ class Trainer:
         imgs = torch.concat([x[:4], pred_img[:4]])
         masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
+
+    def load(self, subject: dict, mu_water: float) -> Subject:
+        image = ScalarImage(
+            tensor=subject["volume"]["data"][0], affine=subject["volume"]["affine"][0]
+        )
+        try:
+            label = LabelMap(
+                tensor=subject["mask"]["data"][0], affine=subject["mask"]["affine"][0]
+            )
+        except (KeyError, TypeError):
+            label = None
+        return Subject.from_images(
+            image, label, convert_to_mu=True, mu_water=mu_water
+        ).cuda()
 
     def render_samples(
         self,
