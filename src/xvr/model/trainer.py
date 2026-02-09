@@ -103,9 +103,6 @@ class Trainer:
             sdd,
             height,
             delx,
-            orientation,
-            reverse_x_axis,
-            renderer,
             lr,
             n_total_itrs,
             n_warmup_itrs,
@@ -159,7 +156,8 @@ class Trainer:
         )
 
         if self.single_subject:
-            self.subjects = (None for _ in range(self.n_total_itrs))
+            tmp = self.subjects.cuda()
+            self.subjects = (tmp for _ in range(self.n_total_itrs))
 
         for itr, subject in zip(pbar, self.subjects):
             # Checkpoint the model
@@ -167,11 +165,7 @@ class Trainer:
                 self._checkpoint(itr)
 
             # Run an iteration of the training loop
-            try:
-                log, imgs, masks = self.step(itr, subject)
-            except Exception as e:
-                print(e)
-                continue
+            log, imgs, masks = self.step(itr, subject)
 
             # Log metrics (and optionally save to wandb)
             pbar.set_postfix(log)
@@ -231,7 +225,6 @@ class Trainer:
             "rgeo": rgeo.mean().item(),
             "tgeo": tgeo.mean().item(),
             "dice": dice.mean().item(),
-            "mvc": mvc.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
@@ -240,7 +233,9 @@ class Trainer:
         masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
 
-    def load(self, subject: dict, mu_water: float) -> Subject:
+    def load(self, subject: dict | Subject, mu_water: float) -> Subject:
+        if isinstance(subject, Subject):
+            return subject
         image = ScalarImage(
             tensor=subject["volume"]["data"][0], affine=subject["volume"]["affine"][0]
         )
