@@ -26,18 +26,18 @@ def get_random_pose(
     dtype = subject.isocenter.dtype
     device = subject.isocenter.device
 
-    alpha = uniform(
-        alphamin, alphamax, batch_size, circle_shift=True, dtype=dtype, device=device
+    alpha = uniform(alphamin, alphamax, batch_size, dtype=dtype, device=device)
+    beta = uniform(betamin, betamax, batch_size, dtype=dtype, device=device)
+    gamma = uniform(gammamin, gammamax, batch_size, dtype=dtype, device=device)
+    tx = uniform(
+        txmin, txmax, batch_size, circle_shift=False, dtype=dtype, device=device
     )
-    beta = uniform(
-        betamin, betamax, batch_size, circle_shift=True, dtype=dtype, device=device
+    ty = uniform(
+        tymin, tymax, batch_size, circle_shift=False, dtype=dtype, device=device
     )
-    gamma = uniform(
-        gammamin, gammamax, batch_size, circle_shift=True, dtype=dtype, device=device
+    tz = uniform(
+        tzmin, tzmax, batch_size, circle_shift=False, dtype=dtype, device=device
     )
-    tx = uniform(txmin, txmax, batch_size, dtype=dtype, device=device)
-    ty = uniform(tymin, tymax, batch_size, dtype=dtype, device=device)
-    tz = uniform(tzmin, tzmax, batch_size, dtype=dtype, device=device)
     rot = torch.concat([alpha, beta, gamma], dim=1)
     xyz = torch.concat([tx, ty, tz], dim=1)
     return make_rt_inv(rot, xyz, orientation, subject.isocenter)
@@ -47,7 +47,7 @@ def uniform(
     low: float,
     high: float,
     n: int,
-    circle_shift: bool = False,
+    circle_shift: bool = True,
     dtype: torch.dtype = torch.float32,
     device: torch.device = "cuda",
 ) -> Float[torch.Tensor, "n 1"]:

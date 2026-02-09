@@ -1,7 +1,6 @@
 import timm
 import torch
-from diffdrr.pose import convert
-from diffdrr.registration import N_ANGULAR_COMPONENTS
+from nanodrr.geometry import Parameterization, convert
 
 
 class PoseRegressor(torch.nn.Module):
@@ -25,7 +24,7 @@ class PoseRegressor(torch.nn.Module):
 
         self.parameterization = parameterization
         self.convention = convention
-        n_angular_components = N_ANGULAR_COMPONENTS[parameterization]
+        n_angular_components = Parameterization(parameterization).dim
 
         # Get the size of the output from the backbone
         self.backbone = timm.create_model(
@@ -49,9 +48,9 @@ class PoseRegressor(torch.nn.Module):
         return convert(
             rot,
             xyz,
-            convention=self.convention,
             parameterization=self.parameterization,
-        ).matrix
+            convention=self.convention,
+        )
 
 
 def load_model(ckptpath, meta=False):
