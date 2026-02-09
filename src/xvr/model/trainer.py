@@ -3,6 +3,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import torch
 import wandb
+from diffdrr.pose import RigidTransform
 from diffdrr.visualization import plot_drr, plot_mask
 from jaxtyping import Float
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
@@ -208,12 +209,12 @@ class Trainer:
             pred_pose = pred_pose.compose(self.reframe)
 
         # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = self.render_samples(subject, pred_pose)
+        pred_img, pred_mask, _ = self.render_samples(subject, pred_pose.matrix)
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
         loss, mncc, dgeo, rgeo, tgeo, dice, mvc = self.lossfn(
-            img, mask, pose, pred_img, pred_mask, pred_pose
+            img, mask, RigidTransform(pose), pred_img, pred_mask, pred_pose
         )
         loss = loss / self.n_grad_accum_itrs
 
