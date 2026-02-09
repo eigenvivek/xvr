@@ -117,9 +117,7 @@ class Trainer:
         )
 
         # Initialize the loss function
-        self.lossfn = PoseRegressionLoss(
-            sdd, weight_ncc, weight_geo, weight_dice, weight_mvc
-        )
+        self.lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice)
 
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
@@ -163,7 +161,6 @@ class Trainer:
 
         if self.single_subject:
             self.subjects = (None for _ in range(self.n_total_itrs))
-
 
         for itr, subject in zip(pbar, self.subjects):
             # Checkpoint the model
