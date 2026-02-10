@@ -158,7 +158,7 @@ def initialize_modules(
         dtype=torch.float32,
         device="cuda",
     )
-    transforms = XrayTransforms(height)
+    transforms = XrayTransforms(height).cuda()
 
     return model, drr, transforms, optimizer, scheduler, start_itr, model_number
 
