@@ -40,14 +40,10 @@ known-first-party = ["xvr", "nanodrr"]
 known-third-party = ["wandb"]
 
 [tool.uv.workspace]
-members = [
-    "nanodrr",
-    "nanodrr/roma",
-]
+members = ["nanodrr"]
 
 [tool.uv.sources]
 nanodrr = { workspace = true, editable = true }
-roma = { workspace = true, editable = true }
 
 [build-system]
 requires = ["hatchling"]

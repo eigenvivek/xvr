@@ -15,7 +15,6 @@ resolution-markers = [
 [manifest]
 members = [
     "nanodrr",
-    "roma",
     "xvr",
 ]
 
@@ -2392,7 +2391,7 @@ requires-dist = [
     { name = "jupyterlab", marker = "extra == 'jupyter'", specifier = ">=4.5.3" },
     { name = "jupyterlab-execute-time", marker = "extra == 'jupyter'", specifier = ">=3.3.0" },
     { name = "matplotlib", specifier = ">=3.10.8" },
-    { name = "roma", editable = "nanodrr/roma" },
+    { name = "roma", git = "https://github.com/naver/roma" },
     { name = "torch", specifier = ">=2.10.0" },
     { name = "torchio", specifier = ">=0.21.2" },
 ]
@@ -3908,7 +3907,7 @@ wheels = [
 [[package]]
 name = "roma"
 version = "1.5.6"
-source = { editable = "nanodrr/roma" }
+source = { git = "https://github.com/naver/roma#4faa9af66f361b9b4a12ae0b9eb788d70012148a" }
 
 [[package]]
 name = "rpds-py"
@@ -5103,7 +5102,7 @@ requires-dist = [
     { name = "jaxtyping", specifier = ">=0.3.7" },
     { name = "nanodrr", editable = "nanodrr" },
     { name = "pydicom", extras = ["pixeldata"], specifier = ">=3.0.1" },
-    { name = "roma", editable = "nanodrr/roma" },
+    { name = "roma" },
     { name = "wandb", specifier = ">=0.21.1" },
 ]
 
