@@ -15,6 +15,7 @@ resolution-markers = [
 [manifest]
 members = [
     "nanodrr",
+    "roma",
     "xvr",
 ]
 
@@ -2391,7 +2392,7 @@ requires-dist = [
     { name = "jupyterlab", marker = "extra == 'jupyter'", specifier = ">=4.5.3" },
     { name = "jupyterlab-execute-time", marker = "extra == 'jupyter'", specifier = ">=3.3.0" },
     { name = "matplotlib", specifier = ">=3.10.8" },
-    { name = "roma", specifier = ">=1.5.5" },
+    { name = "roma", editable = "nanodrr/roma" },
     { name = "torch", specifier = ">=2.10.0" },
     { name = "torchio", specifier = ">=0.21.2" },
 ]
@@ -3906,12 +3907,8 @@ wheels = [
 
 [[package]]
 name = "roma"
-version = "1.5.5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f7/c2/2da8258636e44d4f1846b259044950ddf9101ba0cb6ca5230c4df5e4f9a7/roma-1.5.5.tar.gz", hash = "sha256:715e36788193792ebb90b1d97906146b089b59807aeb8a2b8ce0940283c9e0b9", size = 31911, upload-time = "2026-02-06T16:10:25.589Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/92/051b7161b8d9614de477ee5bb66315fae273ae9c3f04255612bdd7613591/roma-1.5.5-py3-none-any.whl", hash = "sha256:0cbd293e0c51bd23ff11f51edfc4b63f8f55af45e27277e41382846f610b7e89", size = 25170, upload-time = "2026-02-06T16:10:23.615Z" },
-]
+version = "1.5.6"
+source = { editable = "nanodrr/roma" }
 
 [[package]]
 name = "rpds-py"
@@ -5084,6 +5081,7 @@ dependencies = [
     { name = "jaxtyping" },
     { name = "nanodrr" },
     { name = "pydicom", extra = ["pixeldata"] },
+    { name = "roma" },
     { name = "wandb" },
 ]
 
@@ -5105,6 +5103,7 @@ requires-dist = [
     { name = "jaxtyping", specifier = ">=0.3.7" },
     { name = "nanodrr", editable = "nanodrr" },
     { name = "pydicom", extras = ["pixeldata"], specifier = ">=3.0.1" },
+    { name = "roma", editable = "nanodrr/roma" },
     { name = "wandb", specifier = ">=0.21.1" },
 ]
 
