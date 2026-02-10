@@ -41,7 +41,6 @@ class Trainer:
         delx,
         orientation=args.orientation,
         reverse_x_axis=args.reverse_x_axis,
-        renderer=args.renderer,
         parameterization=args.parameterization,
         convention=args.convention,
         model_name=args.model_name,
@@ -53,7 +52,6 @@ class Trainer:
         weight_ncc=args.weight_ncc,
         weight_geo=args.weight_geo,
         weight_dice=args.weight_dice,
-        weight_mvc=args.weight_mvc,
         batch_size=args.batch_size,
         n_total_itrs=args.n_total_itrs,
         n_warmup_itrs=args.n_warmup_itrs,
@@ -169,7 +167,7 @@ class Trainer:
             log, imgs, masks = self.step(itr, subject)
 
             # Log metrics (and optionally save to wandb)
-            pbar.set_postfix(log)
+            pbar.set_postfix({k: f"{v:.3f}" for k, v in log.items()})
             if run is not None:
                 self._log_wandb(itr, log, imgs, masks)
 
