@@ -118,6 +118,7 @@ class Trainer:
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
         self.augmentations = XrayAugmentations(p_augmentation)
+        self.augmentations.forward = torch.compiler.disable(self.augmentations.forward)
 
         # Define the pose distribution
         self.pose_distribution = dict(
@@ -175,38 +176,54 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
-    def step(self, itr: int, subject: dict):
-        # Load the subject
-        subject = self.load(
-            subject, mu_water=0.019
-        )  # TODO: augment water attenuation here
-
+    @torch.compile
+    def compute_loss(self, subject: Subject):
         # Sample a batch of random poses relative to the subject's coordinate frame
         pose = get_random_pose(subject=subject, **self.pose_distribution)
 
         # Render a batch of images and only keep samples with sufficient anatomy?
         with torch.no_grad():
             img, mask, keep = self.render_samples(subject, pose)
-
-        img = img[keep]
-        mask = mask[keep]
-        pose = pose[keep]
+            x = self.augmentations(img)
+            x = self.transforms(x)
 
         # Regress the poses of the DRRs (and optionally convert between reference frames)
-        x = self.transforms(self.augmentations(img))
         pred_pose = self.model(x)
         if self.reframe is not None:
             pred_pose = self.reframe @ pred_pose
 
         # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = self.render_samples(subject, pred_pose.matrix)
+        pred_img, pred_mask, _ = self.render_samples(subject, pred_pose)
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, mncc, dgeo, rgeo, tgeo, dice, mvc = self.lossfn(
+        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
             img, mask, pose, pred_img, pred_mask, pred_pose
         )
         loss = loss / self.n_grad_accum_itrs
+
+        # Save images
+        imgs = torch.concat([x, pred_img])
+        masks = torch.concat([mask, pred_mask])
+
+        return loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks
+
+    def step(self, itr: int, subject: dict):
+        # Load the subject
+        subject = self.load(subject, mu_water=0.019)  # TODO: augment attenuation
+
+        # Compute the loss
+        (
+            loss,
+            mncc,
+            dgeo,
+            rgeo,
+            tgeo,
+            dice,
+            keep,
+            imgs,
+            masks,
+        ) = self.compute_loss(subject)
 
         # Optimize the model
         loss.mean().backward()
@@ -229,8 +246,6 @@ class Trainer:
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
-        imgs = torch.concat([x[:4], pred_img[:4]])
-        masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
 
     def load(self, subject: dict | Subject, mu_water: float) -> Subject:
