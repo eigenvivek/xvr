@@ -15,6 +15,7 @@ dependencies = [
     "jaxtyping>=0.3.7",
     "nanodrr",
     "pydicom[pixeldata]>=3.0.1",
+    "roma",
     "wandb>=0.21.1",
 ]
 
@@ -39,10 +40,12 @@ known-third-party = ["wandb"]
 [tool.uv.workspace]
 members = [
     "nanodrr",
+    "nanodrr/roma",
 ]
 
 [tool.uv.sources]
 nanodrr = { workspace = true, editable = true }
+roma = { workspace = true, editable = true }
 
 [build-system]
 requires = ["hatchling"]
