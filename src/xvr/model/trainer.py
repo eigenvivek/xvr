@@ -174,7 +174,7 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
-    @torch.compile
+    @torch.compile(mode="max-autotune-no-cudagraphs")
     def compute_loss(self, subject: Subject):
         # Sample a batch of random poses relative to the subject's coordinate frame
         pose = get_random_pose(subject=subject, **self.pose_distribution)
@@ -211,17 +211,9 @@ class Trainer:
         subject = self.load(subject, mu_water=0.019)  # TODO: augment attenuation
 
         # Compute the loss
-        (
-            loss,
-            mncc,
-            dgeo,
-            rgeo,
-            tgeo,
-            dice,
-            keep,
-            imgs,
-            masks,
-        ) = self.compute_loss(subject)
+        (loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks) = self.compute_loss(
+            subject
+        )
 
         # Optimize the model
         loss.mean().backward()
