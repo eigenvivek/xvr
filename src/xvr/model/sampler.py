@@ -1,7 +1,7 @@
 import torch
 from jaxtyping import Float
-from nanodrr.camera import make_rt_inv
 
+from nanodrr.camera import make_rt_inv
 from nanodrr.data import Subject
 
 

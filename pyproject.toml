@@ -33,8 +33,10 @@ lint.ignore = [
     "F722",  # Forward annotation false positive from jaxtyping
     "F821",  # Forward annotation false positive from jaxtyping
 ]
+src = ["src", "nanodrr"]
 
 [tool.ruff.lint.isort]
+known-first-party = ["xvr", "nanodrr"]
 known-third-party = ["wandb"]
 
 [tool.uv.workspace]
