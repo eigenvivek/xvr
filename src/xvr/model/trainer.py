@@ -195,23 +195,19 @@ class Trainer:
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
-            img, mask, pose, pred_img, pred_mask, pred_pose
-        )
+        loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
         loss = loss / self.n_grad_accum_itrs
 
         # Save images
         imgs = torch.concat([x, pred_img])
         masks = torch.concat([mask, pred_mask])
 
-        return loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks
+        return loss, metrics, keep, imgs, masks
 
     def step(self, itr: int, subject: Subject):
         torch.compiler.cudagraph_mark_step_begin()
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
-            loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks = self.compute_loss(
-                subject.bfloat16()
-            )
+            loss, metrics, keep, imgs, masks = self.compute_loss(subject.bfloat16())
         loss.mean().backward()
 
         # Optimize the model
@@ -225,11 +221,11 @@ class Trainer:
 
         # Return losses and imgs
         log = {
-            "mncc": mncc.mean().item(),
-            "dgeo": dgeo.mean().item(),
-            "rgeo": rgeo.mean().item(),
-            "tgeo": tgeo.mean().item(),
-            "dice": dice.mean().item(),
+            "mncc": metrics.mncc.mean().item(),
+            "dgeo": metrics.dgeo.mean().item(),
+            "rgeo": metrics.rgeo.mean().item(),
+            "tgeo": metrics.tgeo.mean().item(),
+            "dice": metrics.dice.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
