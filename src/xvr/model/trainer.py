@@ -196,7 +196,7 @@ class Trainer:
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
         loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
-        loss = loss / self.n_grad_accum_itrs
+        loss = (loss * keep) / self.n_grad_accum_itrs
 
         # Save images
         imgs = torch.concat([x, pred_img])
