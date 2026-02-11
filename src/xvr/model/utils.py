@@ -71,7 +71,7 @@ def initialize_subjects(
             num_workers=num_workers,
             pin_memory=pin_memory,
         )
-        return subjects, single_subject
+        return SubjectIterator(subjects), single_subject
 
     # Return random crops
     patch_sampler = UniformSampler(patch_size)
@@ -177,3 +177,30 @@ def initialize_coordinate_frame(warp, img, invert):
     if warp is None:
         return None
     return get_4x4(warp, img, invert).cuda().matrix
+
+
+class SubjectIterator:
+    """Wraps a SubjectsLoader to yield Subject objects instead of dicts."""
+
+    def __init__(self, loader: SubjectsLoader, mu_water: float = 0.019):
+        self.loader = loader
+        self.mu_water = mu_water
+
+    def _to_subject(self, data: dict) -> Subject:
+        image = ScalarImage(
+            tensor=data["volume"]["data"][0],
+            affine=data["volume"]["affine"][0],
+        )
+        mask_data = data.get("mask")
+        label = (
+            LabelMap(tensor=mask_data["data"][0], affine=mask_data["affine"][0])
+            if mask_data is not None
+            else None
+        )
+        return Subject.from_images(
+            image, label, convert_to_mu=True, mu_water=self.mu_water
+        ).cuda()
+
+    def __iter__(self):
+        for data in self.loader:
+            yield self._to_subject(data)
