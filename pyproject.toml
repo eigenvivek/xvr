@@ -15,7 +15,6 @@ dependencies = [
     "jaxtyping>=0.3.7",
     "nanodrr",
     "pydicom[pixeldata]>=3.0.1",
-    "roma",
     "wandb>=0.21.1",
 ]
 

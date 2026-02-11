@@ -5080,7 +5080,6 @@ dependencies = [
     { name = "jaxtyping" },
     { name = "nanodrr" },
     { name = "pydicom", extra = ["pixeldata"] },
-    { name = "roma" },
     { name = "wandb" },
 ]
 
@@ -5102,7 +5101,6 @@ requires-dist = [
     { name = "jaxtyping", specifier = ">=0.3.7" },
     { name = "nanodrr", editable = "nanodrr" },
     { name = "pydicom", extras = ["pixeldata"], specifier = ">=3.0.1" },
-    { name = "roma" },
     { name = "wandb", specifier = ">=0.21.1" },
 ]
 
