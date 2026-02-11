@@ -1,6 +1,16 @@
+from typing import NamedTuple
+
 import torch
 
 from nanodrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelation2d
+
+
+class Metrics(NamedTuple):
+    mncc: torch.Tensor
+    dgeo: torch.Tensor
+    rgeo: torch.Tensor
+    tgeo: torch.Tensor
+    dice: torch.Tensor
 
 
 class PoseRegressionLoss(torch.nn.Module):
@@ -32,7 +42,8 @@ class PoseRegressionLoss(torch.nn.Module):
             + self.weight_geo * dgeo
         )
 
-        return loss, mncc, dgeo, rgeo, tgeo, dice
+        metrics = Metrics(mncc, dgeo, rgeo, tgeo, dice)
+        return loss, metrics
 
 
 class DiceLoss(torch.nn.Module):

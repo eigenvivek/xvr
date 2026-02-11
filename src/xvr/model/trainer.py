@@ -1,4 +1,5 @@
 from datetime import datetime
+from itertools import repeat
 
 import matplotlib.pyplot as plt
 import torch
@@ -6,7 +7,6 @@ import wandb
 from diffdrr.visualization import plot_drr, plot_mask
 from jaxtyping import Float
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
-from torchio import LabelMap, ScalarImage
 from tqdm import tqdm
 
 from nanodrr.data import Subject
@@ -154,8 +154,8 @@ class Trainer:
         )
 
         if self.single_subject:
-            tmp = self.subjects.cuda()
-            self.subjects = (tmp for _ in range(self.n_total_itrs))
+            subject = self.subjects.cuda()
+            self.subjects = repeat(subject)
 
         for itr, subject in zip(pbar, self.subjects):
             # Checkpoint the model
@@ -195,24 +195,19 @@ class Trainer:
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
-            img, mask, pose, pred_img, pred_mask, pred_pose
-        )
-        loss = loss / self.n_grad_accum_itrs
+        loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
+        loss = (loss * keep) / self.n_grad_accum_itrs
 
         # Save images
         imgs = torch.concat([x, pred_img])
         masks = torch.concat([mask, pred_mask])
 
-        return loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks
+        return loss, metrics, keep, imgs, masks
 
-    def step(self, itr: int, subject: dict):
+    def step(self, itr: int, subject: Subject):
         torch.compiler.cudagraph_mark_step_begin()
-        subject = self.load(subject, mu_water=0.019)  # TODO: augment attenuation
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
-            loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks = self.compute_loss(
-                subject.bfloat16()
-            )
+            loss, metrics, keep, imgs, masks = self.compute_loss(subject.bfloat16())
         loss.mean().backward()
 
         # Optimize the model
@@ -226,32 +221,16 @@ class Trainer:
 
         # Return losses and imgs
         log = {
-            "mncc": mncc.mean().item(),
-            "dgeo": dgeo.mean().item(),
-            "rgeo": rgeo.mean().item(),
-            "tgeo": tgeo.mean().item(),
-            "dice": dice.mean().item(),
+            "mncc": metrics.mncc.mean().item(),
+            "dgeo": metrics.dgeo.mean().item(),
+            "rgeo": metrics.rgeo.mean().item(),
+            "tgeo": metrics.tgeo.mean().item(),
+            "dice": metrics.dice.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
         return log, imgs, masks
-
-    def load(self, subject: dict | Subject, mu_water: float) -> Subject:
-        if isinstance(subject, Subject):
-            return subject
-        image = ScalarImage(
-            tensor=subject["volume"]["data"][0], affine=subject["volume"]["affine"][0]
-        )
-        try:
-            label = LabelMap(
-                tensor=subject["mask"]["data"][0], affine=subject["mask"]["affine"][0]
-            )
-        except (KeyError, TypeError):
-            label = None
-        return Subject.from_images(
-            image, label, convert_to_mu=True, mu_water=mu_water
-        ).cuda()
 
     def render_samples(
         self,
