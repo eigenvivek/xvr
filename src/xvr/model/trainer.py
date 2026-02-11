@@ -116,7 +116,6 @@ class Trainer:
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
         self.augmentations = XrayAugmentations(p_augmentation)
-        self.augmentations.forward = torch.compiler.disable(self.augmentations.forward)
 
         # Define the pose distribution
         self.pose_distribution = dict(
@@ -174,7 +173,7 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
-    @torch.compile(mode="max-autotune-no-cudagraphs")
+    @torch.compile(fullgraph=True, mode="max-autotune-no-cudagraphs")
     def compute_loss(self, subject: Subject):
         # Sample a batch of random poses relative to the subject's coordinate frame
         pose = get_random_pose(subject=subject, **self.pose_distribution)
@@ -182,7 +181,8 @@ class Trainer:
         # Render a batch of images and only keep samples with sufficient anatomy?
         with torch.no_grad():
             img, mask, keep = self.render_samples(subject, pose)
-            x = self.augmentations(img)
+            with torch.autocast(device_type="cuda", enabled=False):
+                x = self.augmentations(img)
             x = self.transforms(x)
 
         # Regress the poses of the DRRs (and optionally convert between reference frames)
@@ -207,16 +207,15 @@ class Trainer:
         return loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks
 
     def step(self, itr: int, subject: dict):
-        # Load the subject
+        torch.compiler.cudagraph_mark_step_begin()
         subject = self.load(subject, mu_water=0.019)  # TODO: augment attenuation
-
-        # Compute the loss
-        (loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks) = self.compute_loss(
-            subject
-        )
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+            loss, mncc, dgeo, rgeo, tgeo, dice, keep, imgs, masks = self.compute_loss(
+                subject.bfloat16()
+            )
+        loss.mean().backward()
 
         # Optimize the model
-        loss.mean().backward()
         if ((itr + 1) % self.n_grad_accum_itrs == 0) or (
             (itr + 1) == self.n_total_itrs
         ):
@@ -271,11 +270,11 @@ class Trainer:
         # Discard empty imgs/masks
         if mask.shape[1] == 1:
             # Keep if >10% of the image is non-zero pixels
-            keep = mask.to(img).flatten(1).mean(1) > img_threshold
+            keep = mask.float().flatten(1).mean(1) > img_threshold
         else:
             # Keep if >5% of the image contains pixels corresponding to masked structures
             keep = mask[:, 1:].sum(dim=1, keepdim=True)
-            keep = (keep > 0).to(img).flatten(1).mean(1) > mask_threshold
+            keep = (keep > 0).float().flatten(1).mean(1) > mask_threshold
 
         return img, mask, keep
 
