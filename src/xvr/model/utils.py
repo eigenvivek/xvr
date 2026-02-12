@@ -5,6 +5,7 @@ from typing import Optional
 import torch
 from torch.utils.data import WeightedRandomSampler
 from torchio import (
+    Compose,
     LabelMap,
     Queue,
     ScalarImage,
@@ -15,10 +16,11 @@ from torchio import (
 from torchio import Subject as TorchioSubject
 from tqdm import tqdm
 
-from nanodrr.data import Subject as Subject
+from nanodrr.data import Subject
 from nanodrr.drr import DRR
 
 from ..utils import XrayTransforms, get_4x4
+from .io import RandomHUToMu, SubjectIterator
 from .network import PoseRegressor
 from .scheduler import IdentitySchedule, WarmupCosineSchedule
 
@@ -56,7 +58,7 @@ def initialize_subjects(
         subjects.append(subject)
 
     # Construct a dataloader with efficient IO
-    subjects = SubjectsDataset(subjects)
+    subjects = SubjectsDataset(subjects, transform=Compose([RandomHUToMu()]))
     if weights is None:
         weights = [1 / len(volumes) for _ in range(len(volumes))]
     subject_sampler = WeightedRandomSampler(
@@ -78,11 +80,12 @@ def initialize_subjects(
     patch_sampler = UniformSampler(patch_size)
     patches_queue = Queue(
         subjects,
-        max_length=64,
-        samples_per_volume=16,
+        max_length=160,
+        samples_per_volume=32,
         sampler=patch_sampler,
         subject_sampler=subject_sampler,
         shuffle_subjects=False,
+        shuffle_patches=True,
         num_workers=num_workers,
     )
 
@@ -94,33 +97,6 @@ def initialize_subjects(
     )
 
     return SubjectIterator(subjects), single_subject
-
-
-class SubjectIterator:
-    """Wraps a SubjectsLoader to yield Subject objects instead of dicts."""
-
-    def __init__(self, loader: SubjectsLoader, mu_water: float = 0.019):
-        self.loader = loader
-        self.mu_water = mu_water
-
-    def _to_subject(self, data: dict) -> Subject:
-        image = ScalarImage(
-            tensor=data["volume"]["data"][0],
-            affine=data["volume"]["affine"][0],
-        )
-        mask_data = data.get("mask")
-        label = (
-            LabelMap(tensor=mask_data["data"][0], affine=mask_data["affine"][0])
-            if mask_data is not None
-            else None
-        )
-        return Subject.from_images(
-            image, label, convert_to_mu=True, mu_water=self.mu_water
-        ).cuda()
-
-    def __iter__(self):
-        for data in self.loader:
-            yield self._to_subject(data)
 
 
 def initialize_modules(
