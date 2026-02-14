@@ -4,12 +4,12 @@ from itertools import repeat
 import matplotlib.pyplot as plt
 import torch
 import wandb
-from diffdrr.visualization import plot_drr, plot_mask
 from jaxtyping import Float
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from tqdm import tqdm
 
 from nanodrr.data import Subject
+from nanodrr.visualization import plot_drr
 
 from ..config.trainer import args
 from .augmentations import XrayAugmentations
@@ -273,9 +273,7 @@ class Trainer:
         ncols = len(imgs) // 2
         if itr % 250 == 0 and ncols > 0:
             fig, axs = plt.subplots(ncols=ncols, nrows=2)
-            plot_drr(imgs, axs=axs.flatten(), ticks=False)
-            if masks.shape[1] > 1:
-                plot_mask(masks[:, 1:], alpha=0.25, axs=axs.flatten())
+            plot_drr(imgs, masks, axs=axs.flatten(), ticks=False)
             plt.tight_layout()
             log["imgs"] = fig
             plt.close()
