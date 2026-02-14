@@ -9,7 +9,7 @@ from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from tqdm import tqdm
 
 from nanodrr.data import Subject
-from nanodrr.visualization import plot_drr
+from nanodrr.plot import plot_drr
 
 from ..config.trainer import args
 from .augmentations import XrayAugmentations
