@@ -66,6 +66,8 @@ class Trainer:
         num_workers=args.num_workers,
         pin_memory=args.pin_memory,
         weights=None,
+        use_compile=args.use_compile,
+        use_bf16=args.use_bf16,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
@@ -144,6 +146,15 @@ class Trainer:
         self.n_save_every_itrs = n_save_every_itrs
         self.outpath = outpath
 
+        # Set up training optimizations (compile/bf16)
+        self.use_compile = use_compile
+        self.use_bf16 = use_bf16
+        self.dtype = torch.bfloat16 if self.use_bf16 else torch.float32
+        if self.use_compile:
+            self.compute_loss = torch.compile(
+                self.compute_loss, fullgraph=True, mode="max-autotune-no-cudagraphs"
+            )
+
     def train(self, run=None):
         pbar = tqdm(
             range(self.start_itr, self.n_total_itrs),
@@ -173,7 +184,6 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
-    @torch.compile(fullgraph=True, mode="max-autotune-no-cudagraphs")
     def compute_loss(self, subject: Subject):
         # Sample a batch of random poses relative to the subject's coordinate frame
         pose = get_random_pose(subject=subject, **self.pose_distribution)
@@ -206,8 +216,10 @@ class Trainer:
 
     def step(self, itr: int, subject: Subject):
         torch.compiler.cudagraph_mark_step_begin()
-        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
-            loss, metrics, keep, imgs, masks = self.compute_loss(subject.bfloat16())
+        with torch.autocast(
+            device_type="cuda", dtype=self.dtype, enabled=self.use_bf16
+        ):
+            loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
         loss.mean().backward()
 
         # Optimize the model

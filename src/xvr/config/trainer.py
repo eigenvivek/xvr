@@ -17,6 +17,8 @@ class TrainerArgs:
     convention: str = "ZXY"
     unit_conversion_factor: float = 1000.0
     p_augmentation: float = 0.333
+    use_compile: bool = False
+    use_bf16: bool = False
 
     # Optimizer
     lr: float = 2e-4

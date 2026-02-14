@@ -295,6 +295,20 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Data",
 )
 @categorized_option(
+    "--use_compile",
+    default=args.use_compile,
+    is_flag=True,
+    help="Compile forward pass with `max-autotune-no-cudagraphs`",
+    category="Model",
+)
+@categorized_option(
+    "--use_bf16",
+    default=args.use_bf16,
+    is_flag=True,
+    help="Run all ops in bf16",
+    category="Model",
+)
+@categorized_option(
     "--name",
     default=None,
     type=str,
