@@ -369,6 +369,8 @@ def train(
     num_workers,
     pin_memory,
     sample_weights,
+    use_compile,
+    use_bf16,
     name,
     id,
     project,
@@ -457,6 +459,8 @@ def train(
         weights=weights,
         warp=warp,
         invert=invert,
+        use_compile=use_compile,
+        use_bf16=use_bf16,
     )
 
     # Set up logging
