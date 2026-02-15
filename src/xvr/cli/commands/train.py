@@ -113,13 +113,6 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Renderer",
 )
 @categorized_option(
-    "--renderer",
-    default=args.renderer,
-    type=click.Choice(["siddon", "trilinear"]),
-    help="Rendering equation",
-    category="Renderer",
-)
-@categorized_option(
     "--orientation",
     default=args.orientation,
     type=click.Choice(["AP", "PA"]),
@@ -208,13 +201,6 @@ from ..formatter import CategorizedCommand, categorized_option
     default=args.weight_dice,
     type=float,
     help="Weight on Dice loss term",
-    category="Optimizer",
-)
-@categorized_option(
-    "--weight_mvc",
-    default=args.weight_mvc,
-    type=float,
-    help="Weight on multiview consistency loss term",
     category="Optimizer",
 )
 @categorized_option(
@@ -309,6 +295,20 @@ from ..formatter import CategorizedCommand, categorized_option
     category="Data",
 )
 @categorized_option(
+    "--use_compile",
+    default=args.use_compile,
+    is_flag=True,
+    help="Compile forward pass with `max-autotune-no-cudagraphs`",
+    category="Model",
+)
+@categorized_option(
+    "--use_bf16",
+    default=args.use_bf16,
+    is_flag=True,
+    help="Run all ops in bf16",
+    category="Model",
+)
+@categorized_option(
     "--name",
     default=None,
     type=str,
@@ -343,7 +343,6 @@ def train(
     sdd,
     height,
     delx,
-    renderer,
     orientation,
     reverse_x_axis,
     model_name,
@@ -357,7 +356,6 @@ def train(
     weight_ncc,
     weight_geo,
     weight_dice,
-    weight_mvc,
     batch_size,
     n_total_itrs,
     n_warmup_itrs,
@@ -371,6 +369,8 @@ def train(
     num_workers,
     pin_memory,
     sample_weights,
+    use_compile,
+    use_bf16,
     name,
     id,
     project,
@@ -433,7 +433,6 @@ def train(
         sdd=sdd,
         height=height,
         delx=delx,
-        renderer=renderer,
         orientation=orientation,
         reverse_x_axis=reverse_x_axis,
         parameterization=parameterization,
@@ -447,7 +446,6 @@ def train(
         weight_ncc=weight_ncc,
         weight_geo=weight_geo,
         weight_dice=weight_dice,
-        weight_mvc=weight_mvc,
         batch_size=batch_size,
         n_total_itrs=n_total_itrs,
         n_warmup_itrs=n_warmup_itrs,
@@ -461,6 +459,8 @@ def train(
         weights=weights,
         warp=warp,
         invert=invert,
+        use_compile=use_compile,
+        use_bf16=use_bf16,
     )
 
     # Set up logging

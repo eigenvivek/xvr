@@ -6,7 +6,6 @@ class TrainerArgs:
     """Default arguments for training."""
 
     # Renderer
-    renderer: str = "trilinear"
     orientation: str = "AP"
     reverse_x_axis: bool = False
 
@@ -18,13 +17,14 @@ class TrainerArgs:
     convention: str = "ZXY"
     unit_conversion_factor: float = 1000.0
     p_augmentation: float = 0.333
+    use_compile: bool = False
+    use_bf16: bool = False
 
     # Optimizer
     lr: float = 2e-4
     weight_ncc: float = 1e0
     weight_geo: float = 1e-2
     weight_dice: float = 1e0
-    weight_mvc: float = 0
     batch_size: int = 116
     n_total_itrs: int = 1_000_000
     n_warmup_itrs: int = 1_000

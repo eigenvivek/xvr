@@ -3,21 +3,24 @@ from pathlib import Path
 from typing import Optional
 
 import torch
-from diffdrr.data import load_example_ct, read
-from diffdrr.drr import DRR
 from torch.utils.data import WeightedRandomSampler
 from torchio import (
+    Compose,
     LabelMap,
     Queue,
     ScalarImage,
-    Subject,
     SubjectsDataset,
     SubjectsLoader,
     UniformSampler,
 )
+from torchio import Subject as TorchioSubject
 from tqdm import tqdm
 
+from nanodrr.data import Subject
+from nanodrr.drr import DRR
+
 from ..utils import XrayTransforms, get_4x4
+from .io import RandomHUToMu, SubjectIterator
 from .network import PoseRegressor
 from .scheduler import IdentitySchedule, WarmupCosineSchedule
 
@@ -25,7 +28,6 @@ from .scheduler import IdentitySchedule, WarmupCosineSchedule
 def initialize_subjects(
     volpath: str,  # A single CT or a directory with multiple volumes
     maskpath: Optional[str],  # Optional labelmaps corresponding to the CTs
-    orientation: Optional[str],  # "AP", "PA", or None
     patch_size: Optional[tuple],  # Tuple for random crop sizes (h, w, d)
     num_samples: int,  # Total number of training iterations
     num_workers: int,  # Number of workers for the dataloader
@@ -37,7 +39,7 @@ def initialize_subjects(
     single_subject = False
     if Path(volpath).is_file():
         single_subject = True
-        subject = read(volpath, maskpath, orientation=orientation)
+        subject = Subject.from_filepath(volpath, maskpath)
         return subject, single_subject
 
     # Else, construct a list of all volumes and masks
@@ -52,11 +54,11 @@ def initialize_subjects(
     for volpath, maskpath in pbar:
         volume = ScalarImage(volpath)
         mask = LabelMap(maskpath) if maskpath is not None else None
-        subject = Subject(volume=volume, mask=mask)
+        subject = TorchioSubject(volume=volume, mask=mask)
         subjects.append(subject)
 
     # Construct a dataloader with efficient IO
-    subjects = SubjectsDataset(subjects)
+    subjects = SubjectsDataset(subjects, transform=Compose([RandomHUToMu()]))
     if weights is None:
         weights = [1 / len(volumes) for _ in range(len(volumes))]
     subject_sampler = WeightedRandomSampler(
@@ -70,18 +72,20 @@ def initialize_subjects(
             sampler=subject_sampler,
             num_workers=num_workers,
             pin_memory=pin_memory,
+            prefetch_factor=4,
         )
-        return subjects, single_subject
+        return SubjectIterator(subjects), single_subject
 
     # Return random crops
     patch_sampler = UniformSampler(patch_size)
     patches_queue = Queue(
         subjects,
-        max_length=64,
-        samples_per_volume=4,
+        max_length=160,
+        samples_per_volume=32,
         sampler=patch_sampler,
         subject_sampler=subject_sampler,
         shuffle_subjects=False,
+        shuffle_patches=True,
         num_workers=num_workers,
     )
 
@@ -92,7 +96,7 @@ def initialize_subjects(
         pin_memory=pin_memory,
     )
 
-    return subjects, single_subject
+    return SubjectIterator(subjects), single_subject
 
 
 def initialize_modules(
@@ -105,14 +109,10 @@ def initialize_modules(
     sdd,
     height,
     delx,
-    orientation,
-    reverse_x_axis,
-    renderer,
     lr,
     n_total_itrs,
     n_warmup_itrs,
     n_grad_accum_itrs,
-    subject,
     disable_scheduler,
     ckptpath,
     reuse_optimizer,
@@ -135,7 +135,7 @@ def initialize_modules(
         model.load_state_dict(ckpt["model_state_dict"])
 
     # Initialize the optimizer and learning rate scheduler
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, fused=True)
     if disable_scheduler:
         scheduler = IdentitySchedule(optimizer)
     else:
@@ -150,25 +150,19 @@ def initialize_modules(
         scheduler.load_state_dict(ckpt["scheduler_state_dict"])
     model.train()
 
-    # If more than one subject is provided, initialize the DRR module with a dummy CT
-    drr = DRR(
-        subject if subject is not None else load_example_ct(orientation=orientation),
+    # Initialize the DRR module
+    drr = DRR.from_carm_intrinsics(
         sdd=sdd,
-        height=height,
         delx=delx,
-        reverse_x_axis=reverse_x_axis,
-        renderer=renderer,
+        dely=delx,
+        height=height,
+        width=height,
+        x0=0.0,
+        y0=0.0,
+        dtype=torch.float32,
+        device="cuda",
     )
-    drr.density = None  # Unload the precomputed density map to free up memory
-    if not hasattr(drr, "mask"):
-        drr.mask = None
-    transforms = XrayTransforms(height)
-
-    # If a single subject was provided, expose their volume and isocenter in the DRR module
-    if subject is not None:
-        drr.register_buffer("volume", subject.volume.data.squeeze())
-        drr.register_buffer("center", torch.tensor(subject.volume.get_center())[None])
-    drr = drr.cuda().to(torch.float32)
+    transforms = XrayTransforms(height).cuda()
 
     return model, drr, transforms, optimizer, scheduler, start_itr, model_number
 
@@ -186,4 +180,4 @@ def _load_checkpoint(ckptpath, reuse_optimizer):
 def initialize_coordinate_frame(warp, img, invert):
     if warp is None:
         return None
-    return get_4x4(warp, img, invert).cuda()
+    return get_4x4(warp, img, invert).cuda().matrix

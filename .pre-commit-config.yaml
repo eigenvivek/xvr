@@ -1,22 +1,22 @@
 repos:
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.24.1
+    rev: v0.25
     hooks:
       - id: validate-pyproject
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1.30.0
+    rev: v1.43.4
     hooks:
       - id: typos
         args: ["--config", ".typos.toml"]
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.8.17
+    rev: 0.10.1
     hooks:
       - id: uv-lock
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.3
+    rev: v0.15.0
     hooks:
       - id: ruff-check
         args: [ --fix ]
