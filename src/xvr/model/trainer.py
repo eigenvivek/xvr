@@ -209,8 +209,8 @@ class Trainer:
         loss = (loss * keep) / self.n_grad_accum_itrs
 
         # Save images
-        imgs = torch.concat([x, pred_img])
-        masks = torch.concat([mask, pred_mask])
+        imgs = torch.concat([x[:4], pred_img[:4]])
+        masks = torch.concat([mask[:4], pred_mask[:4]])
 
         return loss, metrics, keep, imgs, masks
 
