@@ -7,7 +7,7 @@ def _apply_prob(x, augmented, p, device):
     """Branchless per-sample apply with probability p."""
     B = x.shape[0]
     apply = (torch.rand(B, 1, 1, 1, device=device) < p).to(x.dtype)
-    return torch.lerp(x, augmented, apply)
+    return torch.lerp(x, augmented.to(x.dtype), apply)
 
 
 class Standardize(nn.Module):
@@ -136,7 +136,7 @@ class RandomErasing(nn.Module):
 
         apply = (torch.rand(B, 1, 1, 1, device=device) < self.p).to(x.dtype)
         mask = mask * apply
-        return torch.lerp(x, torch.rand_like(x), mask)
+        return torch.lerp(x, torch.rand_like(x, dtype=x.dtype), mask)
 
 
 class RandomCenterCrop(nn.Module):
