@@ -2,8 +2,7 @@ import torch
 from nanodrr.drr import DRR
 
 from ...utils import XrayTransforms
-from ..network import PoseRegressor
-from ..scheduler import IdentitySchedule, WarmupCosineSchedule
+from ..modules import IdentitySchedule, PoseRegressor, WarmupCosineSchedule
 
 
 def initialize_modules(

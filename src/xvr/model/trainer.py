@@ -17,7 +17,7 @@ from .initialize import (
     initialize_modules,
     initialize_subjects,
 )
-from .loss import PoseRegressionLoss
+from .modules import PoseRegressionLoss
 from .sampler import get_random_pose
 
 
