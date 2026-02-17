@@ -13,7 +13,7 @@ dependencies = [
     "click>=8.1.8",
     "diffdrr>=0.6.0",
     "jaxtyping>=0.3.7",
-    "nanodrr",
+    "nanodrr>=0.1.0",
     "pydicom[pixeldata]>=3.0.1",
     "wandb>=0.21.1",
 ]
@@ -32,17 +32,11 @@ lint.ignore = [
     "F722",  # Forward annotation false positive from jaxtyping
     "F821",  # Forward annotation false positive from jaxtyping
 ]
-src = ["src", "nanodrr"]
+src = ["src"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["xvr", "nanodrr"]
+known-first-party = ["xvr"]
 known-third-party = ["wandb"]
-
-[tool.uv.workspace]
-members = ["nanodrr"]
-
-[tool.uv.sources]
-nanodrr = { workspace = true, editable = true }
 
 [build-system]
 requires = ["hatchling"]
