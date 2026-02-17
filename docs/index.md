@@ -2,17 +2,12 @@
 
 ***Training patient-specific 2D/3D registration models in 5 minutes***
 
-- :rocket: A single CLI/API for training models and registering clinical data
-- :zap: 100x faster patient-specific model training than [`DiffPose`](https://github.com/eigenvivek/DiffPose)
-- :triangular_ruler: Submillimeter registration accuracy with new image similarity metrics
-- :compass: Human-interpretable pose parameters for training your own models
-- :snake: Pure Python/PyTorch implementation
-- :computer: Supports macOS, Linux, and Windows
+- 🚀 A single CLI/API for training models and registering clinical data
+- ⚡️ 100x faster patient-specific model training than [`DiffPose`](https://github.com/eigenvivek/DiffPose)
+- 📐 Submillimeter registration accuracy with new image similarity metrics
+- 🧭 Human-interpretable pose parameters for training your own models
+- 🐍 Pure Python/PyTorch implementation
+- 💾 Supports macOS, Linux, and Windows
 
-## Manuscript
-
-*Rapid patient-specific neural networks for intraoperative X-ray to volume registration.*
-
-Vivek Gopalakrishnan, Neel Dey, David-Dimitris Chlorogiannis, Andrew Abumoussa, Anna M. Larson, Darren B. Orbach, Sarah Frisken, and Polina Golland.
-
-arXiv: https://arxiv.org/abs/2503.16309
+!!! abstract "Manuscript"
+    Vivek Gopalakrishnan, Neel Dey, David-Dimitris Chlorogiannis, Andrew Abumoussa, Anna M. Larson, Darren B. Orbach, Sarah Frisken, and Polina Golland. [*Rapid patient-specific neural networks for intraoperative X-ray to volume registration.*](https://arxiv.org/abs/2503.16309) _ArXiv_ (2025): arXiv-2503.
