@@ -24,6 +24,12 @@ theme:
 
 nav:
   - Home: index.md
+  - CLI Reference:
+    - train: cli/train.md
+    - restart: cli/restart.md
+    - register: cli/register.md
+    - animate: cli/animate.md
+    - dcm2nii: cli/dcm2nii.md
   - API Reference: reference/
 
 plugins:
@@ -58,6 +64,7 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - mkdocs-click
 
 extra_css:
   - stylesheets/extra.css
