@@ -30,11 +30,8 @@ jobs:
           restore-keys: |
             mkdocs-material-
 
-      # Make sure setuptools is available in the env used for building diffdrr
-      - name: Install setuptools
-        run: uv pip install setuptools
-
       # Install project deps (xvr + diffdrr) and docs group, with no build isolation
+      # Assumes `setuptools` is listed in [project].dependencies in your pyproject.toml
       - name: Install deps (project + docs, no build isolation)
         run: uv sync --group docs --no-build-isolation
 
