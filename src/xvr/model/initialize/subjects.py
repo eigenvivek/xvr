@@ -3,6 +3,7 @@ from itertools import zip_longest
 from pathlib import Path
 from typing import Optional
 
+import torch
 from nanodrr.data.io import Subject as NanoSubject
 from nanodrr.data.preprocess import hu_to_mu
 from torch.utils.data import WeightedRandomSampler
@@ -121,17 +122,31 @@ class SubjectIterator:
         self.loader = loader
 
     def _to_subject(self, data: dict) -> NanoSubject:
-        image = ScalarImage(
-            tensor=data["volume"]["data"][0],
-            affine=data["volume"]["affine"][0],
-        )
+        imagedata = NanoSubject._to_bcdhw(data["volume"]["data"][0]).float()
+        affine = data["volume"]["affine"][0].float()
+
         mask_data = data.get("mask")
-        label = (
-            LabelMap(tensor=mask_data["data"][0], affine=mask_data["affine"][0])
+        labeldata = (
+            NanoSubject._to_bcdhw(mask_data["data"][0]).float()
             if mask_data is not None
-            else None
+            else torch.zeros_like(imagedata)
         )
-        return NanoSubject.from_images(image, label, convert_to_mu=False).cuda()
+
+        voxel_to_world = affine
+        world_to_voxel = torch.inverse(affine)
+        voxel_to_grid = NanoSubject._make_voxel_to_grid(imagedata.shape)
+
+        center = (torch.tensor(imagedata.shape[2:], dtype=torch.float32) - 1) / 2
+        isocenter = voxel_to_world[:3, :3] @ center + voxel_to_world[:3, 3]
+
+        return NanoSubject(
+            imagedata,
+            labeldata,
+            voxel_to_world,
+            world_to_voxel,
+            voxel_to_grid,
+            isocenter,
+        ).cuda()
 
     def __iter__(self):
         for data in self.loader:
