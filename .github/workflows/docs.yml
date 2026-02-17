@@ -1,23 +1,21 @@
 name: Documentation
+
 on:
   push:
     branches:
-      - master
+      - main
+  pull_request:
+    branches:
       - main
 
 permissions:
-  contents: write
+  contents: write  # needed for gh-deploy on push; harmless on PRs
 
 jobs:
-  deploy:
+  docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure Git Credentials
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
       - uses: astral-sh/setup-uv@v4
         with:
@@ -32,4 +30,17 @@ jobs:
           restore-keys: |
             mkdocs-material-
 
-      - run: uv run --only-group docs mkdocs gh-deploy --force
+      # Always: make sure docs build succeeds
+      - name: Build docs
+        run: uv run --only-group docs mkdocs build --strict
+
+      # Only on pushes to main: deploy
+      - name: Configure Git Credentials
+        if: github.event_name == 'push'
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Deploy docs
+        if: github.event_name == 'push'
+        run: uv run --only-group docs mkdocs gh-deploy --force
