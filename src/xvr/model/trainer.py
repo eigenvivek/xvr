@@ -207,7 +207,8 @@ class Trainer:
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
         loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
-        loss = (loss * keep) / self.n_grad_accum_itrs
+        n_kept = keep.sum().clamp(min=1)
+        loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
 
         # Save images
         imgs = torch.concat([x[:4], pred_img[:4]])
@@ -221,7 +222,7 @@ class Trainer:
             device_type="cuda", dtype=self.dtype, enabled=self.use_bf16
         ):
             loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
-        loss.mean().backward()
+        loss.backward()
 
         # Optimize the model
         if ((itr + 1) % self.n_grad_accum_itrs == 0) or (
@@ -239,7 +240,7 @@ class Trainer:
             "rgeo": metrics.rgeo.mean().item(),
             "tgeo": metrics.tgeo.mean().item(),
             "dice": metrics.dice.mean().item(),
-            "loss": loss.mean().item(),
+            "loss": loss.item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
