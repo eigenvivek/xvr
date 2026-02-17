@@ -954,7 +954,7 @@ wheels = [
 [[package]]
 name = "diffdrr"
 version = "0.6.0"
-source = { git = "https://github.com/eigenvivek/diffdrr#c4c72270dac27683a55f57e36ee5071f5b20efc6" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "einops" },
     { name = "fastcore" },
@@ -964,7 +964,6 @@ dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pyvista", extra = ["all"] },
-    { name = "roma" },
     { name = "scipy" },
     { name = "seaborn" },
     { name = "timm" },
@@ -972,6 +971,10 @@ dependencies = [
     { name = "torchio" },
     { name = "torchvision" },
     { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/39/3978e00a918448c3055a1994109e5dffd01f5f8d946b85668b6108b2e0f1/diffdrr-0.6.0.tar.gz", hash = "sha256:3cfa5a4015100541f016b3ce0b017f5109b8e15ac6c68db10eb3a1a731c6804f", size = 34805896, upload-time = "2025-10-20T17:37:15.862Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1b/0f/65cfffa49c63814f6c8d74bebdb27da52d7bbf4055cb5af834d3cda4abd9/diffdrr-0.6.0-py3-none-any.whl", hash = "sha256:ed2b2bc4666f7e89fa7d60bc6d5621755c25870a9d705a7ac3f407af4d53d0b3", size = 34803065, upload-time = "2025-10-20T17:37:11.973Z" },
 ]
 
 [[package]]
@@ -4359,15 +4362,6 @@ wheels = [
 ]
 
 [[package]]
-name = "roma"
-version = "1.5.6"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/13/b2/f6560e1a105957a61d1090cf918415f354a012cef0639886e1ccd5aa9d4e/roma-1.5.6.tar.gz", hash = "sha256:986b3c1323592a50590c4566fa4dfd89f4855d6fa6f173268ec9e03bfdf553db", size = 32187, upload-time = "2026-02-11T12:55:11.869Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/55/bd/dd56edc2680df7658c7bdeeb58270ab35dfcdc0e2670899ce9771604b436/roma-1.5.6-py3-none-any.whl", hash = "sha256:ae21a4e095330428d60e1dbdcad4e550dbdc9a7b4597a0157aaf5d6fd2b46afb", size = 25327, upload-time = "2026-02-11T12:55:10.629Z" },
-]
-
-[[package]]
 name = "rpds-py"
 version = "0.30.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5577,7 +5571,7 @@ docs = [
 requires-dist = [
     { name = "antspyx", specifier = ">=0.5.4" },
     { name = "click", specifier = ">=8.1.8" },
-    { name = "diffdrr", git = "https://github.com/eigenvivek/diffdrr" },
+    { name = "diffdrr", specifier = ">=0.6.0" },
     { name = "pydicom", extras = ["pixeldata"], specifier = ">=3.0.1" },
     { name = "wandb", specifier = ">=0.21.1" },
 ]
