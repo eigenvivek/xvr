@@ -9,7 +9,7 @@ on:
       - main
 
 permissions:
-  contents: write  # needed for gh-deploy on push; harmless on PRs
+  contents: write
 
 jobs:
   docs:
@@ -30,11 +30,19 @@ jobs:
           restore-keys: |
             mkdocs-material-
 
-      # Always: make sure docs build succeeds
-      - name: Build docs
-        run: uv run --only-group docs mkdocs build --strict
+      # Make sure setuptools is available in the env used for building diffdrr
+      - name: Install setuptools
+        run: uv pip install setuptools
 
-      # Only on pushes to main: deploy
+      # Install project deps (xvr + diffdrr) and docs group, with no build isolation
+      - name: Install deps (project + docs, no build isolation)
+        run: uv sync --group docs --no-build-isolation
+
+      # Always: build docs (mkdocs-click needs `xvr` importable)
+      - name: Build docs
+        run: uv run mkdocs build --strict
+
+      # Only deploy on push to main
       - name: Configure Git Credentials
         if: github.event_name == 'push'
         run: |
@@ -43,4 +51,4 @@ jobs:
 
       - name: Deploy docs
         if: github.event_name == 'push'
-        run: uv run --only-group docs mkdocs gh-deploy --force
+        run: uv run mkdocs gh-deploy --force
