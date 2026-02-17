@@ -30,16 +30,23 @@ jobs:
           restore-keys: |
             mkdocs-material-
 
-      # Install project deps (xvr + diffdrr) and docs group, with no build isolation
-      # Assumes `setuptools` is listed in [project].dependencies in your pyproject.toml
+      # 1) Create the venv that uv will use
+      - name: Create venv
+        run: uv venv
+
+      # 2) Pre-install setuptools into that venv so diffdrr can import it
+      - name: Install setuptools into venv
+        run: uv pip install setuptools
+
+      # 3) Install project deps (xvr + diffdrr) and docs group, with no build isolation
       - name: Install deps (project + docs, no build isolation)
         run: uv sync --group docs --no-build-isolation
 
-      # Always: build docs (mkdocs-click needs `xvr` importable)
+      # 4) Always: build docs (mkdocs-click needs `xvr` importable)
       - name: Build docs
         run: uv run mkdocs build --strict
 
-      # Only deploy on push to main
+      # 5) Only deploy on push to main
       - name: Configure Git Credentials
         if: github.event_name == 'push'
         run: |
