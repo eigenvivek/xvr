@@ -118,7 +118,6 @@ class Trainer:
         self.lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice)
 
         # Set up augmentations
-        self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
         self.augmentations = XrayAugmentations(p_augmentation)
 
         # Define the pose distribution
