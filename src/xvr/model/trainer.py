@@ -12,9 +12,13 @@ from tqdm import tqdm
 
 from ..config.trainer import args
 from .augmentations import XrayAugmentations
+from .initialize import (
+    initialize_coordinate_frame,
+    initialize_modules,
+    initialize_subjects,
+)
 from .loss import PoseRegressionLoss
 from .sampler import get_random_pose
-from .utils import initialize_coordinate_frame, initialize_modules, initialize_subjects
 
 
 class Trainer:
