@@ -14,6 +14,7 @@ dependencies = [
     "diffdrr>=0.6.0",
     "pydicom[pixeldata]>=3.0.1",
     "wandb>=0.21.1",
+    "setuptools",
 ]
 
 [project.scripts]
