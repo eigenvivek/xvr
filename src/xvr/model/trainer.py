@@ -11,7 +11,7 @@ from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from tqdm import tqdm
 
 from ..config.trainer import args
-from .data import XrayAugmentations, get_random_pose
+from .datum import XrayAugmentations, get_random_pose
 from .initialize import (
     initialize_coordinate_frame,
     initialize_modules,
