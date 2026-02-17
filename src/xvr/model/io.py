@@ -1,9 +1,8 @@
 import random
 
-from torchio import LabelMap, ScalarImage, Subject, SubjectsLoader, Transform
-
 from nanodrr.data.io import Subject as NanoSubject
 from nanodrr.data.preprocess import hu_to_mu
+from torchio import LabelMap, ScalarImage, Subject, SubjectsLoader, Transform
 
 
 class RandomHUToMu(Transform):

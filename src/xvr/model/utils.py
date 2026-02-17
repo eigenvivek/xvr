@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Optional
 
 import torch
+from nanodrr.data import Subject
+from nanodrr.drr import DRR
 from torch.utils.data import WeightedRandomSampler
 from torchio import (
     Compose,
@@ -15,9 +17,6 @@ from torchio import (
 )
 from torchio import Subject as TorchioSubject
 from tqdm import tqdm
-
-from nanodrr.data import Subject
-from nanodrr.drr import DRR
 
 from ..utils import XrayTransforms, get_4x4
 from .io import RandomHUToMu, SubjectIterator
