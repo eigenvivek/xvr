@@ -1,28 +1,24 @@
+import random
 from itertools import zip_longest
 from pathlib import Path
 from typing import Optional
 
 import torch
+from nanodrr.data.io import Subject as NanoSubject
+from nanodrr.data.preprocess import hu_to_mu
 from torch.utils.data import WeightedRandomSampler
 from torchio import (
     Compose,
     LabelMap,
     Queue,
     ScalarImage,
+    Subject,
     SubjectsDataset,
     SubjectsLoader,
+    Transform,
     UniformSampler,
 )
-from torchio import Subject as TorchioSubject
 from tqdm import tqdm
-
-from nanodrr.data import Subject
-from nanodrr.drr import DRR
-
-from ..utils import XrayTransforms, get_4x4
-from .io import RandomHUToMu, SubjectIterator
-from .network import PoseRegressor
-from .scheduler import IdentitySchedule, WarmupCosineSchedule
 
 
 def initialize_subjects(
@@ -54,7 +50,7 @@ def initialize_subjects(
     for volpath, maskpath in pbar:
         volume = ScalarImage(volpath)
         mask = LabelMap(maskpath) if maskpath is not None else None
-        subject = TorchioSubject(volume=volume, mask=mask)
+        subject = Subject(volume=volume, mask=mask)
         subjects.append(subject)
 
     # Construct a dataloader with efficient IO
@@ -99,85 +95,59 @@ def initialize_subjects(
     return SubjectIterator(subjects), single_subject
 
 
-def initialize_modules(
-    model_name,
-    pretrained,
-    parameterization,
-    convention,
-    norm_layer,
-    unit_conversion_factor,
-    sdd,
-    height,
-    delx,
-    lr,
-    n_total_itrs,
-    n_warmup_itrs,
-    n_grad_accum_itrs,
-    disable_scheduler,
-    ckptpath,
-    reuse_optimizer,
-):
-    # Initialize the pose regression model
-    model = PoseRegressor(
-        model_name=model_name,
-        pretrained=pretrained,
-        parameterization=parameterization,
-        convention=convention,
-        norm_layer=norm_layer,
-        height=height,
-        unit_conversion_factor=unit_conversion_factor,
-    ).cuda()
+class RandomHUToMu(Transform):
+    def __init__(
+        self,
+        mu_water: float = 0.0192,
+        mu_bone_range: tuple[float, float] = (0.0, 0.2),
+        hu_bone: float = 1000.0,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.mu_water = mu_water
+        self.mu_bone_range = mu_bone_range
+        self.hu_bone = hu_bone
 
-    # If a checkpoint is passed, reload the model state
-    ckpt, start_itr, model_number = _load_checkpoint(ckptpath, reuse_optimizer)
-    if ckpt is not None:
-        print("Loading previous model weights...")
-        model.load_state_dict(ckpt["model_state_dict"])
-
-    # Initialize the optimizer and learning rate scheduler
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, fused=True)
-    if disable_scheduler:
-        scheduler = IdentitySchedule(optimizer)
-    else:
-        warmup_itrs = n_warmup_itrs / n_grad_accum_itrs
-        total_itrs = n_total_itrs / n_grad_accum_itrs
-        scheduler = WarmupCosineSchedule(optimizer, warmup_itrs, total_itrs)
-
-    # Optionally, reload the optimizer and scheduler
-    if ckpt is not None and reuse_optimizer:
-        print("Reinitializing optimizer...")
-        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-        scheduler.load_state_dict(ckpt["scheduler_state_dict"])
-    model.train()
-
-    # Initialize the DRR module
-    drr = DRR.from_carm_intrinsics(
-        sdd=sdd,
-        delx=delx,
-        dely=delx,
-        height=height,
-        width=height,
-        x0=0.0,
-        y0=0.0,
-        dtype=torch.float32,
-        device="cuda",
-    )
-    transforms = XrayTransforms(height).cuda()
-
-    return model, drr, transforms, optimizer, scheduler, start_itr, model_number
+    def apply_transform(self, subject: Subject) -> Subject:
+        mu_bone = random.uniform(*self.mu_bone_range)
+        for image in subject.get_images(intensity_only=True):
+            image.set_data(hu_to_mu(image.data, self.mu_water, mu_bone, self.hu_bone))
+        return subject
 
 
-def _load_checkpoint(ckptpath, reuse_optimizer):
-    if ckptpath is not None:
-        ckpt = torch.load(ckptpath, weights_only=False)
-        if reuse_optimizer:
-            return ckpt, ckpt["itr"], ckpt["model_number"]
-        else:
-            return ckpt, 0, 0
-    return None, 0, 0
+class SubjectIterator:
+    """Wraps a SubjectsLoader to yield Subject objects instead of dicts."""
 
+    def __init__(self, loader: SubjectsLoader):
+        self.loader = loader
 
-def initialize_coordinate_frame(warp, img, invert):
-    if warp is None:
-        return None
-    return get_4x4(warp, img, invert).cuda().matrix
+    def _to_subject(self, data: dict) -> NanoSubject:
+        imagedata = NanoSubject._to_bcdhw(data["volume"]["data"][0]).float()
+        affine = data["volume"]["affine"][0].float()
+
+        mask_data = data.get("mask")
+        labeldata = (
+            NanoSubject._to_bcdhw(mask_data["data"][0]).float()
+            if mask_data is not None
+            else torch.zeros_like(imagedata)
+        )
+
+        voxel_to_world = affine
+        world_to_voxel = torch.inverse(affine)
+        voxel_to_grid = NanoSubject._make_voxel_to_grid(imagedata.shape)
+
+        center = (torch.tensor(imagedata.shape[2:], dtype=torch.float32) - 1) / 2
+        isocenter = voxel_to_world[:3, :3] @ center + voxel_to_world[:3, 3]
+
+        return NanoSubject(
+            imagedata,
+            labeldata,
+            voxel_to_world,
+            world_to_voxel,
+            voxel_to_grid,
+            isocenter,
+        ).cuda()
+
+    def __iter__(self):
+        for data in self.loader:
+            yield self._to_subject(data)

@@ -5,17 +5,19 @@ import matplotlib.pyplot as plt
 import torch
 import wandb
 from jaxtyping import Float
+from nanodrr.data import Subject
+from nanodrr.plot import plot_drr
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from tqdm import tqdm
 
-from nanodrr.data import Subject
-from nanodrr.plot import plot_drr
-
 from ..config.trainer import args
-from .augmentations import XrayAugmentations
-from .loss import PoseRegressionLoss
-from .sampler import get_random_pose
-from .utils import initialize_coordinate_frame, initialize_modules, initialize_subjects
+from .datum import XrayAugmentations, get_random_pose
+from .initialize import (
+    initialize_coordinate_frame,
+    initialize_modules,
+    initialize_subjects,
+)
+from .modules import PoseRegressionLoss
 
 
 class Trainer:
@@ -116,7 +118,6 @@ class Trainer:
         self.lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice)
 
         # Set up augmentations
-        self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
         self.augmentations = XrayAugmentations(p_augmentation)
 
         # Define the pose distribution
@@ -206,7 +207,8 @@ class Trainer:
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
         loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
-        loss = (loss * keep) / self.n_grad_accum_itrs
+        n_kept = keep.sum().clamp(min=1)
+        loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
 
         # Save images
         imgs = torch.concat([x[:4], pred_img[:4]])
@@ -220,7 +222,7 @@ class Trainer:
             device_type="cuda", dtype=self.dtype, enabled=self.use_bf16
         ):
             loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
-        loss.mean().backward()
+        loss.backward()
 
         # Optimize the model
         if ((itr + 1) % self.n_grad_accum_itrs == 0) or (
@@ -238,7 +240,7 @@ class Trainer:
             "rgeo": metrics.rgeo.mean().item(),
             "tgeo": metrics.tgeo.mean().item(),
             "dice": metrics.dice.mean().item(),
-            "loss": loss.mean().item(),
+            "loss": loss.item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
