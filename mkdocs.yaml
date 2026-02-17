@@ -1,0 +1,70 @@
+site_name: xvr
+site_url: https://xvr.csail.mit.edu
+repo_url: https://github.com/eigenvivek/xvr
+repo_name: eigenvivek/xvr
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+  palette:
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    primary: black
+    accent: lime
+    toggle:
+      icon: material/weather-night
+      name: Switch to light mode
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    toggle:
+      icon: material/weather-sunny
+      name: Switch to dark mode
+
+nav:
+  - Home: index.md
+  - CLI Reference:
+    - train: cli/train.md
+    - restart: cli/restart.md
+    - register: cli/register.md
+    - animate: cli/animate.md
+    - dcm2nii: cli/dcm2nii.md
+  - API Reference: reference/
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - docs/scripts/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_if_no_docstring: false
+            inherited_members: true
+            show_bases: false
+            members_order: source
+            separate_signature: true
+            unwrap_annotated: true
+            merge_init_into_class: true
+            docstring_section_style: spacy
+            signature_crossrefs: true
+            show_signature_annotations: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            line_length: 80
+  - callouts
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - mkdocs-click
+
+extra_css:
+  - stylesheets/extra.css

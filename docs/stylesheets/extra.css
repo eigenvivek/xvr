@@ -1,0 +1,9 @@
+/* Navigation section headers */
+.md-nav__item--section > .md-nav__link {
+  color: rgb(255, 144, 4) !important;
+}
+
+/* Navigation title (top of sidebar) */
+.md-nav__title {
+  color: rgb(255, 144, 4) !important;
+}
