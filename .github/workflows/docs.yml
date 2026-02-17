@@ -32,5 +32,4 @@ jobs:
           restore-keys: |
             mkdocs-material-
 
-      - run: uv sync --only-group docs
-      - run: uv run mkdocs gh-deploy --force
+      - run: uv run --only-group docs mkdocs gh-deploy --force
