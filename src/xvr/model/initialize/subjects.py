@@ -35,7 +35,7 @@ def initialize_subjects(
     single_subject = False
     if Path(volpath).is_file():
         single_subject = True
-        subject = Subject.from_filepath(volpath, maskpath)
+        subject = NanoSubject.from_filepath(volpath, maskpath)
         return subject, single_subject
 
     # Else, construct a list of all volumes and masks
