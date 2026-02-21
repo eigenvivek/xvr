@@ -1,5 +1,4 @@
 from datetime import datetime
-from itertools import repeat
 
 import matplotlib.pyplot as plt
 import torch
@@ -76,7 +75,7 @@ class Trainer:
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.single_subject = initialize_subjects(
+        self.subjects = initialize_subjects(
             volpath,
             maskpath,
             patch_size,
@@ -164,10 +163,6 @@ class Trainer:
             desc="Training model...",
             ncols=200,
         )
-
-        if self.single_subject:
-            subject = self.subjects.cuda()
-            self.subjects = repeat(subject)
 
         for itr, subject in zip(pbar, self.subjects):
             # Checkpoint the model

@@ -1,5 +1,5 @@
 import random
-from itertools import zip_longest
+from itertools import repeat, zip_longest
 from pathlib import Path
 from typing import Optional
 
@@ -31,12 +31,10 @@ def initialize_subjects(
     weights: Optional[tuple[float, ...]] = None,  # Sampling probability for each volume
     replacement: bool = True,  # Sample with replacement
 ):
-    # If only a single subject is passed, load it and return
-    single_subject = False
+    # If only a single subject is passed, load it and return an infinite iterator
     if Path(volpath).is_file():
-        single_subject = True
-        subject = NanoSubject.from_filepath(volpath, maskpath)
-        return subject, single_subject
+        subject = NanoSubject.from_filepath(volpath, maskpath).cuda()
+        return repeat(subject)
 
     # Else, construct a list of all volumes and masks
     # We assume volumes and masks have the same name, but are in different folders
@@ -70,7 +68,7 @@ def initialize_subjects(
             pin_memory=pin_memory,
             prefetch_factor=4,
         )
-        return SubjectIterator(subjects), single_subject
+        return SubjectIterator(subjects)
 
     # Return random crops
     patch_sampler = UniformSampler(patch_size)
@@ -92,7 +90,7 @@ def initialize_subjects(
         pin_memory=pin_memory,
     )
 
-    return SubjectIterator(subjects), single_subject
+    return SubjectIterator(subjects)
 
 
 class RandomHUToMu(Transform):
