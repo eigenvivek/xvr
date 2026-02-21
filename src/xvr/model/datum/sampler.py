@@ -28,15 +28,9 @@ def get_random_pose(
     alpha = uniform(alphamin, alphamax, batch_size, dtype=dtype, device=device)
     beta = uniform(betamin, betamax, batch_size, dtype=dtype, device=device)
     gamma = uniform(gammamin, gammamax, batch_size, dtype=dtype, device=device)
-    tx = uniform(
-        txmin, txmax, batch_size, circle_shift=False, dtype=dtype, device=device
-    )
-    ty = uniform(
-        tymin, tymax, batch_size, circle_shift=False, dtype=dtype, device=device
-    )
-    tz = uniform(
-        tzmin, tzmax, batch_size, circle_shift=False, dtype=dtype, device=device
-    )
+    tx = uniform(txmin, txmax, batch_size, circle_shift=False, dtype=dtype, device=device)
+    ty = uniform(tymin, tymax, batch_size, circle_shift=False, dtype=dtype, device=device)
+    tz = uniform(tzmin, tzmax, batch_size, circle_shift=False, dtype=dtype, device=device)
     rot = torch.concat([alpha, beta, gamma], dim=1)
     xyz = torch.concat([tx, ty, tz], dim=1)
     return make_rt_inv(rot, xyz, orientation, subject.isocenter)

@@ -116,9 +116,7 @@ class _RegistrarBase:
         self, mncc_patch_size: int, gncc_patch_size: int, sigma: float, beta: float
     ):
         """Initialize gradient multiscale normalized cross correlation."""
-        sim1 = MultiscaleNormalizedCrossCorrelation2d(
-            [None, mncc_patch_size], [0.5, 0.5]
-        )
+        sim1 = MultiscaleNormalizedCrossCorrelation2d([None, mncc_patch_size], [0.5, 0.5])
         sim2 = GradientNormalizedCrossCorrelation2d(gncc_patch_size, sigma).cuda()
         return lambda x, y: beta * sim1(x, y) + (1 - beta) * sim2(x, y)
 
@@ -131,9 +129,7 @@ class _RegistrarBase:
         beta: float,
     ):
         # Initialize the image similarity metric
-        imagesim = self.initialize_imagesim(
-            mncc_patch_size, gncc_patch_size, sigma, beta
-        )
+        imagesim = self.initialize_imagesim(mncc_patch_size, gncc_patch_size, sigma, beta)
 
         # Predict the initial pose with a pretrained network
         gt, sdd, delx, dely, x0, y0, pf_to_af, init_pose = self.initialize_pose(i2d)
@@ -169,9 +165,7 @@ class _RegistrarBase:
         reg = Registration(self.drr, rot, xyz, self.parameterization, self.convention)
 
         # Run test-time optimization and save the results
-        params, nccs, times, alphas = self.run_test_time_optimization(
-            gt, reg, scales, imagesim
-        )
+        params, nccs, times, alphas = self.run_test_time_optimization(gt, reg, scales, imagesim)
         columns = [
             "r1",
             "r2",
@@ -197,11 +191,7 @@ class _RegistrarBase:
 
     def run_test_time_optimization(self, gt, reg, scales, imagesim):
         # Perform multiscale registration
-        params = [
-            torch.concat(reg.pose.convert("euler_angles", "ZXY"), dim=-1)
-            .squeeze()
-            .tolist()
-        ]
+        params = [torch.concat(reg.pose.convert("euler_angles", "ZXY"), dim=-1).squeeze().tolist()]
         nccs = []
         times = [0.0]
         alphas = [[self.lr_rot, self.lr_xyz]]
@@ -261,9 +251,7 @@ class _RegistrarBase:
                 nccs.append(loss.item())
                 times.append(t1 - t0)
                 params.append(
-                    torch.concat(reg.pose.convert("euler_angles", "ZXY"), dim=-1)
-                    .squeeze()
-                    .tolist()
+                    torch.concat(reg.pose.convert("euler_angles", "ZXY"), dim=-1).squeeze().tolist()
                 )
 
                 # Determine update to the learning rate
