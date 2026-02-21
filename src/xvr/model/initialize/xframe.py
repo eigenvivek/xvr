@@ -11,6 +11,7 @@ def initialize_coordinate_frame(warp, img, invert):
         return get_4x4(warp, img, invert).cuda().matrix
     if Path(img).is_file():
         isocenter = ScalarImage(img).get_center()
+        isocenter = torch.tensor(isocenter).to(torch.float32)
         transform = torch.eye(4, dtype=torch.float32)[None]
         transform[:, :3, 3] = isocenter
         return transform.cuda()
