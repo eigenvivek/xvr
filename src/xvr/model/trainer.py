@@ -218,16 +218,12 @@ class Trainer:
 
     def step(self, itr: int, subject: Subject):
         torch.compiler.cudagraph_mark_step_begin()
-        with torch.autocast(
-            device_type="cuda", dtype=self.dtype, enabled=self.use_bf16
-        ):
+        with torch.autocast(device_type="cuda", dtype=self.dtype, enabled=self.use_bf16):
             loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
         loss.backward()
 
         # Optimize the model
-        if ((itr + 1) % self.n_grad_accum_itrs == 0) or (
-            (itr + 1) == self.n_total_itrs
-        ):
+        if ((itr + 1) % self.n_grad_accum_itrs == 0) or ((itr + 1) == self.n_total_itrs):
             adaptive_clip_grad_(self.model.parameters())
             self.optimizer.step()
             self.scheduler.step()

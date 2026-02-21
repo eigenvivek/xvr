@@ -25,9 +25,7 @@ class XrayTransforms(nn.Module):
         x = self.standardize(x)
         if self.equalize_fn is not None:
             x = self.equalize_fn(x)
-        x = F.interpolate(
-            x, size=(self.height, self.width), mode="bilinear", align_corners=False
-        )
+        x = F.interpolate(x, size=(self.height, self.width), mode="bilinear", align_corners=False)
         x = self.normalize(x)
         return x
 

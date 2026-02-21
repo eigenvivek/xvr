@@ -85,9 +85,7 @@ def categorized_option(*param_decls, category="Miscellaneous", **kwargs):
     def decorator(f):
         if not hasattr(f, "__click_params__"):
             f.__click_params__ = []
-        f.__click_params__.append(
-            CategorizedOption(param_decls, category=category, **kwargs)
-        )
+        f.__click_params__.append(CategorizedOption(param_decls, category=category, **kwargs))
         return f
 
     return decorator

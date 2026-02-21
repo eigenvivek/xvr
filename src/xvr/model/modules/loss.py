@@ -35,11 +35,7 @@ class PoseRegressionLoss(torch.nn.Module):
         mncc = self.imagesim(img, pred_img)
         dice = self.diceloss(mask, pred_mask)
         rgeo, tgeo, dgeo = self.geodesic(pose, pred_pose)
-        loss = (
-            self.weight_ncc * (1 - mncc)
-            + self.weight_dice * dice
-            + self.weight_geo * dgeo
-        )
+        loss = self.weight_ncc * (1 - mncc) + self.weight_dice * dice + self.weight_geo * dgeo
 
         metrics = Metrics(mncc, dgeo, rgeo, tgeo, dice)
         return loss, metrics

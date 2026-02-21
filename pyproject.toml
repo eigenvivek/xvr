@@ -26,6 +26,7 @@ Repository = "https://github.com/eigenvivek/xvr"
 Issues = "https://github.com/eigenvivek/xvr/issues"
 
 [tool.ruff]
+line-length = 100
 extend-exclude = ["*.ipynb"]
 lint.extend-select = ["I"]
 lint.ignore = [
