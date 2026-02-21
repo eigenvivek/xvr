@@ -180,6 +180,33 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
+    def step(self, itr: int, subject: Subject):
+        # Compute the loss for a single step
+        torch.compiler.cudagraph_mark_step_begin()
+        with torch.autocast(device_type="cuda", dtype=self.dtype, enabled=self.use_bf16):
+            loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
+        loss.backward()
+
+        # Optimize the model
+        if ((itr + 1) % self.n_grad_accum_itrs == 0) or ((itr + 1) == self.n_total_itrs):
+            adaptive_clip_grad_(self.model.parameters())
+            self.optimizer.step()
+            self.scheduler.step()
+            self.optimizer.zero_grad()
+
+        # Return losses and imgs
+        log = {
+            "mncc": metrics.mncc.mean().item(),
+            "dgeo": metrics.dgeo.mean().item(),
+            "rgeo": metrics.rgeo.mean().item(),
+            "tgeo": metrics.tgeo.mean().item(),
+            "dice": metrics.dice.mean().item(),
+            "loss": loss.item(),
+            "lr": self.scheduler.get_last_lr()[0],
+            "kept": keep.float().mean().item(),
+        }
+        return log, imgs, masks
+
     def compute_loss(self, subject: Subject):
         # Sample a batch of random poses relative to the subject's coordinate frame
         pose = get_random_pose(subject=subject, **self.pose_distribution)
@@ -210,32 +237,6 @@ class Trainer:
         masks = torch.concat([mask[:4], pred_mask[:4]])
 
         return loss, metrics, keep, imgs, masks
-
-    def step(self, itr: int, subject: Subject):
-        torch.compiler.cudagraph_mark_step_begin()
-        with torch.autocast(device_type="cuda", dtype=self.dtype, enabled=self.use_bf16):
-            loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
-        loss.backward()
-
-        # Optimize the model
-        if ((itr + 1) % self.n_grad_accum_itrs == 0) or ((itr + 1) == self.n_total_itrs):
-            adaptive_clip_grad_(self.model.parameters())
-            self.optimizer.step()
-            self.scheduler.step()
-            self.optimizer.zero_grad()
-
-        # Return losses and imgs
-        log = {
-            "mncc": metrics.mncc.mean().item(),
-            "dgeo": metrics.dgeo.mean().item(),
-            "rgeo": metrics.rgeo.mean().item(),
-            "tgeo": metrics.tgeo.mean().item(),
-            "dice": metrics.dice.mean().item(),
-            "loss": loss.item(),
-            "lr": self.scheduler.get_last_lr()[0],
-            "kept": keep.float().mean().item(),
-        }
-        return log, imgs, masks
 
     def render_samples(
         self,
