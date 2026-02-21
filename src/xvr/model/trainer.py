@@ -69,6 +69,8 @@ class Trainer:
         weights=None,
         use_compile=args.use_compile,
         use_bf16=args.use_bf16,
+        img_threshold: float = 0.10,
+        mask_threshold: float = 0.05,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
@@ -145,6 +147,9 @@ class Trainer:
         self.n_grad_accum_itrs = n_grad_accum_itrs
         self.n_save_every_itrs = n_save_every_itrs
         self.outpath = outpath
+
+        self.img_threshold = img_threshold
+        self.mask_threshold = mask_threshold
 
         # Set up training optimizations (compile/bf16)
         self.use_compile = use_compile
@@ -238,13 +243,7 @@ class Trainer:
 
         return loss, metrics, keep, imgs, masks
 
-    def render_samples(
-        self,
-        subject: Subject,
-        pose: Float[torch.Tensor, "B 4 4"],
-        img_threshold: float = 0.10,
-        mask_threshold: float = 0.05,
-    ):
+    def render_samples(self, subject: Subject, pose: Float[torch.Tensor, "B 4 4"]):
         # Render a batch of DRRs
         img = self.drr(subject, pose)
 
@@ -252,14 +251,12 @@ class Trainer:
         mask = img > 0
         img = img.sum(dim=1, keepdim=True)
 
-        # Discard empty imgs/masks
+        # Flag empty images/masks
         if mask.shape[1] == 1:
-            # Keep if >10% of the image is non-zero pixels
-            keep = mask.float().flatten(1).mean(1) > img_threshold
+            keep = mask.float().flatten(1).mean(1) > self.img_threshold
         else:
-            # Keep if >5% of the image contains pixels corresponding to masked structures
             keep = mask[:, 1:].sum(dim=1, keepdim=True)
-            keep = (keep > 0).float().flatten(1).mean(1) > mask_threshold
+            keep = (keep > 0).float().flatten(1).mean(1) > self.mask_threshold
 
         return img, mask, keep
 
