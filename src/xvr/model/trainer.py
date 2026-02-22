@@ -194,7 +194,7 @@ class Trainer:
 
         # Optimize the model
         if ((itr + 1) % self.n_grad_accum_itrs == 0) or ((itr + 1) == self.n_total_itrs):
-            adaptive_clip_grad_(self.model.parameters())
+            adaptive_clip_grad(self.model.parameters())
             self.optimizer.step()
             self.scheduler.step()
             self.optimizer.zero_grad()
@@ -230,6 +230,11 @@ class Trainer:
 
         # Render DRRs from the predicted poses
         pred_img, pred_mask, _ = self.render_samples(subject, pred_pose)
+
+        # Recenter both poses at the world origin
+        shift = torch.zeros(1, 4, 4, device=pose.device, dtype=pose.dtype)
+        shift[:, :3, 3] = subject.isocenter
+        pose, pred_pose = pose - shift, pred_pose - shift
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
