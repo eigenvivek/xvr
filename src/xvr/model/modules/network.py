@@ -1,7 +1,7 @@
 import timm
 import torch
-from diffdrr.pose import convert
-from diffdrr.registration import N_ANGULAR_COMPONENTS
+from jaxtyping import Float
+from nanodrr.geometry import Parameterization, convert
 
 
 class PoseRegressor(torch.nn.Module):
@@ -25,7 +25,7 @@ class PoseRegressor(torch.nn.Module):
 
         self.parameterization = parameterization
         self.convention = convention
-        n_angular_components = N_ANGULAR_COMPONENTS[parameterization]
+        n_angular_components = Parameterization(parameterization).dim
 
         # Get the size of the output from the backbone
         self.backbone = timm.create_model(
@@ -42,15 +42,15 @@ class PoseRegressor(torch.nn.Module):
         # E.g., if 1000.0, converts output from meters to millimeters
         self.unit_conversion_factor = unit_conversion_factor
 
-    def forward(self, x):
+    def forward(self, x: Float[torch.Tensor, "B C H W"]) -> Float[torch.Tensor, "B 4 4"]:
         x = self.backbone(x)
         rot = self.rot_regression(x)
         xyz = self.unit_conversion_factor * self.xyz_regression(x)
         return convert(
             rot,
             xyz,
-            convention=self.convention,
             parameterization=self.parameterization,
+            convention=self.convention,
         )
 
 

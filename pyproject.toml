@@ -12,7 +12,10 @@ dependencies = [
     "antspyx>=0.5.4",
     "click>=8.1.8",
     "diffdrr>=0.6.0",
+    "jaxtyping>=0.3.7",
+    "nanodrr>=0.1.0",
     "pydicom[pixeldata]>=3.0.1",
+    "setuptools>=82.0.0",
     "wandb>=0.21.1",
 ]
 
@@ -24,12 +27,17 @@ Repository = "https://github.com/eigenvivek/xvr"
 Issues = "https://github.com/eigenvivek/xvr/issues"
 
 [tool.ruff]
+line-length = 100
 extend-exclude = ["*.ipynb"]
-
-[tool.ruff.lint]
-extend-select = ["I"]
+lint.extend-select = ["I"]
+lint.ignore = [
+    "F722",  # Forward annotation false positive from jaxtyping
+    "F821",  # Forward annotation false positive from jaxtyping
+]
+src = ["src"]
 
 [tool.ruff.lint.isort]
+known-first-party = ["xvr"]
 known-third-party = ["wandb"]
 
 [build-system]

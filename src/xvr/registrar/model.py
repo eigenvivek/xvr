@@ -89,9 +89,7 @@ class RegistrarModel(_RegistrarBase):
         )
 
         # Predict the pose of the X-ray image
-        init_pose, resampled_gt = predict_pose(
-            self.model, self.config, gt, sdd, delx, dely, x0, y0
-        )
+        init_pose, resampled_gt = predict_pose(self.model, self.config, gt, sdd, delx, dely, x0, y0)
 
         # Optionally, correct the pose by warping the CT volume to the template
         init_pose = _correct_pose(init_pose, self.warp, self.volume, self.invert)

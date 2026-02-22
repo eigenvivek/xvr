@@ -1,5 +1,15 @@
+from typing import NamedTuple
+
 import torch
-from diffdrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelation2d
+from nanodrr.metrics import DoubleGeodesicSE3, MultiscaleNormalizedCrossCorrelation2d
+
+
+class Metrics(NamedTuple):
+    mncc: torch.Tensor
+    dgeo: torch.Tensor
+    rgeo: torch.Tensor
+    tgeo: torch.Tensor
+    dice: torch.Tensor
 
 
 class PoseRegressionLoss(torch.nn.Module):
@@ -9,7 +19,6 @@ class PoseRegressionLoss(torch.nn.Module):
         weight_ncc: float = 1e0,  # Weight for mNCC loss
         weight_geo: float = 1e-2,  # Weight for geodesic distance
         weight_dice: float = 1e0,  # Weight for Dice loss
-        weight_mvc: float = 1e-3,  # Weight for multiview consistency loss
     ):
         super().__init__()
 
@@ -20,34 +29,16 @@ class PoseRegressionLoss(torch.nn.Module):
         self.weight_ncc = weight_ncc
         self.weight_geo = weight_geo
         self.weight_dice = weight_dice
-        self.weight_mvc = weight_mvc
 
     def forward(self, img, mask, pose, pred_img, pred_mask, pred_pose):
         # Per-image losses
         mncc = self.imagesim(img, pred_img)
         dice = self.diceloss(mask, pred_mask)
         rgeo, tgeo, dgeo = self.geodesic(pose, pred_pose)
-        loss = (
-            self.weight_ncc * (1 - mncc)
-            + self.weight_dice * dice
-            + self.weight_geo * dgeo
-        )
+        loss = self.weight_ncc * (1 - mncc) + self.weight_dice * dice + self.weight_geo * dgeo
 
-        # Multiview consistency loss
-        mvc = self.multiview_consistency(pose, pred_pose)
-        if self.weight_mvc > 0:
-            loss += self.weight_mvc * mvc.mean()
-
-        return loss, mncc, dgeo, rgeo, tgeo, dice, mvc
-
-    def multiview_consistency(self, true_pose, pred_pose):
-        assert (B := len(true_pose)) == len(pred_pose)
-        idx, jdx = torch.triu_indices(B, B, offset=1)
-        _, _, dgeo_relative = self.geodesic(
-            true_pose[jdx] @ true_pose[idx].inverse(),
-            pred_pose[jdx] @ pred_pose[idx].inverse(),
-        )
-        return dgeo_relative
+        metrics = Metrics(mncc, dgeo, rgeo, tgeo, dice)
+        return loss, metrics
 
 
 class DiceLoss(torch.nn.Module):

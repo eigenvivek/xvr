@@ -3,17 +3,20 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import torch
 import wandb
-from diffdrr.data import transform_hu_to_density
-from diffdrr.pose import RigidTransform, convert
-from diffdrr.visualization import plot_drr, plot_mask
-from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
+from jaxtyping import Float
+from nanodrr.data import Subject
+from nanodrr.plot import plot_drr
+from timm.utils.agc import adaptive_clip_grad
 from tqdm import tqdm
 
 from ..config.trainer import args
-from .augmentations import XrayAugmentations
-from .loss import PoseRegressionLoss
-from .sampler import get_random_pose
-from .utils import initialize_coordinate_frame, initialize_modules, initialize_subjects
+from .data import XrayAugmentations, get_random_pose
+from .initialize import (
+    initialize_coordinate_frame,
+    initialize_modules,
+    initialize_subjects,
+)
+from .modules import PoseRegressionLoss
 
 
 class Trainer:
@@ -39,7 +42,6 @@ class Trainer:
         delx,
         orientation=args.orientation,
         reverse_x_axis=args.reverse_x_axis,
-        renderer=args.renderer,
         parameterization=args.parameterization,
         convention=args.convention,
         model_name=args.model_name,
@@ -51,7 +53,6 @@ class Trainer:
         weight_ncc=args.weight_ncc,
         weight_geo=args.weight_geo,
         weight_dice=args.weight_dice,
-        weight_mvc=args.weight_mvc,
         batch_size=args.batch_size,
         n_total_itrs=args.n_total_itrs,
         n_warmup_itrs=args.n_warmup_itrs,
@@ -66,16 +67,19 @@ class Trainer:
         num_workers=args.num_workers,
         pin_memory=args.pin_memory,
         weights=None,
+        use_compile=args.use_compile,
+        use_bf16=args.use_bf16,
+        img_threshold: float = 0.10,
+        mask_threshold: float = 0.05,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.single_subject = initialize_subjects(
+        self.subjects = initialize_subjects(
             volpath,
             maskpath,
-            orientation,
             patch_size,
             n_total_itrs,
             num_workers,
@@ -102,26 +106,19 @@ class Trainer:
             sdd,
             height,
             delx,
-            orientation,
-            reverse_x_axis,
-            renderer,
             lr,
             n_total_itrs,
             n_warmup_itrs,
             n_grad_accum_itrs,
-            self.subjects if self.single_subject else None,
             disable_scheduler,
             ckptpath,
             reuse_optimizer,
         )
 
         # Initialize the loss function
-        self.lossfn = PoseRegressionLoss(
-            sdd, weight_ncc, weight_geo, weight_dice, weight_mvc
-        )
+        self.lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice)
 
         # Set up augmentations
-        self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
         self.augmentations = XrayAugmentations(p_augmentation)
 
         # Define the pose distribution
@@ -139,6 +136,7 @@ class Trainer:
             tzmin=tzmin,
             tzmax=tzmax,
             batch_size=batch_size,
+            orientation=orientation,
         )
 
         # Initialize a conversion between the template and canonical frames of reference
@@ -150,6 +148,18 @@ class Trainer:
         self.n_save_every_itrs = n_save_every_itrs
         self.outpath = outpath
 
+        self.img_threshold = img_threshold
+        self.mask_threshold = mask_threshold
+
+        # Set up training optimizations (compile/bf16)
+        self.use_compile = use_compile
+        self.use_bf16 = use_bf16
+        self.dtype = torch.bfloat16 if self.use_bf16 else torch.float32
+        if self.use_compile:
+            self.compute_loss = torch.compile(
+                self.compute_loss, fullgraph=True, mode="max-autotune-no-cudagraphs"
+            )
+
     def train(self, run=None):
         pbar = tqdm(
             range(self.start_itr, self.n_total_itrs),
@@ -159,147 +169,97 @@ class Trainer:
             ncols=200,
         )
 
-        if self.single_subject:
-            self.subjects = (None for _ in range(self.n_total_itrs))
-
         for itr, subject in zip(pbar, self.subjects):
             # Checkpoint the model
             if itr % self.n_save_every_itrs == 0:
                 self._checkpoint(itr)
 
             # Run an iteration of the training loop
-            try:
-                log, imgs, masks = self.step(itr, subject)
-            except Exception as e:
-                print(e)
-                continue
+            log, imgs, masks = self.step(itr, subject)
 
             # Log metrics (and optionally save to wandb)
-            pbar.set_postfix(log)
+            pbar.set_postfix({k: f"{v:.3f}" for k, v in log.items()})
             if run is not None:
                 self._log_wandb(itr, log, imgs, masks)
 
         # Save the final model
         self._checkpoint(itr)
 
-    def step(self, itr, subject):
-        # Sample a batch of random poses
-        pose = get_random_pose(**self.pose_distribution).cuda()
-
-        # Load the subject and translate the pose to its isocenter
-        vol, seg, affinv, offset = self.load(
-            subject, pose.matrix.dtype, pose.matrix.device
-        )
-        pose = pose.compose(offset)
-
-        # Render a batch of DRRs and keep samples that capture the volume
-        contrast = self.contrast_distribution.sample().item()
-        tmp = transform_hu_to_density(vol, contrast)
-
-        with torch.no_grad():
-            img, mask, keep = self.render_samples(tmp, seg, affinv, pose)
-
-        img = img[keep]
-        mask = mask[keep]
-        pose = pose[keep]
-
-        # Regress the poses of the DRRs (and optionally convert between reference frames)
-        x = self.transforms(self.augmentations(img))
-        pred_pose = self.model(x)
-        if self.reframe is not None:
-            pred_pose = pred_pose.compose(self.reframe)
-
-        # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = self.render_samples(tmp, seg, affinv, pred_pose)
-
-        # Compute the loss
-        img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, mncc, dgeo, rgeo, tgeo, dice, mvc = self.lossfn(
-            img, mask, pose, pred_img, pred_mask, pred_pose
-        )
-        loss = loss / self.n_grad_accum_itrs
+    def step(self, itr: int, subject: Subject):
+        # Compute the loss for a single step
+        loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
+        loss.backward()
 
         # Optimize the model
-        loss.mean().backward()
-        if ((itr + 1) % self.n_grad_accum_itrs == 0) or (
-            (itr + 1) == self.n_total_itrs
-        ):
-            adaptive_clip_grad_(self.model.parameters())
+        if ((itr + 1) % self.n_grad_accum_itrs == 0) or ((itr + 1) == self.n_total_itrs):
+            adaptive_clip_grad(self.model.parameters())
             self.optimizer.step()
             self.scheduler.step()
             self.optimizer.zero_grad()
 
         # Return losses and imgs
         log = {
-            "mncc": mncc.mean().item(),
-            "dgeo": dgeo.mean().item(),
-            "rgeo": rgeo.mean().item(),
-            "tgeo": tgeo.mean().item(),
-            "dice": dice.mean().item(),
-            "mvc": mvc.mean().item(),
-            "loss": loss.mean().item(),
+            "mncc": metrics.mncc.mean().item(),
+            "dgeo": metrics.dgeo.mean().item(),
+            "rgeo": metrics.rgeo.mean().item(),
+            "tgeo": metrics.tgeo.mean().item(),
+            "dice": metrics.dice.mean().item(),
+            "loss": loss.item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
         }
-        imgs = torch.concat([x[:4], pred_img[:4]])
-        masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
 
-    def load(self, subject, dtype, device):
-        # Load 3D imaging data into memory and optionally move the pose to the volume's isocenter
-        if subject is None:
-            volume, mask, affinv = (
-                self.drr.volume,
-                self.drr.mask,
-                self.drr.affine_inverse,
-            )
-            offset = make_translation(self.drr.center)
-            return volume, mask, affinv, offset
+    def compute_loss(self, subject: Subject):
+        with torch.autocast(device_type="cuda", dtype=self.dtype, enabled=self.use_bf16):
+            # Sample a batch of random poses relative to the subject's coordinate frame
+            pose = get_random_pose(subject=subject, **self.pose_distribution)
 
-        # Process torchio patch
-        volume = subject["volume"]["data"].squeeze().to(device, dtype)
-        try:
-            mask = subject["mask"]["data"].data.squeeze().to(device, dtype)
-        except TypeError:
-            mask = None
+            # Render a batch of images and flag samples with sufficient anatomy in the view
+            with torch.no_grad():
+                img, mask, keep = self.render_samples(subject, pose)
+                x = self.augmentations(img.float())
+                x = self.transforms(x)
 
-        # Get the volume's isocenter and construct a translation to it
-        affine = torch.from_numpy(subject["volume"]["affine"]).to(dtype=dtype)
-        affine = RigidTransform(affine)
-        center = (torch.tensor(volume.shape)[None, None] - 1) / 2
-        center = affine(center)[0].to(device, dtype)
-        offset = make_translation(center)
+            # Regress the poses of the DRRs (and optionally convert between reference frames)
+            pred_pose = self.model(x)
+            if self.reframe is not None:
+                pred_pose = self.reframe @ pred_pose
 
-        # Make the inverse affine
-        affine = torch.from_numpy(subject["volume"]["affine"]).to(device, dtype)
-        affinv = RigidTransform(affine.inverse())
+            # Render DRRs from the predicted poses
+            pred_img, pred_mask, _ = self.render_samples(subject, pred_pose)
 
-        return volume, mask, affinv, offset
+            # Recenter both poses at the world origin
+            shift = torch.zeros(1, 4, 4, device=pose.device, dtype=pose.dtype)
+            shift[:, :3, 3] = subject.isocenter
+            pose, pred_pose = pose - shift, pred_pose - shift
 
-    def render_samples(
-        self, tmp, seg, affinv, pose, img_threshold=0.10, mask_threshold=0.05
-    ):
-        # Get the source and target locations for every ray in voxel coordinates
-        source, target = self.drr.detector(pose, None)
-        img = (target - source).norm(dim=-1).unsqueeze(1)
-        source, target = affinv(source), affinv(target)
+            # Compute the loss
+            img, pred_img = self.transforms(img), self.transforms(pred_img)
+            loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
+            n_kept = keep.sum().clamp(min=1)
+            loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
 
+            # Save images
+            imgs = torch.concat([x[:4], pred_img[:4]])
+            masks = torch.concat([mask[:4], pred_mask[:4]])
+
+        return loss, metrics, keep, imgs, masks
+
+    def render_samples(self, subject: Subject, pose: Float[torch.Tensor, "B 4 4"]):
         # Render a batch of DRRs
-        img = self.drr.renderer(tmp, source, target, img, mask=seg)
-        img = self.drr.reshape_transform(img, batch_size=len(pose))
+        img = self.drr(subject, pose)
 
         # Create a foreground mask and collapse potentially multichannel images to a single DRR
         mask = img > 0
         img = img.sum(dim=1, keepdim=True)
 
-        # Discard empty imgs/masks
+        # Flag empty images/masks
         if mask.shape[1] == 1:
-            # Keep if >10% of the image is non-zero pixels
-            keep = mask.to(img).flatten(1).mean(1) > img_threshold
+            keep = mask.float().flatten(1).mean(1) > self.img_threshold
         else:
-            # Keep if >5% of the image contains pixels corresponding to masked structures
             keep = mask[:, 1:].sum(dim=1, keepdim=True)
-            keep = (keep > 0).to(img).flatten(1).mean(1) > mask_threshold
+            keep = (keep > 0).float().flatten(1).mean(1) > self.mask_threshold
 
         return img, mask, keep
 
@@ -307,9 +267,7 @@ class Trainer:
         ncols = len(imgs) // 2
         if itr % 250 == 0 and ncols > 0:
             fig, axs = plt.subplots(ncols=ncols, nrows=2)
-            plot_drr(imgs, axs=axs.flatten(), ticks=False)
-            if masks.shape[1] > 1:
-                plot_mask(masks[:, 1:], alpha=0.25, axs=axs.flatten())
+            plot_drr(imgs, masks, axs=axs.flatten(), ticks=False)
             plt.tight_layout()
             log["imgs"] = fig
             plt.close()
@@ -330,8 +288,3 @@ class Trainer:
         )
         tqdm.write(f"Saving checkpoint: {savepath}")
         self.model_number += 1
-
-
-def make_translation(xyz):
-    rot = torch.zeros_like(xyz)
-    return convert(rot, xyz, parameterization="euler_angles", convention="ZXY")
