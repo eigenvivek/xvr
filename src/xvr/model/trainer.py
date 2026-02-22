@@ -6,7 +6,7 @@ import wandb
 from jaxtyping import Float
 from nanodrr.data import Subject
 from nanodrr.plot import plot_drr
-from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
+from timm.utils.agc import adaptive_clip_grad
 from tqdm import tqdm
 
 from ..config.trainer import args

@@ -121,7 +121,7 @@ class SubjectIterator:
 
     def _to_subject(self, data: dict) -> NanoSubject:
         imagedata = NanoSubject._to_bcdhw(data["volume"]["data"][0]).float()
-        affine = data["volume"]["affine"][0].float()
+        affine = torch.from_numpy(data["volume"]["affine"][0], dtype=torch.float32)
 
         mask_data = data.get("mask")
         labeldata = (
