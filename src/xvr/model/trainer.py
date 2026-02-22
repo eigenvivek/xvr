@@ -1,5 +1,4 @@
 from datetime import datetime
-from itertools import repeat
 
 import matplotlib.pyplot as plt
 import torch
@@ -11,7 +10,7 @@ from timm.utils.agc import adaptive_clip_grad
 from tqdm import tqdm
 
 from ..config.trainer import args
-from .datum import XrayAugmentations, get_random_pose
+from .data import XrayAugmentations, get_random_pose
 from .initialize import (
     initialize_coordinate_frame,
     initialize_modules,
@@ -70,13 +69,15 @@ class Trainer:
         weights=None,
         use_compile=args.use_compile,
         use_bf16=args.use_bf16,
+        img_threshold: float = 0.10,
+        mask_threshold: float = 0.05,
     ):
         # Record all hyperparameters to be checkpointed
         self.config = locals()
         del self.config["self"]
 
         # Initialize a lazy list of all 3D volumes
-        self.subjects, self.single_subject = initialize_subjects(
+        self.subjects = initialize_subjects(
             volpath,
             maskpath,
             patch_size,
@@ -147,6 +148,9 @@ class Trainer:
         self.n_save_every_itrs = n_save_every_itrs
         self.outpath = outpath
 
+        self.img_threshold = img_threshold
+        self.mask_threshold = mask_threshold
+
         # Set up training optimizations (compile/bf16)
         self.use_compile = use_compile
         self.use_bf16 = use_bf16
@@ -165,10 +169,6 @@ class Trainer:
             ncols=200,
         )
 
-        if self.single_subject:
-            subject = self.subjects.cuda()
-            self.subjects = repeat(subject)
-
         for itr, subject in zip(pbar, self.subjects):
             # Checkpoint the model
             if itr % self.n_save_every_itrs == 0:
@@ -185,41 +185,9 @@ class Trainer:
         # Save the final model
         self._checkpoint(itr)
 
-    def compute_loss(self, subject: Subject):
-        # Sample a batch of random poses relative to the subject's coordinate frame
-        pose = get_random_pose(subject=subject, **self.pose_distribution)
-
-        # Render a batch of images and only keep samples with sufficient anatomy?
-        with torch.no_grad():
-            img, mask, keep = self.render_samples(subject, pose)
-            with torch.autocast(device_type="cuda", enabled=False):
-                x = self.augmentations(img)
-            x = self.transforms(x)
-
-        # Regress the poses of the DRRs (and optionally convert between reference frames)
-        pred_pose = self.model(x)
-        if self.reframe is not None:
-            pred_pose = self.reframe @ pred_pose
-
-        # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = self.render_samples(subject, pred_pose)
-
-        # Compute the loss
-        img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
-        n_kept = keep.sum().clamp(min=1)
-        loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
-
-        # Save images
-        imgs = torch.concat([x[:4], pred_img[:4]])
-        masks = torch.concat([mask[:4], pred_mask[:4]])
-
-        return loss, metrics, keep, imgs, masks
-
     def step(self, itr: int, subject: Subject):
-        torch.compiler.cudagraph_mark_step_begin()
-        with torch.autocast(device_type="cuda", dtype=self.dtype, enabled=self.use_bf16):
-            loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
+        # Compute the loss for a single step
+        loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
         loss.backward()
 
         # Optimize the model
@@ -242,13 +210,43 @@ class Trainer:
         }
         return log, imgs, masks
 
-    def render_samples(
-        self,
-        subject: Subject,
-        pose: Float[torch.Tensor, "B 4 4"],
-        img_threshold: float = 0.10,
-        mask_threshold: float = 0.05,
-    ):
+    def compute_loss(self, subject: Subject):
+        with torch.autocast(device_type="cuda", dtype=self.dtype, enabled=self.use_bf16):
+            # Sample a batch of random poses relative to the subject's coordinate frame
+            pose = get_random_pose(subject=subject, **self.pose_distribution)
+
+            # Render a batch of images and flag samples with sufficient anatomy in the view
+            with torch.no_grad():
+                img, mask, keep = self.render_samples(subject, pose)
+                x = self.augmentations(img.float())
+                x = self.transforms(x)
+
+            # Regress the poses of the DRRs (and optionally convert between reference frames)
+            pred_pose = self.model(x)
+            if self.reframe is not None:
+                pred_pose = self.reframe @ pred_pose
+
+            # Render DRRs from the predicted poses
+            pred_img, pred_mask, _ = self.render_samples(subject, pred_pose)
+
+            # Recenter both poses at the world origin
+            shift = torch.zeros(1, 4, 4, device=pose.device, dtype=pose.dtype)
+            shift[:, :3, 3] = subject.isocenter
+            pose, pred_pose = pose - shift, pred_pose - shift
+
+            # Compute the loss
+            img, pred_img = self.transforms(img), self.transforms(pred_img)
+            loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
+            n_kept = keep.sum().clamp(min=1)
+            loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
+
+            # Save images
+            imgs = torch.concat([x[:4], pred_img[:4]])
+            masks = torch.concat([mask[:4], pred_mask[:4]])
+
+        return loss, metrics, keep, imgs, masks
+
+    def render_samples(self, subject: Subject, pose: Float[torch.Tensor, "B 4 4"]):
         # Render a batch of DRRs
         img = self.drr(subject, pose)
 
@@ -256,14 +254,12 @@ class Trainer:
         mask = img > 0
         img = img.sum(dim=1, keepdim=True)
 
-        # Discard empty imgs/masks
+        # Flag empty images/masks
         if mask.shape[1] == 1:
-            # Keep if >10% of the image is non-zero pixels
-            keep = mask.float().flatten(1).mean(1) > img_threshold
+            keep = mask.float().flatten(1).mean(1) > self.img_threshold
         else:
-            # Keep if >5% of the image contains pixels corresponding to masked structures
             keep = mask[:, 1:].sum(dim=1, keepdim=True)
-            keep = (keep > 0).float().flatten(1).mean(1) > mask_threshold
+            keep = (keep > 0).float().flatten(1).mean(1) > self.mask_threshold
 
         return img, mask, keep
 
