@@ -5626,6 +5626,7 @@ dependencies = [
     { name = "jaxtyping", version = "0.3.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "nanodrr" },
     { name = "pydicom", extra = ["pixeldata"] },
+    { name = "setuptools" },
     { name = "wandb" },
 ]
 
@@ -5655,6 +5656,7 @@ requires-dist = [
     { name = "jaxtyping", specifier = ">=0.3.7" },
     { name = "nanodrr", specifier = ">=0.1.0" },
     { name = "pydicom", extras = ["pixeldata"], specifier = ">=3.0.1" },
+    { name = "setuptools", specifier = ">=82.0.0" },
     { name = "wandb", specifier = ">=0.21.1" },
 ]
 
