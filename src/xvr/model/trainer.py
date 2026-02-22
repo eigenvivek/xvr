@@ -7,7 +7,7 @@ import wandb
 from jaxtyping import Float
 from nanodrr.data import Subject
 from nanodrr.plot import plot_drr
-from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
+from timm.utils.agc import adaptive_clip_grad
 from tqdm import tqdm
 
 from ..config.trainer import args
@@ -224,7 +224,7 @@ class Trainer:
 
         # Optimize the model
         if ((itr + 1) % self.n_grad_accum_itrs == 0) or ((itr + 1) == self.n_total_itrs):
-            adaptive_clip_grad_(self.model.parameters())
+            adaptive_clip_grad(self.model.parameters())
             self.optimizer.step()
             self.scheduler.step()
             self.optimizer.zero_grad()
