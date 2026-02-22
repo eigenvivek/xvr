@@ -187,9 +187,7 @@ class Trainer:
 
     def step(self, itr: int, subject: Subject):
         # Compute the loss for a single step
-        torch.compiler.cudagraph_mark_step_begin()
-        with torch.autocast(device_type="cuda", dtype=self.dtype, enabled=self.use_bf16):
-            loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
+        loss, metrics, keep, imgs, masks = self.compute_loss(subject)
         loss.backward()
 
         # Optimize the model
@@ -213,38 +211,38 @@ class Trainer:
         return log, imgs, masks
 
     def compute_loss(self, subject: Subject):
-        # Sample a batch of random poses relative to the subject's coordinate frame
-        pose = get_random_pose(subject=subject, **self.pose_distribution)
+        with torch.autocast(device_type="cuda", dtype=self.dtype, enabled=self.use_bf16):
+            # Sample a batch of random poses relative to the subject's coordinate frame
+            pose = get_random_pose(subject=subject, **self.pose_distribution)
 
-        # Render a batch of images and only keep samples with sufficient anatomy?
-        with torch.no_grad():
-            img, mask, keep = self.render_samples(subject, pose)
-            with torch.autocast(device_type="cuda", enabled=False):
-                x = self.augmentations(img)
-            x = self.transforms(x)
+            # Render a batch of images and flag samples with sufficient anatomy in the view
+            with torch.no_grad():
+                img, mask, keep = self.render_samples(subject, pose)
+                x = self.augmentations(img.float())
+                x = self.transforms(x)
 
-        # Regress the poses of the DRRs (and optionally convert between reference frames)
-        pred_pose = self.model(x)
-        if self.reframe is not None:
-            pred_pose = self.reframe @ pred_pose
+            # Regress the poses of the DRRs (and optionally convert between reference frames)
+            pred_pose = self.model(x)
+            if self.reframe is not None:
+                pred_pose = self.reframe @ pred_pose
 
-        # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = self.render_samples(subject, pred_pose)
+            # Render DRRs from the predicted poses
+            pred_img, pred_mask, _ = self.render_samples(subject, pred_pose)
 
-        # Recenter both poses at the world origin
-        shift = torch.zeros(1, 4, 4, device=pose.device, dtype=pose.dtype)
-        shift[:, :3, 3] = subject.isocenter
-        pose, pred_pose = pose - shift, pred_pose - shift
+            # Recenter both poses at the world origin
+            shift = torch.zeros(1, 4, 4, device=pose.device, dtype=pose.dtype)
+            shift[:, :3, 3] = subject.isocenter
+            pose, pred_pose = pose - shift, pred_pose - shift
 
-        # Compute the loss
-        img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
-        n_kept = keep.sum().clamp(min=1)
-        loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
+            # Compute the loss
+            img, pred_img = self.transforms(img), self.transforms(pred_img)
+            loss, metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
+            n_kept = keep.sum().clamp(min=1)
+            loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
 
-        # Save images
-        imgs = torch.concat([x[:4], pred_img[:4]])
-        masks = torch.concat([mask[:4], pred_mask[:4]])
+            # Save images
+            imgs = torch.concat([x[:4], pred_img[:4]])
+            masks = torch.concat([mask[:4], pred_mask[:4]])
 
         return loss, metrics, keep, imgs, masks
 
