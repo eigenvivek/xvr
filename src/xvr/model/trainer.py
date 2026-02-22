@@ -187,7 +187,7 @@ class Trainer:
 
     def step(self, itr: int, subject: Subject):
         # Compute the loss for a single step
-        loss, metrics, keep, imgs, masks = self.compute_loss(subject)
+        loss, metrics, keep, imgs, masks = self.compute_loss(subject.to(self.dtype))
         loss.backward()
 
         # Optimize the model
