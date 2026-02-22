@@ -27,9 +27,7 @@ def animate(
     run = torch.load(inpath, weights_only=False)
     drr = initialize_drr(**run["drr"])
     gt, *_ = read_xray(**run["xray"])
-    scales = _parse_scales(
-        run["optimization"]["scales"], run["xray"]["crop"], run["drr"]["height"]
-    )
+    scales = _parse_scales(run["optimization"]["scales"], run["xray"]["crop"], run["drr"]["height"])
 
     # Render all DRRs
     drrs = render(drr, gt, scales, run, skip)

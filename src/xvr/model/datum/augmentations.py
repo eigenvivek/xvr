@@ -29,9 +29,7 @@ class RandomApproxCLAHE(nn.Module):
 
     def forward(self, x):
         B, C, H, W = x.shape
-        clip = torch.empty(B, 1, 1, 1, device=x.device).uniform_(
-            self.clip_min, self.clip_max
-        )
+        clip = torch.empty(B, 1, 1, 1, device=x.device).uniform_(self.clip_min, self.clip_max)
         mean = x.mean(dim=(-2, -1), keepdim=True).clamp(min=1e-6)
         out = x / mean
         out = out.clamp(min=0.0)
@@ -48,9 +46,7 @@ class RandomGamma(nn.Module):
 
     def forward(self, x):
         B = x.shape[0]
-        gamma = torch.empty(B, 1, 1, 1, device=x.device).uniform_(
-            self.gamma_min, self.gamma_max
-        )
+        gamma = torch.empty(B, 1, 1, 1, device=x.device).uniform_(self.gamma_min, self.gamma_max)
         out = x.clamp(min=1e-6).pow(gamma)
         return _apply_prob(x, out, self.p, x.device)
 
@@ -112,12 +108,8 @@ class RandomErasing(nn.Module):
         B, C, H, W = x.shape
         device = x.device
 
-        eh = torch.randint(
-            int(H * self.h_range[0]), int(H * self.h_range[1]), (B,), device=device
-        )
-        ew = torch.randint(
-            int(W * self.w_range[0]), int(W * self.w_range[1]), (B,), device=device
-        )
+        eh = torch.randint(int(H * self.h_range[0]), int(H * self.h_range[1]), (B,), device=device)
+        ew = torch.randint(int(W * self.w_range[0]), int(W * self.w_range[1]), (B,), device=device)
         ey = torch.randint(0, H, (B,), device=device)
         ex = torch.randint(0, W, (B,), device=device)
 

@@ -23,9 +23,7 @@ class WarmupCosineSchedule(LambdaLR):
         if step < self.warmup_steps:
             return float(step) / float(max(1.0, self.warmup_steps))
         # progress after warmup
-        progress = float(step - self.warmup_steps) / float(
-            max(1, self.t_total - self.warmup_steps)
-        )
+        progress = float(step - self.warmup_steps) / float(max(1, self.t_total - self.warmup_steps))
         return max(0.0, 0.5 * (1.0 + cos(pi * float(self.cycles) * 2.0 * progress)))
 
 
