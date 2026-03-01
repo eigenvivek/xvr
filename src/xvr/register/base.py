@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Callable, Iterable
 
 import torch
@@ -12,6 +13,17 @@ from ..utils import XrayTransforms
 from .loss import load_loss_function
 from .subject import load_subject
 from .utils import parse_scales
+
+
+@dataclass
+class RegistrationResult:
+    reg: Registration
+    gt: Float[torch.Tensor, "1 1 H W"]
+    losses: list[float]
+    scales: list[float]
+    rescale_factors: list[float]
+    rots: Float[torch.Tensor, "N 3"]
+    xyzs: Float[torch.Tensor, "N 3"]
 
 
 class RegisterBase(ABC):
@@ -110,15 +122,7 @@ class RegisterBase(ABC):
         reducefn: str | int | Callable = "max",
         flip: bool = False,
         **kwargs,
-    ) -> tuple[
-        Registration,
-        Float[torch.Tensor, "1 1 H W"],
-        list[float],
-        list[float],
-        list[float],
-        Float[torch.Tensor, "N 3"],
-        Float[torch.Tensor, "N 3"],
-    ]:
+    ) -> RegistrationResult:
         """Run registration on an X-ray image.
 
         Preprocesses the X-ray, computes an initial pose estimate, and runs
@@ -161,7 +165,7 @@ class RegisterBase(ABC):
 
         # Perform multiscale registration
         losses, scales, rescale_factors, rots, xyzs = self._run_multiscale(reg, gt, equalize, crop)
-        return reg, gt, losses, scales, rescale_factors, rots, xyzs
+        return RegistrationResult(reg, gt, losses, scales, rescale_factors, rots, xyzs)
 
     def _run_multiscale(
         self,
