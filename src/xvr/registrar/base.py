@@ -204,8 +204,8 @@ class _RegistrarBase:
                 reg.drr.detector.height,
                 reg.drr.detector.width,
                 equalize=self.equalize,
-            )
-            img = transform(gt).cuda()
+            ).cuda()
+            img = transform(gt.cuda())
 
             # Initialize the optimizer and scheduler
             step_size_scalar *= 2 ** (stage - 1)

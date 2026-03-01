@@ -1,6 +1,6 @@
 from ..io import read_xray
 from ..model.inference import _construct_antipode, _correct_pose, predict_pose
-from ..model.network import load_model
+from ..model.modules.network import load_model
 from .base import _RegistrarBase
 
 
