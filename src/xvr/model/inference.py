@@ -1,42 +1,57 @@
 import torch
 from diffdrr.pose import RigidTransform, convert
-from diffdrr.utils import resample
+from jaxtyping import Float
+from nanodrr.camera import make_k_inv, resample
 from torchvision.transforms.functional import center_crop
 
+from ..io.xray import Intrinsics
 from ..utils import XrayTransforms, get_4x4
 
 
-def predict_pose(model, config, img, sdd, delx, dely, x0, y0):
-    # Resample the X-ray image to match the model's assumed intrinsics
-    img, height, width = _resample_xray(img, sdd, delx, dely, x0, y0, config)
-    height = min(height, width)
-    img = center_crop(img, (height, height))
-
-    # Resize the image and normalize pixel intensities
-    transforms = XrayTransforms(config["height"])
-    img = transforms(img).cuda()
-
-    # Predict pose
-    with torch.no_grad():
-        init_pose = model(img)
-
-    return init_pose, img
+def predict_pose(
+    model: torch.nn.Module,
+    img: Float[torch.Tensor, "1 C H W"],
+    img_intrinsics: Intrinsics,
+    model_sdd: float,
+    model_delx: float,
+    model_height: int,
+) -> Float[torch.Tensor, "1 4 4"]:
+    """Predict the pose of a X-rays ."""
+    img = _resample_xray(img, img_intrinsics, model_sdd, model_delx, model_height)
+    init_pose = model(img)
+    return init_pose
 
 
-def _resample_xray(img, sdd, delx, dely, x0, y0, config):
-    """Resample the image to match the model's assumed intrinsics"""
-    assert delx == dely, "Non-square pixels are not yet supported"
+def _resample_xray(
+    img: Float[torch.Tensor, "1 C Hi Wi"],
+    img_intrinsics: Intrinsics,
+    model_sdd: float,
+    model_delx: float,
+    model_height: int,
+) -> Float[torch.Tensor, "1 C Hm Wm"]:
+    *_, height, width = img.shape
+    side_length = min(height, width)
+    new_delx = model_delx * (model_height / side_length)
 
-    model_height = config["height"]
-    model_delx = config["delx"]
+    k_inv_old = make_k_inv(
+        **img_intrinsics,
+        height=height,
+        width=width,
+        dtype=img.dtype,
+        device=img.device,
+    )
+    k_inv_new = make_k_inv(
+        *(model_sdd, new_delx, new_delx, 0.0, 0.0),
+        height,
+        width,
+        dtype=img.dtype,
+        device=img.device,
+    )
+    img = resample(img, k_inv_old, k_inv_new)
 
-    _, _, height, width = img.shape
-    subsample = min(height, width) / model_height
-    new_delx = model_delx / subsample
-
-    img = resample(img, sdd, delx, x0, y0, config["sdd"], new_delx, 0, 0)
-
-    return img, height, width
+    img = center_crop(img, (side_length, side_length))
+    transforms = XrayTransforms(model_height).to(img)
+    return transforms(img)
 
 
 def _correct_pose(pose, warp, volume, invert):
