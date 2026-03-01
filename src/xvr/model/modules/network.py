@@ -54,7 +54,7 @@ class PoseRegressor(torch.nn.Module):
         )
 
 
-def load_model(ckptpath, meta=False):
+def load_model(ckptpath: str, meta: bool = False) -> tuple[torch.nn.Module, dict]:
     """Load a pretrained pose regression model"""
     ckpt = torch.load(ckptpath, weights_only=False)
     config = ckpt["config"]
@@ -73,5 +73,4 @@ def load_model(ckptpath, meta=False):
 
     if meta:
         return model, config, ckpt["date"]
-    else:
-        return model, config
+    return model, config
