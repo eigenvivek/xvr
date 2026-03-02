@@ -3,7 +3,6 @@ from importlib.metadata import version
 
 import click
 
-from .commands.dcm2nii import dcm2nii
 from .commands.register import dicom, fixed, model
 from .commands.register import restart as restart_optimization
 from .commands.restart import restart as restart_training
@@ -54,4 +53,3 @@ def cli(ctx):
 cli.add_command(train)
 cli.add_command(restart_training)
 cli.add_command(register)
-cli.add_command(dcm2nii)
