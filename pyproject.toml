@@ -36,6 +36,9 @@ lint.ignore = [
 ]
 src = ["src"]
 
+[tool.ruff.lint.per-file-ignores]
+"src/xvr/cli/**/*.py" = ["E501"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["xvr"]
 known-third-party = ["wandb"]
