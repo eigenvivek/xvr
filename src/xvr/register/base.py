@@ -206,8 +206,8 @@ class RegisterBase(ABC):
                 losses.append(loss.item())
                 scales.append(scale)
                 rescale_factors.append(rescale_factor)
-                rots.append(reg._rot.detach())
-                xyzs.append(reg._xyz.detach())
+                rots.append(reg._rot.detach().clone())
+                xyzs.append(reg._xyz.detach().clone())
 
                 lr = min(scheduler.get_last_lr())
                 if lr < current_lr:
