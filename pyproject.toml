@@ -42,6 +42,9 @@ src = ["src"]
 known-first-party = ["xvr"]
 known-third-party = ["wandb"]
 
+[tool.uv.sources]
+nanodrr = { git = "https://github.com/eigenvivek/nanodrr" }
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
