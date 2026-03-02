@@ -2,7 +2,7 @@ import torch
 from jaxtyping import Float
 from nanodrr.camera import make_rt_inv
 
-from ..io.xray import Intrinsics
+from ..io import Intrinsics
 from ..model.inference import predict_pose
 from ..model.modules.network import load_model
 from .base import RegisterBase

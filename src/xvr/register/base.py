@@ -8,7 +8,7 @@ from nanodrr.camera import make_k_inv
 from nanodrr.registration import Registration
 from tqdm import tqdm
 
-from ..io.xray import Intrinsics, read_xray
+from ..io import Intrinsics, read_xray
 from ..utils import XrayTransforms
 from .loss import load_loss_function
 from .subject import load_subject
