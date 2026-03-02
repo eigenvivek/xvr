@@ -4,7 +4,7 @@ from jaxtyping import Float
 from nanodrr.camera import make_k_inv, resample
 from torchvision.transforms.functional import center_crop
 
-from ..io.xray import Intrinsics
+from ..io import Intrinsics
 from ..utils import XrayTransforms, get_4x4
 
 
