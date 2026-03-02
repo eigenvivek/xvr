@@ -13,9 +13,8 @@ dependencies = [
     "cyclopts>=4.6.0",
     "diffdrr>=0.6.0",
     "jaxtyping>=0.3.7",
-    "nanodrr>=0.1.0",
+    "nanodrr>=0.1.3",
     "pydicom[pixeldata]>=3.0.1",
-    "setuptools>=82.0.0",
     "wandb>=0.21.1",
 ]
 
