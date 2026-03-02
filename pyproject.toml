@@ -10,7 +10,7 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "antspyx>=0.5.4",
-    "click>=8.1.8",
+    "cyclopts>=4.6.0",
     "diffdrr>=0.6.0",
     "jaxtyping>=0.3.7",
     "nanodrr>=0.1.0",
@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-xvr = "xvr.cli:cli"
+xvr = "xvr.cli:main"
 
 [project.urls]
 Repository = "https://github.com/eigenvivek/xvr"
@@ -36,6 +36,9 @@ lint.ignore = [
 ]
 src = ["src"]
 
+[tool.ruff.lint.per-file-ignores]
+"src/xvr/cli/**/*.py" = ["E501"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["xvr"]
 known-third-party = ["wandb"]
@@ -47,6 +50,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "prek>=0.3.2",
+    "pytest>=9.0.2",
 ]
 docs = [
     "black>=26.1.0",

@@ -9,7 +9,6 @@ from nanodrr.plot import plot_drr
 from timm.utils.agc import adaptive_clip_grad
 from tqdm import tqdm
 
-from ..config.trainer import args
 from .data import XrayAugmentations, get_random_pose
 from .initialize import (
     initialize_coordinate_frame,
@@ -22,56 +21,109 @@ from .modules import PoseRegressionLoss
 class Trainer:
     def __init__(
         self,
-        volpath,
-        maskpath,
-        outpath,
-        alphamin,
-        alphamax,
-        betamin,
-        betamax,
-        gammamin,
-        gammamax,
-        txmin,
-        txmax,
-        tymin,
-        tymax,
-        tzmin,
-        tzmax,
-        sdd,
-        height,
-        delx,
-        orientation=args.orientation,
-        reverse_x_axis=args.reverse_x_axis,
-        parameterization=args.parameterization,
-        convention=args.convention,
-        model_name=args.model_name,
-        pretrained=args.pretrained,
-        norm_layer=args.norm_layer,
-        unit_conversion_factor=args.unit_conversion_factor,
-        p_augmentation=args.p_augmentation,
-        lr=args.lr,
-        weight_ncc=args.weight_ncc,
-        weight_geo=args.weight_geo,
-        weight_dice=args.weight_dice,
-        batch_size=args.batch_size,
-        n_total_itrs=args.n_total_itrs,
-        n_warmup_itrs=args.n_warmup_itrs,
-        n_grad_accum_itrs=args.n_grad_accum_itrs,
-        n_save_every_itrs=args.n_save_every_itrs,
-        disable_scheduler=args.disable_scheduler,
-        ckptpath=None,
-        reuse_optimizer=args.reuse_optimizer,
-        warp=None,
-        invert=args.invert,
-        patch_size=None,
-        num_workers=args.num_workers,
-        pin_memory=args.pin_memory,
-        weights=None,
-        use_compile=args.use_compile,
-        use_bf16=args.use_bf16,
+        volpath: str,
+        outpath: str,
+        alphamin: float,
+        alphamax: float,
+        betamin: float,
+        betamax: float,
+        gammamin: float,
+        gammamax: float,
+        txmin: float,
+        txmax: float,
+        tymin: float,
+        tymax: float,
+        tzmin: float,
+        tzmax: float,
+        sdd: float,
+        height: int,
+        delx: float,
+        maskpath: str | None = None,
+        orientation: str = "AP",
+        reverse_x_axis: bool = False,
+        parameterization: str = "quaternion_adjugate",
+        convention: str = "ZXY",
+        model_name: str = "resnet18",
+        pretrained: bool = False,
+        norm_layer: str = "groupnorm",
+        unit_conversion_factor: float = 1000.0,
+        p_augmentation: float = 0.333,
+        lr: float = 2e-4,
+        weight_ncc: float = 1e0,
+        weight_geo: float = 1e-2,
+        weight_dice: float = 1e0,
+        batch_size: int = 116,
+        n_total_itrs: int = 1_000_000,
+        n_warmup_itrs: int = 1_000,
+        n_grad_accum_itrs: int = 4,
+        n_save_every_itrs: int = 1_000,
+        disable_scheduler: bool = False,
+        ckptpath: str | None = None,
+        reuse_optimizer: bool = False,
+        warp: str | None = None,
+        invert: bool = False,
+        patch_size: tuple[int, int, int] | None = None,
+        num_workers: int = 4,
+        pin_memory: bool = False,
+        weights: list[float] | None = None,
+        use_compile: bool = False,
+        use_bf16: bool = False,
         img_threshold: float = 0.10,
         mask_threshold: float = 0.05,
     ):
+        """Train a pose regression model.
+
+        Args:
+            volpath: CT or directory of CTs for pretraining.
+            outpath: Directory in which to save model weights.
+            alphamin: Minimum primary angle (in degrees).
+            alphamax: Maximum primary angle (in degrees).
+            betamin: Minimum secondary angle (in degrees).
+            betamax: Maximum secondary angle (in degrees).
+            gammamin: Minimum tertiary angle (in degrees).
+            gammamax: Maximum tertiary angle (in degrees).
+            txmin: Minimum x-offset (in millimeters).
+            txmax: Maximum x-offset (in millimeters).
+            tymin: Minimum y-offset (in millimeters).
+            tymax: Maximum y-offset (in millimeters).
+            tzmin: Minimum z-offset (in millimeters).
+            tzmax: Maximum z-offset (in millimeters).
+            sdd: Source-to-detector distance (in millimeters).
+            height: DRR height (in pixels).
+            delx: DRR pixel size (in millimeters / pixel).
+            maskpath: Optional labelmaps corresponding to the CTs.
+            orientation: Orientation of CT volumes.
+            reverse_x_axis: Obey radiologic convention (e.g., heart on right).
+            parameterization: Parameterization of SO(3) for regression.
+            convention: If parameterization='euler_angles', specify order.
+            model_name: Name of model to instantiate from the timm library.
+            pretrained: Load pretrained ImageNet-1k weights.
+            norm_layer: Normalization layer.
+            unit_conversion_factor: Scale factor for translation prediction (e.g., from m to mm).
+            p_augmentation: Base probability of image augmentations during training.
+            lr: Maximum learning rate.
+            weight_ncc: Weight on mNCC loss term.
+            weight_geo: Weight on geodesic loss term.
+            weight_dice: Weight on Dice loss term.
+            batch_size: Number of DRRs per batch.
+            n_total_itrs: Number of iterations for training the model.
+            n_warmup_itrs: Number of iterations for warming up the learning rate.
+            n_grad_accum_itrs: Number of iterations for gradient accumulation.
+            n_save_every_itrs: Number of iterations before saving a new model checkpoint.
+            disable_scheduler: Turn off cosine learning rate scheduler.
+            ckptpath: Checkpoint of a pretrained pose regressor.
+            reuse_optimizer: Initialize the previous optimizer's state.
+            warp: SimpleITK transform to warp input CT to checkpoint's reference frame.
+            invert: Whether to invert the warp or not.
+            patch_size: Optional random crop size; if None, return entire volume.
+            num_workers: Number of subprocesses to use in the dataloader.
+            pin_memory: Copy volumes into CUDA pinned memory before returning.
+            weights: Probability for sampling each volume in volpath.
+            use_compile: Compile forward pass with max-autotune-no-cudagraphs.
+            use_bf16: Run all ops in bf16.
+            img_threshold: Minimum fraction of foreground pixels to keep a DRR.
+            mask_threshold: Minimum fraction of mask pixels to keep a DRR.
+        """
         # Record all hyperparameters to be checkpointed
         self.config = locals()
         del self.config["self"]
