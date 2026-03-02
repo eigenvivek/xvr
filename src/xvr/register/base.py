@@ -120,7 +120,7 @@ class RegisterBase(ABC):
         subtract_background: bool = False,
         equalize: bool = False,
         reducefn: str | int | Callable = "max",
-        flip: bool = False,
+        reverse_x_axis: bool = False,
         **kwargs,
     ) -> RegistrationResult:
         """Run registration on an X-ray image.
@@ -135,7 +135,7 @@ class RegisterBase(ABC):
             subtract_background: Subtract background from the image.
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
-            flip: Flip the image horizontally.
+            reverse_x_axis: Flip the image horizontally.
             **kwargs: Additional keyword arguments passed to `get_initial_pose_estimate`.
 
         Returns:
@@ -151,7 +151,7 @@ class RegisterBase(ABC):
         gt, intrinsics, _ = read_xray(filename, crop, subtract_background, linearize, reducefn)
         gt = gt.to(self.device)
         *_, height, width = gt.shape
-        if flip:
+        if reverse_x_axis:
             gt = gt.flip(-1)
 
         # Get the initial pose estimate
