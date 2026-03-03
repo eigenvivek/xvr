@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from jaxtyping import Float
 
-from ..register.base import RegistrationResult
+from ..types.register import RegistrationResult
 
 
 def animate(
