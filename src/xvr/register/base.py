@@ -9,9 +9,8 @@ from nanodrr.registration import Registration
 from tqdm import tqdm
 
 from ..io import Intrinsics, read_xray
-from ..plot import animate
-from ..types.register import OptimizationLogger, RegistrationResult
 from ..utils import XrayTransforms
+from .logging import OptimizationLogger, RegistrationResult
 from .loss import load_loss_function
 from .subject import load_subject
 
@@ -161,6 +160,8 @@ class RegisterBase(ABC):
 
         # Save and animate the registration results
         if savepath is not None:
+            from ..plot import animate
+
             savepath = Path(savepath)
             result.save(savepath)
             animate(result, savepath.with_suffix(".gif"))
