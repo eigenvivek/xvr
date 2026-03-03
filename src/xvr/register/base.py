@@ -105,7 +105,7 @@ class RegisterBase(ABC):
         """
         ...
 
-    def run(
+    def __call__(
         self,
         filename: str,
         crop: int = 0,
