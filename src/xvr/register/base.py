@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -11,19 +10,9 @@ from tqdm import tqdm
 
 from ..io import Intrinsics, read_xray
 from ..utils import XrayTransforms
+from .logging import OptimizationLogger, RegistrationResult
 from .loss import load_loss_function
 from .subject import load_subject
-
-
-@dataclass
-class RegistrationResult:
-    reg: Registration
-    gt: Float[torch.Tensor, "1 1 H W"]
-    losses: list[float]
-    scales: list[float]
-    rescale_factors: list[float]
-    rots: Float[torch.Tensor, "N 3"]
-    xyzs: Float[torch.Tensor, "N 3"]
 
 
 class RegisterBase(ABC):
@@ -167,8 +156,9 @@ class RegisterBase(ABC):
         reg = Registration(self.subject, init_pose, k_inv, sdd, height, width).to(self.device)
 
         # Perform multiscale registration
-        losses, scales, rescale_factors, rots, xyzs = self._run_multiscale(reg, gt, equalize, crop)
-        return RegistrationResult(reg, gt, losses, scales, rescale_factors, rots, xyzs)
+        log = self._run_multiscale(reg, gt, equalize, crop)
+        result = RegistrationResult(reg, gt, log)
+        return result
 
     def _run_multiscale(
         self,
@@ -176,13 +166,7 @@ class RegisterBase(ABC):
         gt: Float[torch.Tensor, "1 1 H W"],
         equalize: bool,
         crop: int,
-    ) -> tuple[
-        list[float],
-        list[float],
-        list[float],
-        Float[torch.Tensor, "N 3"],
-        Float[torch.Tensor, "N 3"],
-    ]:
+    ) -> OptimizationLogger:
         """Run coarse-to-fine multiscale optimization."""
         # Compute the rescale factors for each scale (and append a reset factor)
         factors = parse_scales(self.scales + [1], crop, gt.shape[2])
@@ -219,9 +203,12 @@ class RegisterBase(ABC):
                 if n_plateaus > self.max_n_plateaus:
                     break
 
-        # Reset the camera intrinsics to its native resolution
+        # Reset the intrinsics to their native resolution
         reg.rescale_(factors[-1])
-        return losses, scales, rescale_factors, torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
+
+        # Return the optimization log
+        rots, xyzs = torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
+        return OptimizationLogger(losses, scales, rescale_factors, rots, xyzs)
 
     def _setup_stage(self, reg: Registration, stage: int, equalize: bool):
         """Configure the optimizer, scheduler, and transforms for a single scale stage."""
