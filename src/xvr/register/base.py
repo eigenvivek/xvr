@@ -9,6 +9,7 @@ from nanodrr.registration import Registration
 from tqdm import tqdm
 
 from ..io import Intrinsics, read_xray
+from ..plot import animate
 from ..utils import XrayTransforms
 from .logging import OptimizationLogger, RegistrationResult
 from .loss import load_loss_function
@@ -113,6 +114,7 @@ class RegisterBase(ABC):
         equalize: bool = False,
         reducefn: str | int | Callable = "max",
         reverse_x_axis: bool = False,
+        savepath: Path | str | None = None,
         **kwargs,
     ) -> RegistrationResult:
         """Run registration on an X-ray image.
@@ -128,6 +130,7 @@ class RegisterBase(ABC):
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
             reverse_x_axis: Flip the image horizontally.
+            savepath: Location to save the registration results and an optimization GIF.
             **kwargs: Additional keyword arguments passed to `get_initial_pose_estimate`.
 
         Returns:
@@ -158,6 +161,13 @@ class RegisterBase(ABC):
         # Perform multiscale registration
         log = self._run_multiscale(reg, gt, equalize, crop)
         result = RegistrationResult(reg, gt, log)
+
+        # Save and animate the registration results
+        if savepath is not None:
+            savepath = Path(savepath)
+            result.save(savepath)
+            animate(result, savepath.with_suffix(".gif"))
+
         return result
 
     def _run_multiscale(
