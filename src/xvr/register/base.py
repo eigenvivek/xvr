@@ -61,10 +61,7 @@ class RegisterBase(ABC):
         **metric_kwargs,
     ):
         # Load the subject
-        self._imagepath = Path(imagepath).absolute()
-        self._labelpath = Path(labelpath).absolute() if labelpath is not None else None
-        self._labels = labels if labels is not None else None
-        self.subject = load_subject(self._imagepath, self._labelpath, self._labels).to(device)
+        self.subject = load_subject(imagepath, labelpath, labels).to(device)
 
         # Load the loss function
         self.imagesim = load_loss_function(metric, **metric_kwargs).to(device)

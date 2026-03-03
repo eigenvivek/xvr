@@ -3,9 +3,8 @@ from pathlib import Path
 
 import torch
 from jaxtyping import Float
+from nanodrr.data import Subject
 from nanodrr.registration import Registration
-
-from .subject import load_subject
 
 
 @dataclass
@@ -56,11 +55,6 @@ class RegistrationResult:
                     "sdd": self.reg.sdd.cpu(),
                     "height": self.reg.height,
                     "width": self.reg.width,
-                    "subject": {
-                        "imagepath": self.reg._imagepath,
-                        "labelpath": self.reg._labelpath,
-                        "labels": self.reg._labels,
-                    },
                 },
                 "gt": self.gt.cpu(),
                 "log": {
@@ -75,37 +69,26 @@ class RegistrationResult:
         )
 
     @classmethod
-    def load(cls, path: str | Path, device: str | torch.device = "cpu") -> "RegistrationResult":
-        """Load a registration result from a checkpoint file.
-
-        Args:
-            path: Path to the checkpoint file.
-            device: Device to load tensors onto.
-
-        Returns:
-            The restored registration result.
-        """
+    def load(
+        cls, path: str | Path, subject: Subject, device: str | torch.device = "cpu"
+    ) -> "RegistrationResult":
         state = torch.load(path, map_location=device)
-        subject = state["subject"]
-        subject = load_subject(subject["imagepath"], subject["labelpath"], subject["labels"]).to(
-            device
-        )
         reg = Registration(
             subject=subject,
-            rt_inv=state["rt_inv"],
-            k_inv=state["k_inv"],
-            sdd=state["sdd"],
-            height=state["height"],
-            width=state["width"],
+            rt_inv=state["reg"]["rt_inv"],
+            k_inv=state["reg"]["k_inv"],
+            sdd=state["reg"]["sdd"],
+            height=state["reg"]["height"],
+            width=state["reg"]["width"],
         )
         with torch.no_grad():
-            reg._rot.copy_(state["rot"])
-            reg._xyz.copy_(state["xyz"])
+            reg._rot.copy_(state["reg"]["rot"])
+            reg._xyz.copy_(state["reg"]["xyz"])
         log = OptimizationLogger(
-            losses=state["losses"],
-            scales=state["scales"],
-            rescale_factors=state["rescale_factors"],
-            rots=state["rots"],
-            xyzs=state["xyzs"],
+            losses=state["log"]["losses"],
+            scales=state["log"]["scales"],
+            rescale_factors=state["log"]["rescale_factors"],
+            rots=state["log"]["rots"],
+            xyzs=state["log"]["xyzs"],
         )
         return cls(reg=reg, gt=state["gt"], log=log)
