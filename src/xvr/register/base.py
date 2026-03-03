@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Iterable
 
 import torch
@@ -10,20 +10,9 @@ from tqdm import tqdm
 
 from ..io import Intrinsics, read_xray
 from ..utils import XrayTransforms
+from .logging import OptimizationLogger, RegistrationResult
 from .loss import load_loss_function
 from .subject import load_subject
-from .utils import parse_scales
-
-
-@dataclass
-class RegistrationResult:
-    reg: Registration
-    gt: Float[torch.Tensor, "1 1 H W"]
-    losses: list[float]
-    scales: list[float]
-    rescale_factors: list[float]
-    rots: Float[torch.Tensor, "N 3"]
-    xyzs: Float[torch.Tensor, "N 3"]
 
 
 class RegisterBase(ABC):
@@ -112,7 +101,7 @@ class RegisterBase(ABC):
         """
         ...
 
-    def run(
+    def __call__(
         self,
         filename: str,
         crop: int = 0,
@@ -121,6 +110,7 @@ class RegisterBase(ABC):
         equalize: bool = False,
         reducefn: str | int | Callable = "max",
         reverse_x_axis: bool = False,
+        savepath: Path | str | None = None,
         **kwargs,
     ) -> RegistrationResult:
         """Run registration on an X-ray image.
@@ -136,6 +126,7 @@ class RegisterBase(ABC):
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
             reverse_x_axis: Flip the image horizontally.
+            savepath: Location to save the registration results and an optimization GIF.
             **kwargs: Additional keyword arguments passed to `get_initial_pose_estimate`.
 
         Returns:
@@ -164,8 +155,18 @@ class RegisterBase(ABC):
         reg = Registration(self.subject, init_pose, k_inv, sdd, height, width).to(self.device)
 
         # Perform multiscale registration
-        losses, scales, rescale_factors, rots, xyzs = self._run_multiscale(reg, gt, equalize, crop)
-        return RegistrationResult(reg, gt, losses, scales, rescale_factors, rots, xyzs)
+        log = self._run_multiscale(reg, gt, equalize, crop)
+        result = RegistrationResult(reg, gt, log)
+
+        # Save and animate the registration results
+        if savepath is not None:
+            from ..plot import animate
+
+            savepath = Path(savepath)
+            result.save(savepath)
+            animate(result, savepath.with_suffix(".gif"))
+
+        return result
 
     def _run_multiscale(
         self,
@@ -173,13 +174,7 @@ class RegisterBase(ABC):
         gt: Float[torch.Tensor, "1 1 H W"],
         equalize: bool,
         crop: int,
-    ) -> tuple[
-        list[float],
-        list[float],
-        list[float],
-        Float[torch.Tensor, "N 3"],
-        Float[torch.Tensor, "N 3"],
-    ]:
+    ) -> OptimizationLogger:
         """Run coarse-to-fine multiscale optimization."""
         # Compute the rescale factors for each scale (and append a reset factor)
         factors = parse_scales(self.scales + [1], crop, gt.shape[2])
@@ -216,9 +211,12 @@ class RegisterBase(ABC):
                 if n_plateaus > self.max_n_plateaus:
                     break
 
-        # Reset the camera intrinsics to its native resolution
+        # Reset the intrinsics to their native resolution
         reg.rescale_(factors[-1])
-        return losses, scales, rescale_factors, torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
+
+        # Return the optimization log
+        rots, xyzs = torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
+        return OptimizationLogger(losses, scales, rescale_factors, rots, xyzs)
 
     def _setup_stage(self, reg: Registration, stage: int, equalize: bool):
         """Configure the optimizer, scheduler, and transforms for a single scale stage."""
@@ -235,3 +233,19 @@ class RegisterBase(ABC):
         )
         transform = XrayTransforms(reg.height, reg.width, equalize=equalize).to(self.device)
         return optimizer, scheduler, transform
+
+
+def parse_scales(scales: list[float], crop: int, height: int) -> list[float]:
+    """Convert absolute downscale factors to sequential rescale ratios for an image pyramid.
+
+    Args:
+        scales: Absolute downscale factors relative to the original image (e.g. [8, 4, 2, 1]).
+            A scale of 1.0 snaps back to full cropped resolution.
+        crop: Total pixels cropped from the original image (crop/2 from each side).
+        height: Height of the cropped image in pixels.
+
+    Returns:
+        Sequential rescale ratios between consecutive pyramid levels.
+    """
+    pyramid = [1.0] + [1.0 if x == 1.0 else x * (height / (height + crop)) for x in scales]
+    return [pyramid[idx] / pyramid[idx + 1] for idx in range(len(pyramid) - 1)]

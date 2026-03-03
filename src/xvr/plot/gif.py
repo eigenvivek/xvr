@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from jaxtyping import Float
 
-from ..register.base import RegistrationResult
+from ..register.logging import RegistrationResult
 
 
 def animate(
@@ -39,19 +39,20 @@ def animate(
 @torch.no_grad()
 def replay(result: RegistrationResult) -> Float[torch.Tensor, "B 1 H W"]:
     """Rerender frames from the optimization run at their native resolutions."""
+    device = result.reg.rt_inv.device
     current_scale = None
     initial_height = result.reg.height
 
     # Render the iterates
     preds = []
     for rot, xyz, rescale_factor, scale in zip(
-        result.rots, result.xyzs, result.rescale_factors, result.scales
+        result.log.rots, result.log.xyzs, result.log.rescale_factors, result.log.scales
     ):
         if scale != current_scale:
             result.reg.rescale_(rescale_factor)
             current_scale = scale
-        result.reg._rot.data = rot.unsqueeze(0).to(result.reg.rt_inv.device)
-        result.reg._xyz.data = xyz.unsqueeze(0).to(result.reg.rt_inv.device)
+        result.reg._rot.copy_(rot.unsqueeze(0).to(device))
+        result.reg._xyz.copy_(xyz.unsqueeze(0).to(device))
         preds.append(result.reg().cpu())
 
     # Rescale all iterates to the size of the largest image
