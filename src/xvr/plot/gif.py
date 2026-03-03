@@ -39,6 +39,7 @@ def animate(
 @torch.no_grad()
 def replay(result: RegistrationResult) -> Float[torch.Tensor, "B 1 H W"]:
     """Rerender frames from the optimization run at their native resolutions."""
+    device = result.reg.rt_inv.device
     current_scale = None
     initial_height = result.reg.height
 
@@ -50,8 +51,8 @@ def replay(result: RegistrationResult) -> Float[torch.Tensor, "B 1 H W"]:
         if scale != current_scale:
             result.reg.rescale_(rescale_factor)
             current_scale = scale
-        result.reg._rot.data = rot.unsqueeze(0).to(result.reg.rt_inv.device)
-        result.reg._xyz.data = xyz.unsqueeze(0).to(result.reg.rt_inv.device)
+        result.reg._rot.copy_(rot.unsqueeze(0).to(device))
+        result.reg._xyz.copy_(xyz.unsqueeze(0).to(device))
         preds.append(result.reg().cpu())
 
     # Rescale all iterates to the size of the largest image
