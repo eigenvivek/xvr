@@ -16,8 +16,8 @@ _LOGGING = Group("Logging", sort_key=8)
 @dataclass
 class TrainParams:
     # Data
-    volpath: Annotated[str, Parameter(help="CT or directory of CTs for pretraining", group=_DATA)]
-    outpath: Annotated[str, Parameter(help="Directory in which to save model weights", group=_DATA)]
+    volpath: Annotated[str, Parameter(name=["--volpath", "-v"], help="CT or directory of CTs for pretraining", group=_DATA)]
+    outpath: Annotated[str, Parameter(name=["--outpath", "-o"], help="Directory in which to save model weights", group=_DATA)]
 
     # Renderer
     sdd: Annotated[float, Parameter(help="Source-to-detector distance (in millimeters)", group=_RENDERER)]
@@ -34,7 +34,7 @@ class TrainParams:
     batch_size: Annotated[int, Parameter(help="Number of DRRs per batch", group=_SAMPLING)] = 116
 
     # Data (optional)
-    maskpath: Annotated[str | None, Parameter(help="Optional labelmaps corresponding to the CTs", group=_DATA)] = None
+    maskpath: Annotated[str | None, Parameter(name=["--maskpath", "-m"], help="Optional labelmaps corresponding to the CTs", group=_DATA)] = None
     patch_size: Annotated[str | None, Parameter(help="Optional random crop size e.g. 'h,w,d'; if None, return entire volume", group=_DATA)] = None
     sample_weights: Annotated[str | None, Parameter(help="Probability for sampling each volume in volpath", group=_DATA)] = None
     num_workers: Annotated[int, Parameter(help="Number of subprocesses to use in the dataloader", group=_DATA)] = 4
