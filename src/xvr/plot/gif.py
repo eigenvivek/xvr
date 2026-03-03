@@ -46,7 +46,7 @@ def replay(result: RegistrationResult) -> Float[torch.Tensor, "B 1 H W"]:
     # Render the iterates
     preds = []
     for rot, xyz, rescale_factor, scale in zip(
-        result.rots, result.xyzs, result.rescale_factors, result.scales
+        result.log.rots, result.log.xyzs, result.log.rescale_factors, result.log.scales
     ):
         if scale != current_scale:
             result.reg.rescale_(rescale_factor)
