@@ -2711,7 +2711,7 @@ wheels = [
 [[package]]
 name = "nanodrr"
 version = "0.1.3"
-source = { git = "https://github.com/eigenvivek/nanodrr#90d109f9eb76c14a0d64bc843dec8f9a83c942c5" }
+source = { git = "https://github.com/eigenvivek/nanodrr#2c4f8d202b3aaf1333fad33af64c53e178074f87" }
 dependencies = [
     { name = "jaxtyping", version = "0.3.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "jaxtyping", version = "0.3.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -5646,15 +5646,15 @@ wheels = [
 
 [[package]]
 name = "wslink"
-version = "2.5.0"
+version = "2.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "msgpack" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/06/28/7c7cf32d544f464b58f14b8b9da2acfd382729c8c2074abe0dfe671361fc/wslink-2.5.0.tar.gz", hash = "sha256:61f79460affeeeb05284821f5ec5bc927153d587b661d6cfe33cbe260f9cfae3", size = 31996, upload-time = "2025-10-20T15:38:53.161Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/5f/c17186cf8987c89b3794300cccc3c0007bf89ab08647f6a0eb70a06a195c/wslink-2.5.2.tar.gz", hash = "sha256:3b1b7416b6aaebaf818817228455844a740f5559ef9707120f5964e181953a63", size = 29712, upload-time = "2026-03-03T00:19:10.188Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a2/33/44baf508511b036e455693cd874088f622b8f68e61415e92581a3ffdbbee/wslink-2.5.0-py3-none-any.whl", hash = "sha256:e5738958cc6cbe95581108df066be31a9ead0c485d2b27ca3f3f4865fc08b761", size = 36916, upload-time = "2025-10-20T15:38:52.148Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/fd/0cd3c4ef6705d6edc903761aa36cd32451e41e860915518f13ff7623ea98/wslink-2.5.2-py3-none-any.whl", hash = "sha256:bdea0aa2e5b6aa30c0be74478b29a068743c6107922a2dfa0f162c1dcac395e7", size = 37033, upload-time = "2026-03-03T00:19:09.128Z" },
 ]
 
 [[package]]
