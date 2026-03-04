@@ -41,3 +41,4 @@ class RunParams:
     equalize: Annotated[bool, Parameter(help="Apply histogram equalization during optimization", group=_PREPROCESSING)] = False
     reducefn: Annotated[str, Parameter(help="Reduction function for multi-frame images", group=_PREPROCESSING)] = "max"
     reverse_x_axis: Annotated[bool, Parameter(help="Flip the image horizontally", group=_PREPROCESSING)] = False
+    savepath: Annotated[str | None, Parameter(help="Location to save the registration results and an optimization GIF", group=_MISC)] = False

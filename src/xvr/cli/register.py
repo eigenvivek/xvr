@@ -26,7 +26,7 @@ def model(
 
     reg = RegisterModel(ckpt=ckpt, imagepath=imagepath, **asdict(base))
     for f in files:
-        reg.run(str(f), **asdict(run))
+        reg(str(f), **asdict(run))
 
 
 @register.command
@@ -52,7 +52,7 @@ def fixed(
 
     reg = RegisterFixed(imagepath=imagepath, **asdict(base))
     for f in files:
-        reg.run(
+        reg(
             str(f),
             **asdict(run),
             rot=rot,

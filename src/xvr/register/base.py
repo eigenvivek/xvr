@@ -162,9 +162,9 @@ class RegisterBase(ABC):
         if savepath is not None:
             from ..plot import animate
 
-            savepath = Path(savepath)
-            result.save(savepath)
-            animate(result, savepath.with_suffix(".gif"))
+            savepath = Path(savepath) / Path(filename).stem
+            result.save(savepath.with_suffix(".pth"))
+            animate(result, savepath=savepath.with_suffix(".gif"))
 
         return result
 
