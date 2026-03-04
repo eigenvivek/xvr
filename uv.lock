@@ -2392,7 +2392,7 @@ wheels = [
 
 [[package]]
 name = "mkdocs-material"
-version = "9.7.3"
+version = "9.7.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "babel" },
@@ -2407,9 +2407,9 @@ dependencies = [
     { name = "pymdown-extensions" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8a/b4/f900fcb8e6f510241e334ca401eddcb61ed880fb6572f7f32e4228472ca1/mkdocs_material-9.7.3.tar.gz", hash = "sha256:e5f0a18319699da7e78c35e4a8df7e93537a888660f61a86bd773a7134798f22", size = 4097748, upload-time = "2026-02-24T12:06:22.646Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/36/ce/a1cd02ac7448763f0bb56aaf5f23fa2527944ac6df335080c38c2f253165/mkdocs_material-9.7.4.tar.gz", hash = "sha256:711b0ee63aca9a8c7124d4c73e83a25aa996e27e814767c3a3967df1b9e56f32", size = 4097804, upload-time = "2026-03-03T19:57:36.827Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b9/1b/16ad0193079bb8a15aa1d2620813a9cd15b18de150a4ea1b2c607fb4c74d/mkdocs_material-9.7.3-py3-none-any.whl", hash = "sha256:37ebf7b4788c992203faf2e71900be3c197c70a4be9b0d72aed537b08a91dd9d", size = 9305078, upload-time = "2026-02-24T12:06:19.155Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/94/e3535a9ed078b238df3df75a44694ca0ff5772fd538df4939c658a58c59d/mkdocs_material-9.7.4-py3-none-any.whl", hash = "sha256:6549ad95e4d130ed5099759dfa76ea34c593eefdb9c18c97273605518e99cfbf", size = 9305224, upload-time = "2026-03-03T19:57:34.063Z" },
 ]
 
 [[package]]
@@ -4172,11 +4172,11 @@ wheels = [
 
 [[package]]
 name = "pytz"
-version = "2025.2"
+version = "2026.1.post1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f8/bf/abbd3cdfb8fbc7fb3d4d38d320f2441b1e7cbe29be4f23797b4a2b5d8aac/pytz-2025.2.tar.gz", hash = "sha256:360b9e3dbb49a209c21ad61809c7fb453643e048b38924c765813546746e81c3", size = 320884, upload-time = "2025-03-25T02:25:00.538Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/db/b8721d71d945e6a8ac63c0fc900b2067181dbb50805958d4d4661cf7d277/pytz-2026.1.post1.tar.gz", hash = "sha256:3378dde6a0c3d26719182142c56e60c7f9af7e968076f31aae569d72a0358ee1", size = 321088, upload-time = "2026-03-03T07:47:50.683Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/c4/34e93fe5f5429d7570ec1fa436f1986fb1f00c3e0f43a589fe2bbcd22c3f/pytz-2025.2-py2.py3-none-any.whl", hash = "sha256:5ddf76296dd8c44c26eb8f4b6f35488f3ccbf6fbbd7adee0b7262d43f0ec2f00", size = 509225, upload-time = "2025-03-25T02:24:58.468Z" },
+    { url = "https://files.pythonhosted.org/packages/10/99/781fe0c827be2742bcc775efefccb3b048a3a9c6ce9aec0cbf4a101677e5/pytz-2026.1.post1-py2.py3-none-any.whl", hash = "sha256:f2fd16142fda348286a75e1a524be810bb05d444e5a081f37f7affc635035f7a", size = 510489, upload-time = "2026-03-03T07:47:49.167Z" },
 ]
 
 [[package]]
@@ -5646,15 +5646,15 @@ wheels = [
 
 [[package]]
 name = "wslink"
-version = "2.5.2"
+version = "2.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "msgpack" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/db/5f/c17186cf8987c89b3794300cccc3c0007bf89ab08647f6a0eb70a06a195c/wslink-2.5.2.tar.gz", hash = "sha256:3b1b7416b6aaebaf818817228455844a740f5559ef9707120f5964e181953a63", size = 29712, upload-time = "2026-03-03T00:19:10.188Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/35/29/41313e29d3589c9a2fa34647efd0fcb37c2db38134ea463e6aed1b0be27f/wslink-2.5.3.tar.gz", hash = "sha256:a056c5069c9de6b602425e070be5a5d0fb2ef8af706c776de1b6665b0ae13432", size = 29712, upload-time = "2026-03-03T15:02:49.957Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/fd/0cd3c4ef6705d6edc903761aa36cd32451e41e860915518f13ff7623ea98/wslink-2.5.2-py3-none-any.whl", hash = "sha256:bdea0aa2e5b6aa30c0be74478b29a068743c6107922a2dfa0f162c1dcac395e7", size = 37033, upload-time = "2026-03-03T00:19:09.128Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/db/8cc43cbd6fb52dbee65115b6789701bd64a57ed7c6384242455c017f64b3/wslink-2.5.3-py3-none-any.whl", hash = "sha256:c6f16f2f9505204cd16e1a076533c262362a059bd545b9ae36c1d6f67e5ae54b", size = 37032, upload-time = "2026-03-03T15:02:48.42Z" },
 ]
 
 [[package]]
