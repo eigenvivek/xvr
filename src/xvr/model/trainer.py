@@ -267,6 +267,10 @@ class Trainer:
             # Sample a batch of random poses relative to the subject's coordinate frame
             pose = get_random_pose(subject=subject, **self.pose_distribution)
 
+            # Vary the bone attenuation coefficient
+            mu_bone = torch.empty(1, device=subject._image_hu.device).uniform_(0.0, 0.3)
+            subject.set_mu(mu_bone=mu_bone)
+
             # Render a batch of images and flag samples with sufficient anatomy in the view
             with torch.no_grad():
                 img, mask, keep = self.render_samples(subject, pose)
