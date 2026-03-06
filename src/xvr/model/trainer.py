@@ -17,6 +17,8 @@ from .initialize import (
 )
 from .modules import PoseRegressionLoss
 
+torch.set_float32_matmul_precision("high")
+
 
 class Trainer:
     def __init__(
@@ -302,13 +304,7 @@ class Trainer:
 
         return loss, metrics, keep, imgs, masks
 
-    def render_samples(
-        self, subject: Subject, pose: Float[torch.Tensor, "B 4 4"]
-    ) -> tuple[
-        Float[torch.Tensor, "B 1 H W"],
-        Float[torch.Tensor, "B C H W"],
-        Float[torch.Tensor, "B C"],
-    ]:
+    def render_samples(self, subject: Subject, pose: Float[torch.Tensor, "B 4 4"]):
         # Render a batch of DRRs
         img = self.drr(subject, pose)
 
