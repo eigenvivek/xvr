@@ -4,6 +4,8 @@ from typing import Callable
 import numpy as np
 import torch
 from jaxtyping import Float
+from nanodrr.camera import make_rt_inv
+from nanodrr.data import Subject
 from pydicom import dcmread
 from torchvision.transforms.functional import center_crop
 
@@ -137,19 +139,24 @@ def _preprocess_xray(
     return img
 
 
-def _parse_dicom_pose(filename, orientation):
-    from diffdrr.pose import convert
-
+def _parse_dicom_pose(
+    filename: str,
+    orientation: str | None = "AP",
+    subject: Subject | None = None,
+):
+    """Convert DICOM pose params to a C-arm SE(3) pose."""
     multiplier = -1 if orientation == "PA" else 1
+
     ds = dcmread(filename)
     alpha = float(ds.PositionerPrimaryAngle)
     beta = float(ds.PositionerSecondaryAngle)
     sid = multiplier * float(ds.DistanceSourceToPatient)
-    pose = convert(
+
+    isocenter = subject.isocenter if subject is not None else None
+
+    return make_rt_inv(
         torch.tensor([[alpha, beta, 0.0]]),
         torch.tensor([[0.0, sid, 0.0]]),
-        parameterization="euler_angles",
-        convention="ZXY",
-        degrees=True,
+        orientation,
+        isocenter,
     )
-    return pose

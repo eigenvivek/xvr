@@ -1,7 +1,7 @@
 import torch
-from diffdrr.pose import RigidTransform, convert
 from jaxtyping import Float
-from nanodrr.camera import make_k_inv, resample
+from nanodrr.camera import invert_rt_inv, make_k_inv, make_rt_inv, resample
+from nanodrr.data import Subject
 from torchvision.transforms.functional import center_crop
 
 from ..io import Intrinsics
@@ -63,8 +63,13 @@ def _correct_pose(pose, warp, volume, invert):
     return pose.compose(T)
 
 
-def _construct_antipode(pose: RigidTransform) -> RigidTransform:
-    rot, xyz = pose.convert("euler_angles", "ZXY")
+def _construct_antipode(
+    pose: Float[torch.Tensor, "B 4 4"],
+    orientation: str | None = "AP",
+    subject: Subject | None = None,
+) -> Float[torch.Tensor, "B 4 4"]:
+    isocenter = subject.isocenter if subject is not None else None
+    rot, xyz = invert_rt_inv(pose, orientation, isocenter)
     rot[..., 0:2] *= -1
     rot[..., 0] += torch.pi
-    return convert(rot, xyz, parameterization="euler_angles", convention="ZXY")
+    return make_rt_inv(rot, xyz, orientation, isocenter)
