@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 import torch
-from nanodrr.data.io import Subject as NanoSubject
+from nanodrr.data import Subject as NanoSubject
 from nanodrr.data.preprocess import hu_to_mu
 from torch.utils.data import WeightedRandomSampler
 from torchio import (

@@ -17,6 +17,8 @@ from .initialize import (
 )
 from .modules import PoseRegressionLoss
 
+torch.set_float32_matmul_precision("high")
+
 
 class Trainer:
     def __init__(
@@ -267,6 +269,10 @@ class Trainer:
             # Sample a batch of random poses relative to the subject's coordinate frame
             pose = get_random_pose(subject=subject, **self.pose_distribution)
 
+            # Vary the bone attenuation coefficient
+            mu_bone = torch.empty(1, device=subject._image_hu.device).uniform_(0.0, 0.3)
+            subject.set_mu(mu_bone=mu_bone)
+
             # Render a batch of images and flag samples with sufficient anatomy in the view
             with torch.no_grad():
                 img, mask, keep = self.render_samples(subject, pose)
@@ -298,7 +304,13 @@ class Trainer:
 
         return loss, metrics, keep, imgs, masks
 
-    def render_samples(self, subject: Subject, pose: Float[torch.Tensor, "B 4 4"]):
+    def render_samples(
+        self, subject: Subject, pose: Float[torch.Tensor, "B 4 4"]
+    ) -> tuple[
+        Float[torch.Tensor, "B 1 H W"],
+        Float[torch.Tensor, "B C H W"],
+        Float[torch.Tensor, "B C"],
+    ]:
         # Render a batch of DRRs
         img = self.drr(subject, pose)
 
