@@ -4,7 +4,7 @@ import ants
 import numpy as np
 import torch
 import torchio
-from diffdrr.pose import RigidTransform, make_matrix
+from jaxtyping import Float
 from torchio.data.io import get_sitk_metadata_from_ras_affine
 
 
@@ -40,7 +40,6 @@ def get_4x4(mat, img, invert=False):
 
     T = Tinv @ D @ M @ np.linalg.inv(D)
     T = torch.from_numpy(T).to(torch.float32)
-    T = RigidTransform(T)
 
     return project_onto_SO3(T)
 
@@ -68,15 +67,19 @@ def direction(img: torchio.ScalarImage):
     return np.array(direction).reshape(3, 3)
 
 
-def project_onto_SO3(T: RigidTransform):
+def project_onto_SO3(T: Float[torch.Tensor, "B 4 4"]) -> Float[torch.Tensor, "B 4 4"]:
     """Convert the upper 3x3 to a matrix in SO(3) (i.e., unitary with det=+1)."""
-    M = T.matrix[0]
-    A = M[:3, :3]
-    At = M[:3, 3]
+    A = T[:, :3, :3]
+    At = T[:, :3, 3]
     U, S, V = A.svd()
-    t = A.inverse() @ At
+    t = torch.linalg.solve(A, At)
     S = torch.ones_like(S)
     S[..., -1] = (U @ V.mT).det()
-    R = torch.einsum("ij, j, jk -> ik", U, S, V.mT)
-    t = R @ t
-    return RigidTransform(make_matrix(R[None], t[None]))
+    R = torch.einsum("bij, bj, bkj -> bik", U, S, V)
+    t = torch.einsum("bij, bj -> bi", R, t)
+
+    result = T.clone()
+    result[:, :3, :3] = R
+    result[:, :3, 3] = t
+    result[:, 3, :] = torch.tensor([0, 0, 0, 1], dtype=T.dtype, device=T.device)
+    return result

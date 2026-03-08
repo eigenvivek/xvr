@@ -42,16 +42,11 @@ class PoseRegressor(torch.nn.Module):
         # E.g., if 1000.0, converts output from meters to millimeters
         self.unit_conversion_factor = unit_conversion_factor
 
-    def forward(self, x: Float[torch.Tensor, "B C H W"]) -> Float[torch.Tensor, "B 4 4"]:
-        x = self.backbone(x)
+    def forward(self, img: Float[torch.Tensor, "B C H W"]) -> Float[torch.Tensor, "B 4 4"]:
+        x = self.backbone(img)
         rot = self.rot_regression(x)
-        xyz = self.unit_conversion_factor * self.xyz_regression(x)
-        return convert(
-            rot,
-            xyz,
-            parameterization=self.parameterization,
-            convention=self.convention,
-        )
+        xyz = self.xyz_regression(x) * self.unit_conversion_factor
+        return convert(rot, xyz, self.parameterization, self.convention)
 
 
 def load_model(ckptpath: str, meta: bool = False) -> tuple[torch.nn.Module, dict]:
