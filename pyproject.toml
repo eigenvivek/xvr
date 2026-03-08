@@ -25,6 +25,11 @@ xvr = "xvr.cli:main"
 Repository = "https://github.com/eigenvivek/xvr"
 Issues = "https://github.com/eigenvivek/xvr/issues"
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:builtin type Swig.*has no __module__:DeprecationWarning",
+]
+
 [tool.ruff]
 line-length = 100
 extend-exclude = ["*.ipynb"]
