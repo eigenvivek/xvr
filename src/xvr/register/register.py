@@ -27,7 +27,7 @@ class RegisterFixed(RegisterBase):
         """Compute the initial pose from user-provided rotation and translation.
 
         Args:
-            _gt: Unused. Present for interface compatibility.
+            _img: Unused. Present for interface compatibility.
             _intrinsics: Unused. Present for interface compatibility.
             rot: Rotation angles (in degrees) as (rx, ry, rz).
             xyz: Translation (in mm) as (x, y, z).
@@ -53,13 +53,12 @@ class RegisterModel(RegisterBase):
 
     Args:
         ckpt: Path to the model checkpoint.
-        **kwargs: Passed to Register.
     """
 
     def __init__(self, ckpt: str, **kwargs):
         super().__init__(**kwargs)
-        self.model, self.config = load_model(ckpt)
-        self.model = self.model.to(self.device)
+        model, self.config = load_model(ckpt)
+        self.model = model.to(self.device)
 
     def get_initial_pose_estimate(
         self,
@@ -71,7 +70,6 @@ class RegisterModel(RegisterBase):
         Args:
             gt: Preprocessed ground truth X-ray image.
             intrinsics: Camera intrinsics for the X-ray.
-            **kwargs: Unused. Present for interface compatibility.
 
         Returns:
             A 4x4 rigid transformation matrix.

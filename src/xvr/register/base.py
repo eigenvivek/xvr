@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from inspect import Signature, signature
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -35,12 +36,26 @@ class RegisterBase(ABC):
         lr_rot: Learning rate for rotation parameters.
         lr_xyz: Learning rate for translation parameters.
         lr_reduce_factor: Factor by which to reduce the learning rate on plateau.
-        patience: Number of steps with no improvement before reducing the learning rate.
+        patience: Number of steps without improvement before reducing the learning rate (can be defined per-scale).
         threshold: Minimum change to qualify as an improvement.
         max_n_plateaus: Number of learning rate reductions before early stopping.
         device: Torch device to run on.
         **metric_kwargs: Additional keyword arguments passed to the loss function.
     """
+
+    _registry = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        RegisterBase._registry[cls.__name__.replace("Register", "").lower()] = cls
+        base_sig = signature(RegisterBase.__init__)
+        cls.__init__.__signature__ = _merge_signatures(signature(cls.__init__), base_sig)
+
+    @classmethod
+    def create(cls, method: str, **kwargs):
+        if method not in cls._registry:
+            raise ValueError(f"Unknown method '{method}'. Choose from {list(cls._registry)}")
+        return cls._registry[method](**kwargs)
 
     def __init__(
         self,
@@ -76,9 +91,14 @@ class RegisterBase(ABC):
         self.lr_rot = lr_rot
         self.lr_xyz = lr_xyz
         self.factor = lr_reduce_factor
-        self.patience = patience
         self.threshold = threshold
         self.max_n_plateaus = max_n_plateaus
+
+        self.patience = (
+            patience if isinstance(patience, Iterable) else [patience] * len(self.scales)
+        )
+        if len(self.scales) != len(self.patience):
+            raise ValueError("scales and patience must have the same length")
 
         self.device = device
 
@@ -92,7 +112,7 @@ class RegisterBase(ABC):
         """Compute an initial pose estimate for registration.
 
         Args:
-            gt: Preprocessed ground truth X-ray image.
+            img: Preprocessed ground truth X-ray image.
             intrinsics: Camera intrinsics for the X-ray.
             **kwargs: Additional arguments for specific implementations.
 
@@ -181,12 +201,12 @@ class RegisterBase(ABC):
 
         # Run the optimization and log iterations
         losses, scales, rescale_factors, rots, xyzs = [], [], [], [], []
-        for stage, (scale, rescale_factor, n_itrs) in enumerate(
-            zip(self.scales, factors, self.n_itrs)
+        for stage, (scale, rescale_factor, n_itrs, patience) in enumerate(
+            zip(self.scales, factors, self.n_itrs, self.patience)
         ):
             pbar = tqdm(range(n_itrs), ncols=100, desc=f"Scale {scale:>{self.max_scale_len}}")
             reg.rescale_(rescale_factor)
-            optimizer, scheduler, transform = self._setup_stage(reg, stage, equalize)
+            optimizer, scheduler, transform = self._setup_stage(reg, stage, patience, equalize)
             current_lr, n_plateaus = torch.inf, 0
             true = transform(gt)
             for _ in pbar:
@@ -218,7 +238,7 @@ class RegisterBase(ABC):
         rots, xyzs = torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
         return OptimizationLogger(losses, scales, rescale_factors, rots, xyzs)
 
-    def _setup_stage(self, reg: Registration, stage: int, equalize: bool):
+    def _setup_stage(self, reg: Registration, stage: int, patience: int, equalize: bool):
         """Configure the optimizer, scheduler, and transforms for a single scale stage."""
         step_size_scalar = 2**stage
         optimizer = torch.optim.Adam(
@@ -229,7 +249,7 @@ class RegisterBase(ABC):
             maximize=True,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, "max", self.factor, self.patience, self.threshold
+            optimizer, "max", self.factor, patience, self.threshold
         )
         transform = XrayTransforms(reg.height, reg.width, equalize=equalize).to(self.device)
         return optimizer, scheduler, transform
@@ -249,3 +269,18 @@ def parse_scales(scales: list[float], crop: int, height: int) -> list[float]:
     """
     pyramid = [1.0] + [1.0 if x == 1.0 else x * (height / (height + crop)) for x in scales]
     return [pyramid[idx] / pyramid[idx + 1] for idx in range(len(pyramid) - 1)]
+
+
+def _is_var_keyword(p) -> bool:
+    return p.kind == p.VAR_KEYWORD
+
+
+def _merge_signatures(sub_sig: Signature, base_sig: Signature) -> Signature:
+    sub_params = [p for p in sub_sig.parameters.values() if not _is_var_keyword(p)]
+    base_params = [
+        p
+        for p in base_sig.parameters.values()
+        if p.name not in sub_sig.parameters and not _is_var_keyword(p)
+    ]
+    var_keyword = [p for p in base_sig.parameters.values() if _is_var_keyword(p)]
+    return sub_sig.replace(parameters=sub_params + base_params + var_keyword)
