@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from inspect import signature
+from itertools import repeat
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -36,7 +37,7 @@ class RegisterBase(ABC):
         lr_rot: Learning rate for rotation parameters.
         lr_xyz: Learning rate for translation parameters.
         lr_reduce_factor: Factor by which to reduce the learning rate on plateau.
-        patience: Number of steps with no improvement before reducing the learning rate.
+        patience: Number of steps without improvement before reducing the learning rate (can be defined per-scale).
         threshold: Minimum change to qualify as an improvement.
         max_n_plateaus: Number of learning rate reductions before early stopping.
         device: Torch device to run on.
@@ -110,9 +111,14 @@ class RegisterBase(ABC):
         self.lr_rot = lr_rot
         self.lr_xyz = lr_xyz
         self.factor = lr_reduce_factor
-        self.patience = patience
         self.threshold = threshold
         self.max_n_plateaus = max_n_plateaus
+
+        self.patience = (
+            patience if isinstance(patience, Iterable) else repeat(patience, len(self.scales))
+        )
+        if len(self.scales) != len(self.patience):
+            raise ValueError("scales and patience must have the same length")
 
         self.device = device
 
@@ -215,12 +221,12 @@ class RegisterBase(ABC):
 
         # Run the optimization and log iterations
         losses, scales, rescale_factors, rots, xyzs = [], [], [], [], []
-        for stage, (scale, rescale_factor, n_itrs) in enumerate(
-            zip(self.scales, factors, self.n_itrs)
+        for stage, (scale, rescale_factor, n_itrs, patience) in enumerate(
+            zip(self.scales, factors, self.n_itrs, self.patience)
         ):
             pbar = tqdm(range(n_itrs), ncols=100, desc=f"Scale {scale:>{self.max_scale_len}}")
             reg.rescale_(rescale_factor)
-            optimizer, scheduler, transform = self._setup_stage(reg, stage, equalize)
+            optimizer, scheduler, transform = self._setup_stage(reg, stage, patience, equalize)
             current_lr, n_plateaus = torch.inf, 0
             true = transform(gt)
             for _ in pbar:
@@ -252,7 +258,7 @@ class RegisterBase(ABC):
         rots, xyzs = torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
         return OptimizationLogger(losses, scales, rescale_factors, rots, xyzs)
 
-    def _setup_stage(self, reg: Registration, stage: int, equalize: bool):
+    def _setup_stage(self, reg: Registration, stage: int, patience: int, equalize: bool):
         """Configure the optimizer, scheduler, and transforms for a single scale stage."""
         step_size_scalar = 2**stage
         optimizer = torch.optim.Adam(
@@ -263,7 +269,7 @@ class RegisterBase(ABC):
             maximize=True,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, "max", self.factor, self.patience, self.threshold
+            optimizer, "max", self.factor, patience, self.threshold
         )
         transform = XrayTransforms(reg.height, reg.width, equalize=equalize).to(self.device)
         return optimizer, scheduler, transform
