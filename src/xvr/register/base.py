@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from inspect import Signature, signature
-from itertools import repeat
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -96,7 +95,7 @@ class RegisterBase(ABC):
         self.max_n_plateaus = max_n_plateaus
 
         self.patience = (
-            patience if isinstance(patience, Iterable) else repeat(patience, len(self.scales))
+            patience if isinstance(patience, Iterable) else [patience] * len(self.scales)
         )
         if len(self.scales) != len(self.patience):
             raise ValueError("scales and patience must have the same length")
