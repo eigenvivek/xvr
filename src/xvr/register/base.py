@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from inspect import signature
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -41,6 +42,39 @@ class RegisterBase(ABC):
         device: Torch device to run on.
         **metric_kwargs: Additional keyword arguments passed to the loss function.
     """
+
+    _registry = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        RegisterBase._registry[cls.__name__.replace("Register", "").lower()] = cls
+
+        base_sig = signature(RegisterBase.__init__)
+
+        if "__init__" not in cls.__dict__:
+            cls.__init__.__signature__ = base_sig
+            return
+
+        def _is_var_keyword(p):
+            return p.kind == p.VAR_KEYWORD
+
+        sub_sig = signature(cls.__init__)
+        sub_params = [p for p in sub_sig.parameters.values() if not _is_var_keyword(p)]
+        base_params = [
+            p
+            for p in base_sig.parameters.values()
+            if p.name not in sub_sig.parameters and not _is_var_keyword(p)
+        ]
+        var_keyword = [p for p in base_sig.parameters.values() if _is_var_keyword(p)]
+        cls.__init__.__signature__ = sub_sig.replace(
+            parameters=sub_params + base_params + var_keyword
+        )
+
+    @classmethod
+    def create(cls, method: str, **kwargs):
+        if method not in cls._registry:
+            raise ValueError(f"Unknown method '{method}'. Choose from {list(cls._registry)}")
+        return cls._registry[method](**kwargs)
 
     def __init__(
         self,
@@ -92,7 +126,7 @@ class RegisterBase(ABC):
         """Compute an initial pose estimate for registration.
 
         Args:
-            gt: Preprocessed ground truth X-ray image.
+            img: Preprocessed ground truth X-ray image.
             intrinsics: Camera intrinsics for the X-ray.
             **kwargs: Additional arguments for specific implementations.
 
