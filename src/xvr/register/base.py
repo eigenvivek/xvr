@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from inspect import signature
+from inspect import Signature, signature
 from itertools import repeat
 from pathlib import Path
 from typing import Callable, Iterable
@@ -49,27 +49,8 @@ class RegisterBase(ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         RegisterBase._registry[cls.__name__.replace("Register", "").lower()] = cls
-
         base_sig = signature(RegisterBase.__init__)
-
-        if "__init__" not in cls.__dict__:
-            cls.__init__.__signature__ = base_sig
-            return
-
-        def _is_var_keyword(p):
-            return p.kind == p.VAR_KEYWORD
-
-        sub_sig = signature(cls.__init__)
-        sub_params = [p for p in sub_sig.parameters.values() if not _is_var_keyword(p)]
-        base_params = [
-            p
-            for p in base_sig.parameters.values()
-            if p.name not in sub_sig.parameters and not _is_var_keyword(p)
-        ]
-        var_keyword = [p for p in base_sig.parameters.values() if _is_var_keyword(p)]
-        cls.__init__.__signature__ = sub_sig.replace(
-            parameters=sub_params + base_params + var_keyword
-        )
+        cls.__init__.__signature__ = _merge_signatures(signature(cls.__init__), base_sig)
 
     @classmethod
     def create(cls, method: str, **kwargs):
@@ -289,3 +270,18 @@ def parse_scales(scales: list[float], crop: int, height: int) -> list[float]:
     """
     pyramid = [1.0] + [1.0 if x == 1.0 else x * (height / (height + crop)) for x in scales]
     return [pyramid[idx] / pyramid[idx + 1] for idx in range(len(pyramid) - 1)]
+
+
+def _is_var_keyword(p) -> bool:
+    return p.kind == p.VAR_KEYWORD
+
+
+def _merge_signatures(sub_sig: Signature, base_sig: Signature) -> Signature:
+    sub_params = [p for p in sub_sig.parameters.values() if not _is_var_keyword(p)]
+    base_params = [
+        p
+        for p in base_sig.parameters.values()
+        if p.name not in sub_sig.parameters and not _is_var_keyword(p)
+    ]
+    var_keyword = [p for p in base_sig.parameters.values() if _is_var_keyword(p)]
+    return sub_sig.replace(parameters=sub_params + base_params + var_keyword)
