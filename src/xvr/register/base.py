@@ -48,8 +48,15 @@ class RegisterBase(ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         RegisterBase._registry[cls.__name__.replace("Register", "").lower()] = cls
+
         base_sig = signature(RegisterBase.__init__)
         cls.__init__.__signature__ = _merge_signatures(signature(cls.__init__), base_sig)
+
+        if "__call__" in cls.__dict__:
+            cls.__call__.__signature__ = _merge_signatures(
+                signature(cls.__call__),
+                signature(RegisterBase.__call__),
+            )
 
     @classmethod
     def create(cls, method: str, **kwargs):

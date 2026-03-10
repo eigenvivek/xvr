@@ -6,6 +6,7 @@ from ..io import Intrinsics
 from ..model.inference import predict_pose
 from ..model.modules.network import load_model
 from .base import RegisterBase
+from .logging import RegistrationResult
 
 
 class RegisterFixed(RegisterBase):
@@ -14,6 +15,29 @@ class RegisterFixed(RegisterBase):
     Useful for cases where an approximate pose is already known, such as
     when initializing from a prior scan or a clinical estimate.
     """
+
+    def __call__(
+        self,
+        filename: str,
+        rot: tuple[float, float, float],
+        xyz: tuple[float, float, float],
+        orientation: str = "AP",
+        isocenter: bool = True,
+        **kwargs,
+    ) -> RegistrationResult:
+        """Run registration with a manually specified initial pose.
+
+        Args:
+            filename: Path to the X-ray image.
+            rot: Rotation angles (in degrees) as (rx, ry, rz).
+            xyz: Translation (in mm) as (x, y, z).
+            orientation: Starting orientation of the volume, e.g. "AP" or "lateral".
+            isocenter: If True, centers the pose at the subject isocenter.
+            **kwargs: See RegisterBase.__call__ for remaining arguments.
+        """
+        return super().__call__(
+            filename, rot=rot, xyz=xyz, orientation=orientation, isocenter=isocenter, **kwargs
+        )
 
     def get_initial_pose_estimate(
         self,
@@ -68,7 +92,7 @@ class RegisterModel(RegisterBase):
         """Predict the initial pose from the X-ray using a neural network.
 
         Args:
-            gt: Preprocessed ground truth X-ray image.
+            img: Preprocessed ground truth X-ray image.
             intrinsics: Camera intrinsics for the X-ray.
 
         Returns:
