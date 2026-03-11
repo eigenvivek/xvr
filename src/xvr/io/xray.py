@@ -56,12 +56,12 @@ def read_xray(
     if pf_to_af:
         img = img.flip(-1)
 
+    # Preprocess the X-ray image
+    img = _preprocess_xray(img, crop, subtract_background, linearize)
+
     # Reduce a temporal dimension
     if img.ndim == 5:
         img = _reduce_frames(img, reducefn)
-
-    # Preprocess the X-ray image
-    img = _preprocess_xray(img, crop, subtract_background, linearize)
 
     return img, intrinsics, pf_to_af
 
