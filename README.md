@@ -101,6 +101,7 @@ Data options:
   --patch_size TEXT               Optional random crop size (e.g., 'h,w,d'); if None, return entire volume
   --num_workers INTEGER           Number of subprocesses to use in the dataloader  [default: 4]
   --pin_memory                    Copy volumes from the dataloader into CUDA pinned memory before returning
+  --sample_weights PATH           Probability for sampling each volume in `volpath`
 
 Sampling options:
   --r1 <FLOAT FLOAT>...           Range for primary angle (in degrees)  [required]
@@ -115,7 +116,6 @@ Renderer options:
   --sdd FLOAT                     Source-to-detector distance (in millimeters)  [required]
   --height INTEGER                DRR height (in pixels)  [required]
   --delx FLOAT                    DRR pixel size (in millimeters / pixel)  [required]
-  --renderer [siddon|trilinear]   Rendering equation  [default: trilinear]
   --orientation [AP|PA]           Orientation of CT volumes  [default: AP]
   --reverse_x_axis                Enable to obey radiologic convention (e.g., heart on right)
 
@@ -127,13 +127,14 @@ Model options:
   --convention TEXT               If `parameterization='euler_angles'`, specify order  [default: ZXY]
   --unit_conversion_factor FLOAT  Scale factor for translation prediction (e.g., from m to mm)  [default: 1000.0]
   --p_augmentation FLOAT          Base probability of image augmentations during training  [default: 0.333]
+  --use_compile                   Compile forward pass with `max-autotune-no-cudagraphs`
+  --use_bf16                      Run all ops in bf16
 
 Optimizer options:
   --lr FLOAT                      Maximum learning rate  [default: 0.0002]
   --weight_ncc FLOAT              Weight on mNCC loss term  [default: 1.0]
   --weight_geo FLOAT              Weight on geodesic loss term  [default: 0.01]
   --weight_dice FLOAT             Weight on Dice loss term  [default: 1.0]
-  --weight_mvc FLOAT              Weight on multiview consistency loss term  [default: 0]
   --n_total_itrs INTEGER          Number of iterations for training the model  [default: 1000000]
   --n_warmup_itrs INTEGER         Number of iterations for warming up the learning rate  [default: 1000]
   --n_grad_accum_itrs INTEGER     Number of iterations for gradient accumulation  [default: 4]

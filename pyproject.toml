@@ -10,27 +10,46 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "antspyx>=0.5.4",
-    "click>=8.1.8",
-    "diffdrr>=0.6.0",
-    "pydicom[pixeldata]>=3.0.1",
-    "wandb>=0.21.1",
+    "cyclopts>=4.6.0",
+    "jaxtyping>=0.3.0",
+    "nanodrr[all]>=0.1.4",
+    "pydicom[pixeldata]>=3.0.0",
+    "timm>=1.0.0",
+    "wandb>=0.22.0",
 ]
 
 [project.scripts]
-xvr = "xvr.cli:cli"
+xvr = "xvr.cli:main"
 
 [project.urls]
 Repository = "https://github.com/eigenvivek/xvr"
 Issues = "https://github.com/eigenvivek/xvr/issues"
 
-[tool.ruff]
-extend-exclude = ["*.ipynb"]
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:builtin type Swig.*has no __module__:DeprecationWarning",
+]
 
-[tool.ruff.lint]
-extend-select = ["I"]
+[tool.ruff]
+line-length = 100
+extend-exclude = ["*.ipynb"]
+lint.extend-select = ["I"]
+lint.ignore = [
+    "F722",  # Forward annotation false positive from jaxtyping
+    "F821",  # Forward annotation false positive from jaxtyping
+]
+src = ["src"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/xvr/cli/configs/register.py" = ["E501"]
+"src/xvr/cli/configs/train.py" = ["E501"]
 
 [tool.ruff.lint.isort]
+known-first-party = ["xvr"]
 known-third-party = ["wandb"]
+
+[tool.uv.sources]
+nanodrr = { git = "https://github.com/eigenvivek/nanodrr" }
 
 [build-system]
 requires = ["hatchling"]
@@ -39,6 +58,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "prek>=0.3.2",
+    "pytest>=9.0.2",
 ]
 docs = [
     "black>=26.1.0",
