@@ -89,11 +89,4 @@ class RegisterModel(RegisterBase):
         Returns:
             A 4x4 rigid transformation matrix.
         """
-        return predict_pose(
-            self.model,
-            img,
-            intrinsics,
-            self.config["sdd"],
-            self.config["delx"],
-            self.config["height"],
-        )
+        return predict_pose(self.model, self.config, img, **intrinsics)
