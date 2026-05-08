@@ -2,6 +2,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import torch
+import torch.nn.functional as F
 import wandb
 from diffdrr.data import transform_hu_to_density
 from diffdrr.pose import RigidTransform, convert
@@ -38,7 +39,6 @@ class Trainer:
         delx: float,
         orientation: str = "AP",
         reverse_x_axis: bool = False,
-        renderer: str = "trilinear",
         parameterization: str = "quaternion_adjugate",
         convention: str = "ZXY",
         model_name: str = "resnet18",
@@ -90,7 +90,6 @@ class Trainer:
             delx: DRR pixel size (in millimeters / pixel).
             orientation: Orientation of CT volumes.
             reverse_x_axis: Horizontally flip the rendered DRRs.
-            renderer: DRR rendering backend ('trilinear' or 'siddon').
             parameterization: Parameterization of SO(3) for regression.
             convention: If parameterization='euler_angles', specify order.
             model_name: Name of model to instantiate from the timm library.
@@ -157,7 +156,6 @@ class Trainer:
             delx,
             orientation,
             reverse_x_axis,
-            renderer,
             lr,
             n_total_itrs,
             n_warmup_itrs,
@@ -240,7 +238,7 @@ class Trainer:
         pose = get_random_pose(**self.pose_distribution).cuda()
 
         # Load the subject and translate the pose to its isocenter
-        vol, seg, affinv, offset = self.load(subject, pose.matrix.dtype, pose.matrix.device)
+        vol, seg, world2grid, offset = self.load(subject, pose.matrix.dtype, pose.matrix.device)
         pose = pose.compose(offset)
 
         # Render a batch of DRRs and keep samples that capture the volume
@@ -248,7 +246,7 @@ class Trainer:
         tmp = transform_hu_to_density(vol, contrast)
 
         with torch.no_grad():
-            img, mask, keep = self.render_samples(tmp, seg, affinv, pose)
+            img, mask, keep = self.render_samples(tmp, seg, world2grid, pose)
 
         # Regress the poses of the DRRs (and optionally convert between reference frames)
         x = self.transforms(self.augmentations(img))
@@ -257,7 +255,7 @@ class Trainer:
             pred_pose = pred_pose.compose(self.reframe)
 
         # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = self.render_samples(tmp, seg, affinv, pred_pose)
+        pred_img, pred_mask, _ = self.render_samples(tmp, seg, world2grid, pred_pose)
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
@@ -298,8 +296,10 @@ class Trainer:
                 self.drr.mask,
                 self.drr.affine_inverse,
             )
+            voxel2grid = _make_voxel_to_grid(volume.permute(2, 1, 0).shape, device, dtype)
+            world2grid = affinv.compose(voxel2grid)
             offset = make_translation(self.drr.center)
-            return volume, mask, affinv, offset
+            return volume, mask, world2grid, offset
 
         # Process torchio patch
         volume = subject["volume"]["data"].squeeze().to(device, dtype)
@@ -315,21 +315,57 @@ class Trainer:
         center = affine(center)[0].to(device, dtype)
         offset = make_translation(center)
 
-        # Make the inverse affine
+        # Make the world2grid matrix
         affine = torch.from_numpy(subject["volume"]["affine"]).to(device, dtype)
-        affinv = RigidTransform(affine.inverse())
+        voxel2grid = _make_voxel_to_grid(volume.permute(2, 1, 0).shape, device, dtype)
+        world2grid = RigidTransform(affine.inverse()).compose(voxel2grid)
 
-        return volume, mask, affinv, offset
+        return volume, mask, world2grid, offset
 
-    def render_samples(self, tmp, seg, affinv, pose):
-        # Get the source and target locations for every ray in voxel coordinates
-        source, target = self.drr.detector(pose, None)
-        img = (target - source).norm(dim=-1).unsqueeze(1)
-        source, target = affinv(source), affinv(target)
+    def render_samples(self, tmp, seg, world2grid, pose, n_samples=500):
+        # Make the cam2grid transform
+        cam2grid = self.drr.detector.reorient.compose(pose).compose(world2grid)
 
-        # Render a batch of DRRs
-        img = self.drr.renderer(tmp, source, target, img, mask=seg)
-        img = self.drr.reshape_transform(img, batch_size=len(pose))
+        # Initialize the source and target points
+        src, tgt = self.drr.detector.source.clone(), self.drr.detector.target.clone()
+        tgt = self.drr.detector.calibration(tgt)
+        step_size = (tgt - src).norm(dim=-1) / float(n_samples - 1)
+
+        # Create the sampling points
+        src_, tgt_ = cam2grid(src), cam2grid(tgt)
+        t = torch.linspace(0, 1, n_samples, device="cuda", dtype=src_.dtype)
+        pts = torch.lerp(
+            src_[:, None, :, None],
+            tgt_[:, None, :, None],
+            t[None, :, None, None, None],
+        )
+        B, *_ = pts.shape
+
+        # Sample the volume
+        img = F.grid_sample(
+            tmp.permute(2, 1, 0)[None, None].expand(B, -1, -1, -1, -1),
+            pts,
+            mode="bilinear",
+            align_corners=False,
+        )[:, 0, ..., 0]  # [B, n_samples, N]
+        img = img * step_size[:, None, :]
+
+        # Sample the grid
+        if seg is not None:
+            idx = F.grid_sample(
+                seg.permute(2, 1, 0)[None, None].expand(B, -1, -1, -1, -1),
+                pts,
+                mode="nearest",
+                align_corners=False,
+            )[:, 0, ..., 0].long()  # [B, n_samples, N]
+        else:
+            idx = torch.zeros_like(img).long()
+
+        # Render out the image
+        C = int(seg.max() + 1)
+        out = torch.zeros(B, C, idx.shape[-1], device=img.device, dtype=img.dtype)
+        out.scatter_add_(1, idx, img)
+        img = out.reshape(B, C, self.drr.detector.height, self.drr.detector.width)
 
         # Create a foreground mask and collapse potentially multichannel images to a single DRR
         mask = img > 0
@@ -373,6 +409,34 @@ class Trainer:
         self.model_number += 1
 
 
-def make_translation(xyz):
+def make_translation(xyz) -> RigidTransform:
     rot = torch.zeros_like(xyz)
     return convert(rot, xyz, parameterization="euler_angles", convention="ZXY")
+
+
+def _make_voxel_to_grid(
+    shape: torch.Size, device: torch.device, dtype: torch.dtype
+) -> RigidTransform:
+    r"""Build the affine matrix mapping voxel indices to `grid_sample` normalized coordinates.
+
+    PyTorch's `grid_sample` with `align_corners=False` defines normalized coordinates
+    so that the full voxel extent `[-0.5, S - 0.5]` maps to `[-1, 1]`.
+    A voxel center at index $$i$$ therefore maps to:
+
+    $$x_{\text{norm}} = \frac{2}{S} i + \left(\frac{1}{S} - 1\right)$$
+
+    This method encodes that per-axis scaling and offset into a homogeneous
+    affine matrix applied to voxel-index coordinates.
+
+    Args:
+        shape: Volume shape `(1, 1, D, H, W)`.
+
+    Returns:
+        Affine matrix mapping voxel indices to `[-1, 1]` normalized grid coordinates.
+    """
+    *_, D, H, W = shape
+    size = torch.tensor([W, H, D], dtype=torch.float32)
+    mat = torch.eye(4, dtype=dtype)
+    mat[:3, :3] = torch.diag(2.0 / size)
+    mat[:3, 3] = 1.0 / size - 1.0
+    return RigidTransform(mat.to(device))

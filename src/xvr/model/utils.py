@@ -107,7 +107,6 @@ def initialize_modules(
     delx,
     orientation,
     reverse_x_axis,
-    renderer,
     lr,
     n_total_itrs,
     n_warmup_itrs,
@@ -157,7 +156,7 @@ def initialize_modules(
         height=height,
         delx=delx,
         reverse_x_axis=reverse_x_axis,
-        renderer=renderer,
+        renderer="trilinear",
     )
     drr.density = None  # Unload the precomputed density map to free up memory
     if not hasattr(drr, "mask"):
