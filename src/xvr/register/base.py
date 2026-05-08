@@ -41,6 +41,7 @@ class RegisterBase(ABC):
         labelpath: Path to the segmentation label map. If None, uses the full image.
         labels: Label indices to include in the DRR. If None, uses all labels.
         orientation: Patient orientation for the DRR.
+        reverse_x_axis: Horizontally flip the rendered DRRs.
         metric: Image similarity metric, either a string key or a custom nn.Module.
         metric_kwargs: Additional keyword arguments passed to the loss function.
         scales: Downsampling scale(s) for multiscale registration.
@@ -60,6 +61,7 @@ class RegisterBase(ABC):
     labelpath: str | None = field(default=None)
     labels: list[int] | None = field(default=None)
     orientation: str = field(default="AP")
+    reverse_x_axis: bool = field(default=False)
 
     metric: str | torch.nn.Module = field(default="gmncc")
     metric_kwargs: dict = field(factory=dict)
@@ -89,7 +91,7 @@ class RegisterBase(ABC):
         return cls._registry[method](**kwargs)
 
     def __attrs_post_init__(self):
-        # Normalize patience by expanding scalar to a per-scale list
+        # Normalize patience by expanding scalars to a per-scale list
         if not isinstance(self.patience, Iterable):
             self.patience = [self.patience] * len(self.scales)
         else:
@@ -134,7 +136,6 @@ class RegisterBase(ABC):
         subtract_background: bool = False,
         equalize: bool = False,
         reducefn: str | int | Callable = "max",
-        reverse_x_axis: bool = False,
         savepath: Path | str | None = None,
         **kwargs,
     ) -> RegistrationResult:
@@ -150,7 +151,6 @@ class RegisterBase(ABC):
             subtract_background: Subtract background from the image.
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
-            reverse_x_axis: Flip the image horizontally.
             savepath: Location to save the registration results.
             **kwargs: Additional keyword arguments passed to `get_initial_pose_estimate`.
 
@@ -171,7 +171,7 @@ class RegisterBase(ABC):
             subject=self.subject,
             height=height,
             width=width,
-            reverse_x_axis=reverse_x_axis,
+            reverse_x_axis=self.reverse_x_axis,
             renderer="trilinear",
             **intrinsics,
         ).to(self.device)
