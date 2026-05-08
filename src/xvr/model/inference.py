@@ -20,7 +20,7 @@ def predict_pose(model, config, img, sdd, delx, dely, x0, y0):
     with torch.no_grad():
         init_pose = model(img)
 
-    return init_pose, img
+    return init_pose
 
 
 def _resample_xray(img, sdd, delx, dely, x0, y0, config):
