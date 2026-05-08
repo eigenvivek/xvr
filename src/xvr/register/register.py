@@ -7,7 +7,6 @@ from ..io import Intrinsics
 from ..model.inference import predict_pose
 from ..model.network import load_model
 from .base import RegisterBase
-from .logging import RegistrationResult
 
 
 @attrs.define(slots=False)
@@ -17,23 +16,6 @@ class RegisterFixed(RegisterBase):
     Useful for cases where an approximate pose is already known, such as
     when initializing from a prior scan or a clinical estimate.
     """
-
-    def __call__(
-        self,
-        filename: str,
-        rot: tuple[float, float, float],
-        xyz: tuple[float, float, float],
-        **kwargs,
-    ) -> RegistrationResult:
-        """Run registration with a manually specified initial pose.
-
-        Args:
-            filename: Path to the X-ray image.
-            rot: Rotation angles (in degrees) as (rx, ry, rz).
-            xyz: Translation (in mm) as (x, y, z).
-            **kwargs: See RegisterBase.__call__ for remaining arguments.
-        """
-        return super().__call__(filename, rot=rot, xyz=xyz, **kwargs)
 
     def get_initial_pose_estimate(
         self,
