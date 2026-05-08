@@ -250,10 +250,6 @@ class Trainer:
         with torch.no_grad():
             img, mask, keep = self.render_samples(tmp, seg, affinv, pose)
 
-        img = img[keep]
-        mask = mask[keep]
-        pose = pose[keep]
-
         # Regress the poses of the DRRs (and optionally convert between reference frames)
         x = self.transforms(self.augmentations(img))
         pred_pose = self.model(x)
@@ -268,7 +264,8 @@ class Trainer:
         loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
             img, mask, pose, pred_img, pred_mask, pred_pose
         )
-        loss = loss / self.n_grad_accum_itrs
+        n_kept = keep.sum().clamp(min=1)
+        loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
 
         # Optimize the model
         loss.mean().backward()
