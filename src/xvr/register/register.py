@@ -81,6 +81,7 @@ class RegisterModel(RegisterBase):
         model, self.config = load_model(self.ckpt)
         self.model = model.to(self.device)
         self.orientation = self.config["orientation"]
+        self.reverse_x_axis = self.config["reverse_x_axis"]
         super().__attrs_post_init__()
 
     def get_initial_pose_estimate(
