@@ -5604,6 +5604,7 @@ version = "0.0.0rc2"
 source = { editable = "." }
 dependencies = [
     { name = "antspyx" },
+    { name = "attrs" },
     { name = "click" },
     { name = "diffdrr" },
     { name = "jaxtyping", version = "0.3.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -5633,6 +5634,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "antspyx", specifier = ">=0.5.4" },
+    { name = "attrs", specifier = ">=25.0.0" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "diffdrr", specifier = ">=0.6.0" },
     { name = "jaxtyping", specifier = ">=0.3.0" },
