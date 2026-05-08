@@ -1,3 +1,4 @@
+import attrs
 import torch
 from diffdrr.pose import RigidTransform, convert
 from jaxtyping import Float
@@ -9,6 +10,7 @@ from .base import RegisterBase
 from .logging import RegistrationResult
 
 
+@attrs.define
 class RegisterFixed(RegisterBase):
     """Register using a manually specified initial pose.
 
@@ -60,6 +62,7 @@ class RegisterFixed(RegisterBase):
         )
 
 
+@attrs.define
 class RegisterModel(RegisterBase):
     """Register using a neural network to predict the initial pose.
 
@@ -70,9 +73,13 @@ class RegisterModel(RegisterBase):
         ckpt: Path to the model checkpoint.
     """
 
-    def __init__(self, ckpt: str, **kwargs):
-        super().__init__(**kwargs)
-        model, self.config = load_model(ckpt)
+    ckpt: str
+    model: torch.nn.Module = attrs.field(init=False, repr=False)
+    config: dict = attrs.field(init=False, repr=False)
+
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__()
+        model, self.config = load_model(self.ckpt)
         self.model = model.to(self.device)
 
     def get_initial_pose_estimate(

@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from inspect import Signature, signature
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Any, Callable, ClassVar, Iterable
 
 import torch
+from attrs import define, field
 from diffdrr.data import read
 from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
@@ -17,6 +17,14 @@ from .loss import load_loss_function
 from .models import Pose
 
 
+def _to_list(value) -> list:
+    """Wrap a scalar in a list; coerce iterables (except strings) to lists."""
+    if isinstance(value, str) or not isinstance(value, Iterable):
+        return [value]
+    return list(value)
+
+
+@define(kw_only=True, slots=False, eq=False)
 class RegisterBase(ABC):
     """Abstract base class for 2D/3D image registration.
 
@@ -25,13 +33,16 @@ class RegisterBase(ABC):
     parameters of a DRR renderer.
 
     Subclasses must implement `get_initial_pose_estimate` to define how the
-    initial pose is computed before optimization begins.
+    initial pose is computed before optimization begins. Subclasses should be
+    decorated with `@define`.
 
     Args:
         imagepath: Path to the CT image.
         labelpath: Path to the segmentation label map. If None, uses the full image.
         labels: Label indices to include in the DRR. If None, uses all labels.
+        orientation: Patient orientation for the DRR.
         metric: Image similarity metric, either a string key or a custom nn.Module.
+        metric_kwargs: Additional keyword arguments passed to the loss function.
         scales: Downsampling scale(s) for multiscale registration.
         n_itrs: Number of optimization iterations per scale.
         lr_rot: Learning rate for rotation parameters.
@@ -41,23 +52,35 @@ class RegisterBase(ABC):
         threshold: Minimum change to qualify as an improvement.
         max_n_plateaus: Number of learning rate reductions before early stopping.
         device: Torch device to run on.
-        **metric_kwargs: Additional keyword arguments passed to the loss function.
     """
 
-    _registry = {}
+    _registry: ClassVar[dict] = {}
+
+    imagepath: str
+    labelpath: str | None = field(default=None)
+    labels: list[int] | None = field(default=None)
+    orientation: str = field(default="AP")
+
+    metric: str | torch.nn.Module = field(default="gmncc")
+    metric_kwargs: dict = field(factory=dict)
+
+    scales: list[float] = field(default=8.0, converter=_to_list)
+    n_itrs: list[int] = field(default=500, converter=_to_list)
+    lr_rot: float = field(default=1e-2)
+    lr_xyz: float = field(default=1e-0)
+    factor: float = field(default=0.1, alias="lr_reduce_factor")
+    patience: list[int] | int = field(default=5)
+    threshold: float = field(default=1e-4)
+    max_n_plateaus: int = field(default=2)
+    device: str = field(default="cuda")
+
+    subject: Any = field(init=False, repr=False)
+    imagesim: Any = field(init=False, repr=False)
+    max_scale_len: int = field(init=False, repr=False)
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         RegisterBase._registry[cls.__name__.replace("Register", "").lower()] = cls
-
-        base_sig = signature(RegisterBase.__init__)
-        cls.__init__.__signature__ = _merge_signatures(signature(cls.__init__), base_sig)
-
-        if "__call__" in cls.__dict__:
-            cls.__call__.__signature__ = _merge_signatures(
-                signature(cls.__call__),
-                signature(RegisterBase.__call__),
-            )
 
     @classmethod
     def create(cls, method: str, **kwargs):
@@ -65,51 +88,24 @@ class RegisterBase(ABC):
             raise ValueError(f"Unknown method '{method}'. Choose from {list(cls._registry)}")
         return cls._registry[method](**kwargs)
 
-    def __init__(
-        self,
-        imagepath: str,
-        labelpath: str | None = None,
-        labels: list[int] | None = None,
-        orientation: str = "AP",
-        metric: str | torch.nn.Module = "gmncc",
-        scales: list[float] | float = 8.0,
-        n_itrs: list[int] | int = 500,
-        lr_rot: float = 1e-2,
-        lr_xyz: float = 1e-0,
-        lr_reduce_factor: float = 0.1,
-        patience: int = 5,
-        threshold: float = 1e-4,
-        max_n_plateaus: int = 2,
-        device: str = "cuda",
-        **metric_kwargs,
-    ):
-        # Load the subject
-        self.subject = read(imagepath, labelpath, labels, orientation)
+    def __attrs_post_init__(self):
+        # Normalize patience by expanding scalar to a per-scale list
+        if not isinstance(self.patience, Iterable):
+            self.patience = [self.patience] * len(self.scales)
+        else:
+            self.patience = list(self.patience)
 
-        # Load the loss function
-        self.imagesim = load_loss_function(metric, **metric_kwargs).to(device)
-
-        # Save the optimization hyperparameters
-        self.scales = scales if isinstance(scales, Iterable) else [scales]
-        self.n_itrs = n_itrs if isinstance(n_itrs, Iterable) else [n_itrs]
+        # Validate schedule lengths
         if len(self.scales) != len(self.n_itrs):
             raise ValueError("scales and n_itrs must have the same length")
-        self.max_scale_len = max(len(str(s)) for s in self.scales)
-
-        # Optimization hyperparameters
-        self.lr_rot = lr_rot
-        self.lr_xyz = lr_xyz
-        self.factor = lr_reduce_factor
-        self.threshold = threshold
-        self.max_n_plateaus = max_n_plateaus
-
-        self.patience = (
-            patience if isinstance(patience, Iterable) else [patience] * len(self.scales)
-        )
         if len(self.scales) != len(self.patience):
             raise ValueError("scales and patience must have the same length")
 
-        self.device = device
+        self.max_scale_len = max(len(str(s)) for s in self.scales)
+
+        # Load the CT subject and image similarity metric
+        self.subject = read(self.imagepath, self.labelpath, self.labels, self.orientation)
+        self.imagesim = load_loss_function(self.metric, **self.metric_kwargs).to(self.device)
 
     @abstractmethod
     def get_initial_pose_estimate(
@@ -155,17 +151,11 @@ class RegisterBase(ABC):
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
             reverse_x_axis: Flip the image horizontally.
-            savepath: Location to save the registration results and an optimization GIF.
+            savepath: Location to save the registration results.
             **kwargs: Additional keyword arguments passed to `get_initial_pose_estimate`.
 
         Returns:
-            reg: The Registration object with the optimized pose.
-            gt: The preprocessed ground truth X-ray.
-            losses: Loss value at each iteration.
-            scales: Downsampling scale at each iteration.
-            rescale_factors: Rescale factor at each iteration.
-            rots: Rotation parameters at each iteration, shape (N, 3).
-            xyzs: Translation parameters at each iteration, shape (N, 3).
+            A RegistrationResult with the optimized pose and full optimization log.
         """
         # Read and preprocess the ground truth X-ray
         gt, intrinsics, _ = read_xray(filename, crop, subtract_background, linearize, reducefn)
@@ -176,7 +166,7 @@ class RegisterBase(ABC):
         with torch.no_grad():
             init_pose = self.get_initial_pose_estimate(gt, intrinsics, **kwargs).to(self.device)
 
-        # Make the Registration object
+        # Build the DRR renderer and pose model
         drr = DRR(
             subject=self.subject,
             height=height,
@@ -191,7 +181,7 @@ class RegisterBase(ABC):
         log = self._run_multiscale(drr, pose, gt, equalize, crop)
         result = RegistrationResult(drr, pose, init_pose, gt, log)
 
-        # Save and animate the registration results
+        # Optionally save the registration result
         if savepath is not None:
             savepath = Path(savepath) / Path(filename).stem
             result.save(savepath.with_suffix(".pth"))
@@ -207,10 +197,9 @@ class RegisterBase(ABC):
         crop: int,
     ) -> OptimizationLogger:
         """Run coarse-to-fine multiscale optimization."""
-        # Compute the rescale factors for each scale (and append a reset factor)
+        # Compute sequential rescale ratios (with a terminal reset-to-full-res step)
         factors = parse_scales(self.scales + [1], crop, gt.shape[2])
 
-        # Run the optimization and log iterations
         losses, scales, rescale_factors, rots, xyzs = [], [], [], [], []
         for stage, (scale, rescale_factor, n_itrs, patience) in enumerate(
             zip(self.scales, factors, self.n_itrs, self.patience)
@@ -244,10 +233,9 @@ class RegisterBase(ABC):
                 if n_plateaus > self.max_n_plateaus:
                     break
 
-        # Reset the intrinsics to their native resolution
+        # Reset detector to native resolution
         drr.rescale_detector_(factors[-1])
 
-        # Return the optimization log
         rots, xyzs = torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
         return OptimizationLogger(losses, scales, rescale_factors, rots, xyzs)
 
@@ -282,18 +270,3 @@ def parse_scales(scales: list[float], crop: int, height: int) -> list[float]:
     """
     pyramid = [1.0] + [1.0 if x == 1.0 else x * (height / (height + crop)) for x in scales]
     return [pyramid[idx] / pyramid[idx + 1] for idx in range(len(pyramid) - 1)]
-
-
-def _is_var_keyword(p) -> bool:
-    return p.kind == p.VAR_KEYWORD
-
-
-def _merge_signatures(sub_sig: Signature, base_sig: Signature) -> Signature:
-    sub_params = [p for p in sub_sig.parameters.values() if not _is_var_keyword(p)]
-    base_params = [
-        p
-        for p in base_sig.parameters.values()
-        if p.name not in sub_sig.parameters and not _is_var_keyword(p)
-    ]
-    var_keyword = [p for p in base_sig.parameters.values() if _is_var_keyword(p)]
-    return sub_sig.replace(parameters=sub_params + base_params + var_keyword)
