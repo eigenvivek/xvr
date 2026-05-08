@@ -2,9 +2,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import torch
+from diffdrr.drr import DRR
+from diffdrr.pose import RigidTransform
 from jaxtyping import Float
 
-from .models import Registration
+from .models import Pose
 
 
 @dataclass
@@ -29,11 +31,15 @@ class RegistrationResult:
 
     def __init__(
         self,
-        reg: Registration,
+        drr: DRR,
+        pose: Pose,
+        init_pose: RigidTransform,
         gt: Float[torch.Tensor, "1 1 H W"],
         log: OptimizationLogger,
     ) -> None:
-        self.reg = reg
+        self.drr = drr
+        self.init_pose = init_pose
+        self.final_pose = pose()
         self.gt = gt
         self.log = log
 
@@ -48,13 +54,13 @@ class RegistrationResult:
         torch.save(
             {
                 "reg": {
-                    "rot": self.reg._rot.detach().cpu(),
-                    "xyz": self.reg._xyz.detach().cpu(),
-                    "rt_inv": self.reg.rt_inv.cpu(),
-                    "k_inv": self.reg.k_inv.cpu(),
-                    "sdd": self.reg.sdd.cpu(),
-                    "height": self.reg.height,
-                    "width": self.reg.width,
+                    "rot": self.pose._rot.detach().cpu(),
+                    "xyz": self.pose._xyz.detach().cpu(),
+                    "init_pose": self.init_pose.matrix.cpu(),
+                    "final_pose": self.pose.pose.matrix.cpu(),
+                    "sdd": self.drr.detector.sdd,
+                    "height": self.drr.detector.height,
+                    "width": self.drr.detector.width,
                 },
                 "gt": self.gt.cpu(),
                 "log": {

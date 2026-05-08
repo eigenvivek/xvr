@@ -14,7 +14,7 @@ from ..io import Intrinsics, read_xray
 from ..utils import XrayTransforms
 from .logging import OptimizationLogger, RegistrationResult
 from .loss import load_loss_function
-from .models import GlobalRegistration, LocalRegistration
+from .models import Pose
 
 
 class RegisterBase(ABC):
@@ -139,7 +139,6 @@ class RegisterBase(ABC):
         equalize: bool = False,
         reducefn: str | int | Callable = "max",
         reverse_x_axis: bool = False,
-        optmode: str = "global",
         savepath: Path | str | None = None,
         **kwargs,
     ) -> RegistrationResult:
@@ -156,7 +155,6 @@ class RegisterBase(ABC):
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
             reverse_x_axis: Flip the image horizontally.
-            optmode: Either 'global' (exponential coordinates) or 'local' (Riemannian).
             savepath: Location to save the registration results and an optimization GIF.
             **kwargs: Additional keyword arguments passed to `get_initial_pose_estimate`.
 
@@ -187,16 +185,11 @@ class RegisterBase(ABC):
             renderer="trilinear",
             **intrinsics,
         ).to(self.device)
-        if optmode == "global":
-            reg = GlobalRegistration(drr, init_pose)
-        elif optmode == "local":
-            reg = LocalRegistration(drr, init_pose)
-        else:
-            raise ValueError(f"Unrecognized optimization mode {optmode}. Use 'local' or 'global'.")
+        pose = Pose(init_pose).to(self.device)
 
         # Perform multiscale registration
-        log = self._run_multiscale(reg, gt, equalize, crop)
-        result = RegistrationResult(reg, gt, log)
+        log = self._run_multiscale(drr, pose, gt, equalize, crop)
+        result = RegistrationResult(drr, pose, init_pose, gt, log)
 
         # Save and animate the registration results
         if savepath is not None:
@@ -207,7 +200,8 @@ class RegisterBase(ABC):
 
     def _run_multiscale(
         self,
-        reg: LocalRegistration | GlobalRegistration,
+        drr: DRR,
+        pose: Pose,
         gt: Float[torch.Tensor, "1 1 H W"],
         equalize: bool,
         crop: int,
@@ -222,26 +216,26 @@ class RegisterBase(ABC):
             zip(self.scales, factors, self.n_itrs, self.patience)
         ):
             pbar = tqdm(range(n_itrs), ncols=100, desc=f"Scale {scale:>{self.max_scale_len}}")
-            reg.rescale_(rescale_factor)
-            optimizer, scheduler, transform = self._setup_stage(reg, stage, patience, equalize)
+            drr.rescale_detector_(rescale_factor)
+            optimizer, scheduler, transform = self._setup_stage(
+                drr, pose, stage, patience, equalize
+            )
             current_lr, n_plateaus = torch.inf, 0
             true = transform(gt)
             for _ in pbar:
                 optimizer.zero_grad()
-                pred = transform(reg())
+                pred = transform(drr(pose()))
                 loss = self.imagesim(true, pred)
                 loss.backward()
                 optimizer.step()
-                if isinstance(reg, LocalRegistration):
-                    reg.retract()
                 scheduler.step(loss.detach())
 
                 pbar.set_postfix_str(f"loss = {loss.item():5.3f}")
                 losses.append(loss.item())
                 scales.append(scale)
                 rescale_factors.append(rescale_factor)
-                rots.append(reg._rot.detach().clone())
-                xyzs.append(reg._xyz.detach().clone())
+                rots.append(pose._rot.detach().clone())
+                xyzs.append(pose._xyz.detach().clone())
 
                 lr = min(scheduler.get_last_lr())
                 if lr < current_lr:
@@ -251,28 +245,26 @@ class RegisterBase(ABC):
                     break
 
         # Reset the intrinsics to their native resolution
-        reg.rescale_(factors[-1])
+        drr.rescale_detector_(factors[-1])
 
         # Return the optimization log
         rots, xyzs = torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
         return OptimizationLogger(losses, scales, rescale_factors, rots, xyzs)
 
-    def _setup_stage(
-        self, reg: LocalRegistration | GlobalRegistration, stage: int, patience: int, equalize: bool
-    ):
+    def _setup_stage(self, drr: DRR, pose: Pose, stage: int, patience: int, equalize: bool):
         """Configure the optimizer, scheduler, and transforms for a single scale stage."""
         step_size_scalar = 2**stage
         optimizer = torch.optim.Adam(
             [
-                {"params": [reg._rot], "lr": self.lr_rot / step_size_scalar},
-                {"params": [reg._xyz], "lr": self.lr_xyz / step_size_scalar},
+                {"params": [pose._rot], "lr": self.lr_rot / step_size_scalar},
+                {"params": [pose._xyz], "lr": self.lr_xyz / step_size_scalar},
             ],
             maximize=True,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, "max", self.factor, patience, self.threshold
         )
-        transform = XrayTransforms(reg.height, reg.width, equalize=equalize)
+        transform = XrayTransforms(drr.detector.height, drr.detector.width, equalize=equalize)
         return optimizer, scheduler, transform
 
 
