@@ -10,7 +10,7 @@ from .base import RegisterBase
 from .logging import RegistrationResult
 
 
-@attrs.define
+@attrs.define(slots=False)
 class RegisterFixed(RegisterBase):
     """Register using a manually specified initial pose.
 
@@ -62,7 +62,7 @@ class RegisterFixed(RegisterBase):
         )
 
 
-@attrs.define
+@attrs.define(slots=False)
 class RegisterModel(RegisterBase):
     """Register using a neural network to predict the initial pose.
 
@@ -78,9 +78,10 @@ class RegisterModel(RegisterBase):
     config: dict = attrs.field(init=False, repr=False)
 
     def __attrs_post_init__(self):
-        super().__attrs_post_init__()
         model, self.config = load_model(self.ckpt)
         self.model = model.to(self.device)
+        self.orientation = self.config["orientation"]
+        super().__attrs_post_init__()
 
     def get_initial_pose_estimate(
         self,
