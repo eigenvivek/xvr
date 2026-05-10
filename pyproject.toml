@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-xvr = "xvr.cli:cli"
+xvr = "xvr.cli:main"
 
 [project.urls]
 Repository = "https://github.com/eigenvivek/xvr"
@@ -34,6 +34,10 @@ lint.ignore = [
     "F821",  # Forward annotation false positive from jaxtyping
 ]
 src = ["src"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/xvr/cli/configs/register.py" = ["E501"]
+"src/xvr/cli/configs/train.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["xvr"]
