@@ -20,7 +20,7 @@ class Trainer:
     def __init__(
         self,
         volpath: str,
-        maskpath: str,
+        maskpath: str | None,
         outpath: str,
         alphamin: float,
         alphamax: float,
