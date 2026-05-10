@@ -1,10 +1,11 @@
+from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from cyclopts import App, Group, Parameter
 
-from .configs.register import _DATA, BaseParams, RunParams
+from .configs.register import BaseParams, RunParams
 
 register = App(name="register", help="Use gradient-based optimization to register XRAY to a CT/MR.")
 
@@ -14,34 +15,51 @@ _MODEL = Group("MODEL", sort_key=1)
 
 @register.command
 def model(
-    files: Annotated[list[Path], Parameter(help="X-ray images to register")],
     ckpt: Annotated[str, Parameter(help="Path to model checkpoint", group=_MODEL)],
-    imagepath: Annotated[str, Parameter(help="Path to the CT image", group=_DATA)],
     *,
-    base: BaseParams = BaseParams(),
+    base: BaseParams,
     run: RunParams = RunParams(),
-):
+) -> None:
     """Register using a neural network initial pose estimate."""
     from ..register import RegisterModel
 
-    reg = RegisterModel(ckpt=ckpt, imagepath=imagepath, **asdict(base))
-    for f in files:
-        reg(str(f), **asdict(run))
+    _run_registration(RegisterModel, base, run, init_kwargs={"ckpt": ckpt})
 
 
 @register.command
 def fixed(
-    files: Annotated[list[Path], Parameter(help="X-ray images to register")],
-    imagepath: Annotated[str, Parameter(help="Path to the CT image", group=_DATA)],
     rot: Annotated[tuple[float, float, float], Parameter(help="Rotations in degrees", group=_POSE)],
     xyz: Annotated[tuple[float, float, float], Parameter(help="Translations in mm", group=_POSE)],
     *,
-    base: BaseParams = BaseParams(),
+    base: BaseParams,
     run: RunParams = RunParams(),
-):
+) -> None:
     """Register using a fixed initial pose."""
     from ..register import RegisterFixed
 
-    reg = RegisterFixed(imagepath=imagepath, **asdict(base))
+    _run_registration(RegisterFixed, base, run, run_kwargs={"rot": rot, "xyz": xyz})
+
+
+def _run_registration(
+    registrator: Callable[..., Any],
+    base: BaseParams,
+    run: RunParams,
+    init_kwargs: dict[str, Any] = {},
+    run_kwargs: dict[str, Any] = {},
+) -> None:
+    """Helper to run registration on multiple files."""
+    base_dict = asdict(base)
+    files = _expand_files(base_dict.pop("files"))
+
+    reg = registrator(**base_dict, **init_kwargs)
     for f in files:
-        reg(str(f), **asdict(run), rot=rot, xyz=xyz)
+        print(f"Registering {f}")
+        reg(str(f), **asdict(run), **run_kwargs)
+
+
+def _expand_files(files: list[Path]) -> list[Path]:
+    """Expand any folders into their *.dcm contents."""
+    out: list[Path] = []
+    for f in files:
+        out.extend(sorted(f.glob("*.dcm")) if f.is_dir() else [f])
+    return out
