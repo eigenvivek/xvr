@@ -24,7 +24,9 @@ class RegistrationResult:
     """The result of a registration run.
 
     Args:
-        reg: The registration module with optimized pose.
+        drr: The DRR renderer with detector geometry.
+        pose: The optimized pose model.
+        init_pose: The initial pose estimate.
         gt: The preprocessed ground truth X-ray.
         log: The optimization log.
     """
@@ -35,7 +37,7 @@ class RegistrationResult:
         pose: Pose,
         init_pose: RigidTransform,
         gt: Float[torch.Tensor, "1 1 H W"],
-        log: OptimizationLogger,
+        log: OptimizationLogger | None = None,
     ) -> None:
         self.drr = drr
         self.init_pose = init_pose
@@ -49,50 +51,31 @@ class RegistrationResult:
         Args:
             path: Output file path.
         """
+        if log is not None:
+            log = {
+                "losses": self.log.losses,
+                "scales": self.log.scales,
+                "rescale_factors": self.log.rescale_factors,
+                "rots": self.log.rots.cpu(),
+                "xyzs": self.log.xyzs.cpu(),
+            }
+
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
             {
-                "reg": {
-                    "rot": self.pose._rot.detach().cpu(),
-                    "xyz": self.pose._xyz.detach().cpu(),
-                    "init_pose": self.init_pose.matrix.cpu(),
-                    "final_pose": self.pose.pose.matrix.cpu(),
+                "detector": {
                     "sdd": self.drr.detector.sdd,
                     "height": self.drr.detector.height,
                     "width": self.drr.detector.width,
+                    "delx": self.drr.detector.delx,
+                    "dely": self.drr.detector.dely,
+                    "reverse_x_axis": self.drr.detector.reverse_x_axis,
                 },
+                "init_pose": self.init_pose.matrix.cpu(),
+                "final_pose": self.final_pose.matrix.cpu(),
                 "gt": self.gt.cpu(),
-                "log": {
-                    "losses": self.log.losses,
-                    "scales": self.log.scales,
-                    "rescale_factors": self.log.rescale_factors,
-                    "rots": self.log.rots.cpu(),
-                    "xyzs": self.log.xyzs.cpu(),
-                },
+                "log": log,
             },
             path,
         )
-
-    @classmethod
-    def load(cls, path: str | Path, device: str | torch.device = "cpu") -> "RegistrationResult":
-        state = torch.load(path, map_location=device)
-        reg = Registration(
-            subject=subject,
-            rt_inv=state["reg"]["rt_inv"],
-            k_inv=state["reg"]["k_inv"],
-            sdd=state["reg"]["sdd"],
-            height=state["reg"]["height"],
-            width=state["reg"]["width"],
-        )
-        with torch.no_grad():
-            reg._rot.copy_(state["reg"]["rot"])
-            reg._xyz.copy_(state["reg"]["xyz"])
-        log = OptimizationLogger(
-            losses=state["log"]["losses"],
-            scales=state["log"]["scales"],
-            rescale_factors=state["log"]["rescale_factors"],
-            rots=state["log"]["rots"],
-            xyzs=state["log"]["xyzs"],
-        )
-        return cls(reg=reg, gt=state["gt"], log=log)

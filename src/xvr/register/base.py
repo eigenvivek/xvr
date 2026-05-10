@@ -33,8 +33,7 @@ class RegisterBase(ABC):
     parameters of a DRR renderer.
 
     Subclasses must implement `get_initial_pose_estimate` to define how the
-    initial pose is computed before optimization begins. Subclasses should be
-    decorated with `@define`.
+    initial pose is computed before optimization begins.
 
     Args:
         imagepath: Path to the CT image.
@@ -80,18 +79,8 @@ class RegisterBase(ABC):
     imagesim: Any = field(init=False, repr=False)
     max_scale_len: int = field(init=False, repr=False)
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        RegisterBase._registry[cls.__name__.replace("Register", "").lower()] = cls
-
-    @classmethod
-    def create(cls, method: str, **kwargs):
-        if method not in cls._registry:
-            raise ValueError(f"Unknown method '{method}'. Choose from {list(cls._registry)}")
-        return cls._registry[method](**kwargs)
-
     def __attrs_post_init__(self):
-        # Normalize patience by expanding scalars to a per-scale list
+        # Make sure patience is defined for each scale
         if not isinstance(self.patience, Iterable):
             self.patience = [self.patience] * len(self.scales)
         else:
@@ -102,7 +91,6 @@ class RegisterBase(ABC):
             raise ValueError("scales and n_itrs must have the same length")
         if len(self.scales) != len(self.patience):
             raise ValueError("scales and patience must have the same length")
-
         self.max_scale_len = max(len(str(s)) for s in self.scales)
 
         # Load the CT subject and image similarity metric
@@ -136,6 +124,7 @@ class RegisterBase(ABC):
         subtract_background: bool = False,
         equalize: bool = False,
         reducefn: str | int | Callable = "max",
+        init_only: bool = False,
         savepath: Path | str | None = None,
         **kwargs,
     ) -> RegistrationResult:
@@ -151,6 +140,7 @@ class RegisterBase(ABC):
             subtract_background: Subtract background from the image.
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
+            init_only: Return initial pose estimate result.
             savepath: Location to save the registration results.
             **kwargs: Additional keyword arguments passed to `get_initial_pose_estimate`.
 
@@ -177,11 +167,13 @@ class RegisterBase(ABC):
         ).to(self.device)
         pose = Pose(init_pose).to(self.device)
 
-        # Perform multiscale registration
-        log = self._run_multiscale(drr, pose, gt, equalize, crop)
-        result = RegistrationResult(drr, pose, init_pose, gt, log)
+        # Optionally perform multiscale registration
+        log = None
+        if not init_only:
+            log = self._run_multiscale(drr, pose, gt, equalize, crop)
 
-        # Optionally save the registration result
+        # Save the registration results
+        result = RegistrationResult(drr, pose, init_pose, gt, log)
         if savepath is not None:
             savepath = Path(savepath) / Path(filename).stem
             result.save(savepath.with_suffix(".pth"))
