@@ -124,6 +124,7 @@ class RegisterBase(ABC):
         subtract_background: bool = False,
         equalize: bool = False,
         reducefn: str | int | Callable = "max",
+        init_only: bool = False,
         savepath: Path | str | None = None,
         **kwargs,
     ) -> RegistrationResult:
@@ -139,6 +140,7 @@ class RegisterBase(ABC):
             subtract_background: Subtract background from the image.
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
+            init_only: Return initial pose estimate result.
             savepath: Location to save the registration results.
             **kwargs: Additional keyword arguments passed to `get_initial_pose_estimate`.
 
@@ -165,11 +167,13 @@ class RegisterBase(ABC):
         ).to(self.device)
         pose = Pose(init_pose).to(self.device)
 
-        # Perform multiscale registration
-        log = self._run_multiscale(drr, pose, gt, equalize, crop)
-        result = RegistrationResult(drr, pose, init_pose, gt, log)
+        # Optionally perform multiscale registration
+        log = None
+        if not init_only:
+            log = self._run_multiscale(drr, pose, gt, equalize, crop)
 
-        # Optionally save the registration result
+        # Save the registration results
+        result = RegistrationResult(drr, pose, init_pose, gt, log)
         if savepath is not None:
             savepath = Path(savepath) / Path(filename).stem
             result.save(savepath.with_suffix(".pth"))

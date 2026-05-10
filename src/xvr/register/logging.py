@@ -37,7 +37,7 @@ class RegistrationResult:
         pose: Pose,
         init_pose: RigidTransform,
         gt: Float[torch.Tensor, "1 1 H W"],
-        log: OptimizationLogger,
+        log: OptimizationLogger | None = None,
     ) -> None:
         self.drr = drr
         self.init_pose = init_pose
@@ -51,6 +51,15 @@ class RegistrationResult:
         Args:
             path: Output file path.
         """
+        if log is not None:
+            log = {
+                "losses": self.log.losses,
+                "scales": self.log.scales,
+                "rescale_factors": self.log.rescale_factors,
+                "rots": self.log.rots.cpu(),
+                "xyzs": self.log.xyzs.cpu(),
+            }
+
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
@@ -66,13 +75,7 @@ class RegistrationResult:
                 "init_pose": self.init_pose.matrix.cpu(),
                 "final_pose": self.final_pose.matrix.cpu(),
                 "gt": self.gt.cpu(),
-                "log": {
-                    "losses": self.log.losses,
-                    "scales": self.log.scales,
-                    "rescale_factors": self.log.rescale_factors,
-                    "rots": self.log.rots.cpu(),
-                    "xyzs": self.log.xyzs.cpu(),
-                },
+                "log": log,
             },
             path,
         )
