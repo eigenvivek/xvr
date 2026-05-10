@@ -42,4 +42,4 @@ class RunParams:
     subtract_background: Annotated[bool, Parameter(help="Subtract background from the image", group=_PREPROCESSING)] = False
     equalize: Annotated[bool, Parameter(help="Apply histogram equalization during optimization", group=_PREPROCESSING)] = False
     reducefn: Annotated[str, Parameter(help="Reduction function for multi-frame images", group=_PREPROCESSING)] = "max"
-    savepath: Annotated[str | None, Parameter(help="Location to save the registration results and an optimization GIF", group=_MISC)] = None
+    savepath: Annotated[str | None, Parameter(help="Location to save the registration results", group=_MISC)] = None
