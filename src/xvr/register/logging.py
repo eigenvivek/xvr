@@ -24,7 +24,9 @@ class RegistrationResult:
     """The result of a registration run.
 
     Args:
-        reg: The registration module with optimized pose.
+        drr: The DRR renderer with detector geometry.
+        pose: The optimized pose model.
+        init_pose: The initial pose estimate.
         gt: The preprocessed ground truth X-ray.
         log: The optimization log.
     """
@@ -53,15 +55,16 @@ class RegistrationResult:
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
             {
-                "reg": {
-                    "rot": self.pose._rot.detach().cpu(),
-                    "xyz": self.pose._xyz.detach().cpu(),
-                    "init_pose": self.init_pose.matrix.cpu(),
-                    "final_pose": self.pose.pose.matrix.cpu(),
+                "detector": {
                     "sdd": self.drr.detector.sdd,
                     "height": self.drr.detector.height,
                     "width": self.drr.detector.width,
+                    "delx": self.drr.detector.delx,
+                    "dely": self.drr.detector.dely,
+                    "reverse_x_axis": self.drr.detector.reverse_x_axis,
                 },
+                "init_pose": self.init_pose.matrix.cpu(),
+                "final_pose": self.final_pose.matrix.cpu(),
                 "gt": self.gt.cpu(),
                 "log": {
                     "losses": self.log.losses,
@@ -73,26 +76,3 @@ class RegistrationResult:
             },
             path,
         )
-
-    @classmethod
-    def load(cls, path: str | Path, device: str | torch.device = "cpu") -> "RegistrationResult":
-        state = torch.load(path, map_location=device)
-        reg = Registration(
-            subject=subject,
-            rt_inv=state["reg"]["rt_inv"],
-            k_inv=state["reg"]["k_inv"],
-            sdd=state["reg"]["sdd"],
-            height=state["reg"]["height"],
-            width=state["reg"]["width"],
-        )
-        with torch.no_grad():
-            reg._rot.copy_(state["reg"]["rot"])
-            reg._xyz.copy_(state["reg"]["xyz"])
-        log = OptimizationLogger(
-            losses=state["log"]["losses"],
-            scales=state["log"]["scales"],
-            rescale_factors=state["log"]["rescale_factors"],
-            rots=state["log"]["rots"],
-            xyzs=state["log"]["xyzs"],
-        )
-        return cls(reg=reg, gt=state["gt"], log=log)
