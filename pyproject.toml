@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 dependencies = [
     "antspyx>=0.5.4",
     "attrs>=25.0.0",
-    "click>=8.1.8",
+    "cyclopts>=4.6.0",
     "diffdrr>=0.6.0",
     "jaxtyping>=0.3.0",
     "pydicom[pixeldata]>=3.0.0",
