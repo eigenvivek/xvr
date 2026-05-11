@@ -1,4 +1,4 @@
-from .ants import ants_rigid_register, get_4x4
 from .preprocess import Standardize, XrayTransforms
+from .transforms import read_rigid_transform
 
-__all__ = ["ants_rigid_register", "get_4x4", "Standardize", "XrayTransforms"]
+__all__ = ["read_rigid_transform", "Standardize", "XrayTransforms"]
