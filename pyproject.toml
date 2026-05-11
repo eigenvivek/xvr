@@ -9,7 +9,6 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "antspyx>=0.5.4",
     "attrs>=25.0.0",
     "cyclopts>=4.6.0",
     "diffdrr>=0.6.0",
