@@ -23,6 +23,7 @@ class RegisterFixed(RegisterBase):
         _intrinsics,
         rot: tuple[float, float, float],
         xyz: tuple[float, float, float],
+        eps: float = 1e-8,
     ) -> RigidTransform:
         """Compute the initial pose from user-provided rotation and translation.
 
@@ -36,8 +37,8 @@ class RegisterFixed(RegisterBase):
             A 4x4 rigid transformation matrix.
         """
         return convert(
-            torch.tensor([rot], dtype=torch.float32, device=self.device),
-            torch.tensor([xyz], dtype=torch.float32, device=self.device),
+            torch.tensor([rot], dtype=torch.float32, device=self.device) + eps,
+            torch.tensor([xyz], dtype=torch.float32, device=self.device) + eps,
             parameterization="euler_angles",
             convention="ZXY",
             degrees=True,
