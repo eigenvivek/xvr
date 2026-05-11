@@ -14,6 +14,7 @@ from ..io import Intrinsics, read_xray
 from ..utils import XrayTransforms
 from .logging import OptimizationLogger, RegistrationResult
 from .loss import load_loss_function
+from .losses import mind_ssc_2d
 from .models import Pose
 
 
@@ -123,6 +124,9 @@ class RegisterBase(ABC):
         linearize: bool = True,
         subtract_background: bool = False,
         equalize: bool = False,
+        mind_weight: float | None = None,
+        mind_radius: int = 1,
+        mind_dilation: int = 2,
         reducefn: str | int | Callable = "max",
         init_only: bool = False,
         savepath: Path | str | None = None,
@@ -139,6 +143,9 @@ class RegisterBase(ABC):
             linearize: Convert image to linear attenuation values.
             subtract_background: Subtract background from the image.
             equalize: Apply histogram equalization during optimization.
+            mind_weight: Optional weight factor for MIND-SSC loss.
+            mind_radius: Radius for neighbor sampling in MIND-SCC.
+            mind_dilation: Dilation factor for sampling pattern in MIND-SCC.
             reducefn: Reduction function for multi-frame images.
             init_only: Return initial pose estimate result.
             savepath: Location to save the registration results.
@@ -170,7 +177,9 @@ class RegisterBase(ABC):
         # Optionally perform multiscale registration
         log = None
         if not init_only:
-            log = self._run_multiscale(drr, pose, gt, equalize, crop)
+            log = self._run_multiscale(
+                drr, pose, gt, crop, equalize, mind_weight, mind_radius, mind_dilation
+            )
 
         # Save the registration results
         result = RegistrationResult(drr, pose, init_pose, gt, log)
@@ -185,8 +194,11 @@ class RegisterBase(ABC):
         drr: DRR,
         pose: Pose,
         gt: Float[torch.Tensor, "1 1 H W"],
-        equalize: bool,
         crop: int,
+        equalize: bool,
+        mind_weight: float | None,
+        mind_radius: int,
+        mind_dilation: int,
     ) -> OptimizationLogger:
         """Run coarse-to-fine multiscale optimization."""
         # Compute sequential rescale ratios (with a terminal reset-to-full-res step)
@@ -207,6 +219,11 @@ class RegisterBase(ABC):
                 optimizer.zero_grad()
                 pred = transform(drr(pose()))
                 loss = self.imagesim(true, pred)
+                if mind_weight is not None:
+                    ttrue = mind_ssc_2d(true, mind_radius, mind_dilation).permute(1, 0, 2, 3)
+                    ppred = mind_ssc_2d(pred, mind_radius, mind_dilation).permute(1, 0, 2, 3)
+                    loss = loss + mind_weight * self.imagesim(ttrue, ppred).mean()
+                    loss = loss / (1 + mind_weight)
                 loss.backward()
                 optimizer.step()
                 scheduler.step(loss.detach())

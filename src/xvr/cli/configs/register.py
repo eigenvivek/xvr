@@ -44,6 +44,9 @@ class RunParams:
     linearize: Annotated[bool, Parameter(help="Convert image to linear attenuation values", group=_PREPROCESSING)] = True
     subtract_background: Annotated[bool, Parameter(help="Subtract background from the image", group=_PREPROCESSING)] = False
     equalize: Annotated[bool, Parameter(help="Apply histogram equalization during optimization", group=_PREPROCESSING)] = False
+    mind_weight: Annotated[float | None, Parameter(help="Optional weight factor for MIND-SSC loss", group=_OPTIMIZER)] = None
+    mind_radius: Annotated[int, Parameter(help="Radius for neighbor sampling in MIND-SCC", group=_OPTIMIZER)] = 1
+    mind_dilation: Annotated[int, Parameter(help="Dilation factor for sampling pattern in MIND-SCC", group=_OPTIMIZER)] = 2
     reducefn: Annotated[str, Parameter(help="Reduction function for multi-frame images", group=_PREPROCESSING)] = "max"
     init_only: Annotated[bool, Parameter(help="Return initial pose estimate result", group=_OPTIMIZER)] = False
     savepath: Annotated[str | None, Parameter(help="Location to save the registration results", group=_MISC)] = None
