@@ -6,7 +6,7 @@ from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
 from jaxtyping import Float
 
-from .models import Pose
+from .pose import Pose
 
 
 @dataclass
