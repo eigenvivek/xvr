@@ -169,7 +169,8 @@ class Trainer:
         )
 
         # Initialize the loss function
-        self.lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice, weight_haus)
+        lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice, weight_haus)
+        self.lossfn = torch.compile(lossfn)
 
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
