@@ -60,6 +60,7 @@ class TrainParams:
     weight_ncc: Annotated[float, Parameter(help="Weight on mNCC loss term", group=_OPTIMIZER)] = 1e0
     weight_geo: Annotated[float, Parameter(help="Weight on geodesic loss term", group=_OPTIMIZER)] = 1e-2
     weight_dice: Annotated[float, Parameter(help="Weight on Dice loss term", group=_OPTIMIZER)] = 1e0
+    weight_haus: Annotated[float, Parameter(help="Weight on Hausdorff loss term", group=_OPTIMIZER)] = 1e-1
     n_total_itrs: Annotated[int, Parameter(help="Number of iterations for training the model", group=_OPTIMIZER)] = 1_000_000
     n_warmup_itrs: Annotated[int, Parameter(help="Number of iterations for warming up the learning rate", group=_OPTIMIZER)] = 1_000
     n_grad_accum_itrs: Annotated[int, Parameter(help="Number of iterations for gradient accumulation", group=_OPTIMIZER)] = 4
