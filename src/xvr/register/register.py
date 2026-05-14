@@ -14,6 +14,7 @@ from .context import XrayContext
 from .initializers import PoseInitializer
 from .logging import OptimizationLogger, RegistrationResult
 from .loss import load_loss_function
+from .plot import gif, plot
 from .pose import Pose
 
 
@@ -166,6 +167,8 @@ class Register:
         if savepath is not None:
             savepath = Path(savepath) / Path(filename).stem
             result.save(savepath.with_suffix(".pth"))
+            plot(result).save(savepath.with_suffix(".png"))
+            gif(result).save(savepath.with_suffix(".gif"))
 
         return result
 
