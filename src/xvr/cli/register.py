@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated, Any
@@ -21,9 +20,10 @@ def model(
     run: RunParams = RunParams(),
 ) -> None:
     """Register using a neural network initial pose estimate."""
-    from ..register import RegisterModel
+    from ..register import ModelPose
 
-    _run_registration(RegisterModel, base, run, init_kwargs={"ckpt": ckpt})
+    initializer = ModelPose(ckpt=ckpt, device=base.device)
+    _run_registration(initializer, base, run)
 
 
 @register.command
@@ -31,30 +31,66 @@ def fixed(
     rot: Annotated[tuple[float, float, float], Parameter(help="Rotations in degrees", group=_POSE)],
     xyz: Annotated[tuple[float, float, float], Parameter(help="Translations in mm", group=_POSE)],
     *,
+    orientation: Annotated[
+        str, Parameter(help="Patient orientation for the DRR", group=_POSE)
+    ] = "AP",
+    reverse_x_axis: Annotated[
+        bool, Parameter(help="Horizontally flip the rendered DRRs", group=_POSE)
+    ] = False,
     base: BaseParams,
     run: RunParams = RunParams(),
 ) -> None:
     """Register using a fixed initial pose."""
-    from ..register import RegisterFixed
+    from ..register import FixedPose
 
-    _run_registration(RegisterFixed, base, run, run_kwargs={"rot": rot, "xyz": xyz})
+    initializer = FixedPose(
+        rot=rot,
+        xyz=xyz,
+        orientation=orientation,
+        reverse_x_axis=reverse_x_axis,
+        device=base.device,
+    )
+    _run_registration(initializer, base, run)
+
+
+@register.command
+def dicom(
+    *,
+    orientation: Annotated[
+        str, Parameter(help="Patient orientation for the DRR", group=_POSE)
+    ] = "AP",
+    reverse_x_axis: Annotated[
+        bool, Parameter(help="Horizontally flip the rendered DRRs", group=_POSE)
+    ] = False,
+    base: BaseParams,
+    run: RunParams = RunParams(),
+) -> None:
+    """Register using an initial pose parsed from DICOM metadata."""
+    from ..register import DicomPose
+
+    initializer = DicomPose(
+        orientation=orientation,
+        reverse_x_axis=reverse_x_axis,
+        device=base.device,
+    )
+    _run_registration(initializer, base, run)
 
 
 def _run_registration(
-    registrator: Callable[..., Any],
+    initializer: Any,
     base: BaseParams,
     run: RunParams,
-    init_kwargs: dict[str, Any] = {},
-    run_kwargs: dict[str, Any] = {},
 ) -> None:
     """Helper to run registration on multiple files."""
+    from ..register import Register
+
     base_dict = asdict(base)
     files = _expand_files(base_dict.pop("files"))
 
-    reg = registrator(**base_dict, **init_kwargs)
+    reg = Register(initializer=initializer, **base_dict)
     for f in files:
         print(f"Registering {f}")
-        reg(str(f), **asdict(run), **run_kwargs)
+        reg(str(f), **asdict(run))
 
 
 def _expand_files(files: list[Path]) -> list[Path]:
