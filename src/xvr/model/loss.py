@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import torch
+import torch.nn.functional as F
 from diffdrr.metrics import DoubleGeodesicSE3
 
 from ..register.losses import GradientMultiscaleNormalizedCrossCorrelation2d
@@ -108,15 +109,13 @@ class HausdorffLoss(torch.nn.Module):
         self.num_iters = num_iters
 
     @torch.no_grad()
-    def _distance_transform(self, mask: torch.Tensor) -> torch.Tensor:
+    def _distance_transform(self, mask):
         pad = self.kernel_size // 2
-        dt = torch.zeros_like(mask)
         eroded = mask
+        dt = torch.zeros_like(mask)
         for _ in range(self.num_iters):
-            eroded = -torch.nn.functional.max_pool2d(
-                -eroded, self.kernel_size, stride=1, padding=pad
-            )
-            dt = dt + eroded
+            eroded = -F.max_pool2d(-eroded, self.kernel_size, 1, pad)
+            dt.add_(eroded)
         return dt
 
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
