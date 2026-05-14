@@ -51,7 +51,7 @@ class RegistrationResult:
         Args:
             path: Output file path.
         """
-        if log is not None:
+        if self.log is not None:
             log = {
                 "losses": self.log.losses,
                 "scales": self.log.scales,
