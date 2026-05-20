@@ -204,7 +204,7 @@ class Trainer:
         self.mask_threshold = mask_threshold
         self.outpath = outpath
 
-    def train(self, run=None):
+    def train(self, run: wandb.Run = None):
         pbar = tqdm(
             range(self.start_itr, self.n_total_itrs),
             initial=self.start_itr,
@@ -360,11 +360,12 @@ class Trainer:
                 mode="nearest",
                 align_corners=False,
             )[:, 0, ..., 0].long()  # [B, n_samples, N]
+            C = int(seg.max() + 1)
         else:
             idx = torch.zeros_like(img).long()
+            C = 1
 
         # Render out the image
-        C = int(seg.max() + 1)
         out = torch.zeros(B, C, idx.shape[-1], device=img.device, dtype=img.dtype)
         out.scatter_add_(1, idx, img)
         img = out.reshape(B, C, self.drr.detector.height, self.drr.detector.width)
