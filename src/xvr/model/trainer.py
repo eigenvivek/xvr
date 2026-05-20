@@ -50,6 +50,7 @@ class Trainer:
         weight_ncc: float = 1e0,
         weight_geo: float = 1e-2,
         weight_dice: float = 1e0,
+        weight_haus: float = 1e-1,
         batch_size: int = 116,
         n_total_itrs: int = 1_000_000,
         n_warmup_itrs: int = 1_000,
@@ -101,6 +102,7 @@ class Trainer:
             weight_ncc: Weight on mNCC loss term.
             weight_geo: Weight on geodesic loss term.
             weight_dice: Weight on Dice loss term.
+            weight_haus: Weight on Haussdorff loss term.
             batch_size: Number of DRRs per batch.
             n_total_itrs: Number of iterations for training the model.
             n_warmup_itrs: Number of iterations for warming up the learning rate.
@@ -167,7 +169,8 @@ class Trainer:
         )
 
         # Initialize the loss function
-        self.lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice)
+        lossfn = PoseRegressionLoss(sdd, weight_ncc, weight_geo, weight_dice, weight_haus)
+        self.lossfn = torch.compile(lossfn)
 
         # Set up augmentations
         self.contrast_distribution = torch.distributions.Uniform(1.0, 10.0)
@@ -259,11 +262,9 @@ class Trainer:
 
         # Compute the loss
         img, pred_img = self.transforms(img), self.transforms(pred_img)
-        loss, mncc, dgeo, rgeo, tgeo, dice = self.lossfn(
-            img, mask, pose, pred_img, pred_mask, pred_pose
-        )
+        metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
         n_kept = keep.sum().clamp(min=1)
-        loss = (loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
+        loss = (metrics.loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
 
         # Optimize the model
         loss.mean().backward()
@@ -275,11 +276,12 @@ class Trainer:
 
         # Return losses and imgs
         log = {
-            "mncc": mncc.mean().item(),
-            "dgeo": dgeo.mean().item(),
-            "rgeo": rgeo.mean().item(),
-            "tgeo": tgeo.mean().item(),
-            "dice": dice.mean().item(),
+            "mncc": metrics.mncc.mean().item(),
+            "dgeo": metrics.dgeo.mean().item(),
+            "rgeo": metrics.rgeo.mean().item(),
+            "tgeo": metrics.tgeo.mean().item(),
+            "dice": metrics.dice.mean().item(),
+            "haus": metrics.haus.mean().item(),
             "loss": loss.mean().item(),
             "lr": self.scheduler.get_last_lr()[0],
             "kept": keep.float().mean().item(),
