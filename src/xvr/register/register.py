@@ -153,6 +153,7 @@ class Register:
             width=width,
             reverse_x_axis=self.initializer.reverse_x_axis,
             renderer="trilinear",
+            voxel_shift=0.0,
             **intrinsics,
         ).to(self.device)
         pose = Pose(init_pose).to(self.device)
