@@ -23,19 +23,16 @@ class BaseParams:
     imagepath: Annotated[str, Parameter(help="Path to the CT image", group=_DATA)]
     labelpath: Annotated[str | None, Parameter(help="Path to the segmentation label map. If None, uses the full image", group=_DATA)] = None
     labels: Annotated[list[int] | None, Parameter(help="Label indices to include in the DRR. If None, uses all labels", group=_DATA, validator=_non_empty, consume_multiple=True)] = None
-    orientation: Annotated[str, Parameter(help="Patient orientation for the DRR", group=_DATA)] = "AP"
-    reverse_x_axis: Annotated[bool, Parameter(help="Horizontally flip the rendered DRRs", group=_DATA)] = False
     metric: Annotated[str, Parameter(help="Image similarity metric", group=_OPTIMIZER)] = "gmncc"
     scales: Annotated[list[float], Parameter(help="Downsampling scale(s) for multiscale registration", group=_OPTIMIZER, validator=_non_empty, consume_multiple=True)] = field(default_factory=lambda: [8.0])
     n_itrs: Annotated[list[int], Parameter(help="Number of optimization iterations per scale", group=_OPTIMIZER, validator=_non_empty, consume_multiple=True)] = field(default_factory=lambda: [500])
     lr_rot: Annotated[float, Parameter(help="Learning rate for rotation parameters", group=_OPTIMIZER)] = 1e-2
     lr_xyz: Annotated[float, Parameter(help="Learning rate for translation parameters", group=_OPTIMIZER)] = 1e-0
     lr_reduce_factor: Annotated[float, Parameter(help="Factor by which to reduce the learning rate on plateau", group=_OPTIMIZER)] = 0.1
-    patience: Annotated[list[int] | int, Parameter(help="Number of steps with no improvement before reducing the learning rate (can be defined per-scale)", group=_OPTIMIZER, consume_multiple=True)] = 5
+    patience: Annotated[list[int], Parameter(help="Number of steps with no improvement before reducing the learning rate (one per scale)", group=_OPTIMIZER, validator=_non_empty, consume_multiple=True)] = field(default_factory=lambda: [5])
     threshold: Annotated[float, Parameter(help="Minimum change to qualify as an improvement", group=_OPTIMIZER)] = 1e-4
     max_n_plateaus: Annotated[int, Parameter(help="Number of learning rate reductions before early stopping", group=_OPTIMIZER)] = 2
     device: Annotated[str, Parameter(help="Torch device to run on", group=_MISC)] = "cuda"
-
 
 @Parameter(name="*")
 @dataclass
@@ -45,5 +42,7 @@ class RunParams:
     subtract_background: Annotated[bool, Parameter(help="Subtract background from the image", group=_PREPROCESSING)] = False
     equalize: Annotated[bool, Parameter(help="Apply histogram equalization during optimization", group=_PREPROCESSING)] = False
     reducefn: Annotated[str, Parameter(help="Reduction function for multi-frame images", group=_PREPROCESSING)] = "max"
+    parameterization: Annotated[str, Parameter(help="Parameterization of SO(3) for pose optimization", group=_MODEL)] = "euler_angles"
+    convention: Annotated[str, Parameter(help="If parameterization='euler_angles', specify order", group=_MODEL)] = "ZXY"
     init_only: Annotated[bool, Parameter(help="Return initial pose estimate result", group=_OPTIMIZER)] = False
     savepath: Annotated[str | None, Parameter(help="Location to save the registration results", group=_MISC)] = None

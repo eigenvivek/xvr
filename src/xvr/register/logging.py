@@ -6,7 +6,7 @@ from diffdrr.drr import DRR
 from diffdrr.pose import RigidTransform
 from jaxtyping import Float
 
-from .models import Pose
+from .pose import Pose
 
 
 @dataclass
@@ -51,7 +51,7 @@ class RegistrationResult:
         Args:
             path: Output file path.
         """
-        if log is not None:
+        if self.log is not None:
             log = {
                 "losses": self.log.losses,
                 "scales": self.log.scales,

@@ -138,9 +138,10 @@ def _preprocess_xray(
     return img
 
 
-def _parse_dicom_pose(
-    filename: str,
+def parse_dicom_pose(
+    filename: str | Path,
     orientation: str | None = "AP",
+    device: str = "cuda",
 ):
     """Convert DICOM pose params to a C-arm SE(3) pose."""
     multiplier = -1 if orientation == "PA" else 1
@@ -151,8 +152,8 @@ def _parse_dicom_pose(
     sid = multiplier * float(ds.DistanceSourceToPatient)
 
     return convert(
-        torch.tensor([[alpha, beta, 0.0]]),
-        torch.tensor([[0.0, sid, 0.0]]),
+        torch.tensor([[alpha, beta, 0.0]], device=device),
+        torch.tensor([[0.0, sid, 0.0]], device=device),
         convention="ZXY",
         degrees=True,
     )
