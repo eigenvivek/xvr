@@ -112,6 +112,8 @@ class Register:
         subtract_background: bool = False,
         equalize: bool = False,
         reducefn: str | int | Callable = "max",
+        parameterization: str = "euler_angles",
+        convention: str | None = "ZXY",
         init_only: bool = False,
         savepath: Path | str | None = None,
     ) -> RegistrationResult:
@@ -128,6 +130,8 @@ class Register:
             subtract_background: Subtract background from the image.
             equalize: Apply histogram equalization during optimization.
             reducefn: Reduction function for multi-frame images.
+            parameterization: Representation of SO(3) for pose optimization.
+            convention: If `parameterization='euler_angles'`, specify order.
             init_only: Return initial pose estimate result without optimization.
             savepath: Location to save the registration results.
 
@@ -156,7 +160,7 @@ class Register:
             voxel_shift=0.0,
             **intrinsics,
         ).to(self.device)
-        pose = Pose(init_pose).to(self.device)
+        pose = Pose(init_pose, parameterization, convention).to(self.device)
 
         # Optionally perform multiscale registration
         log = None
