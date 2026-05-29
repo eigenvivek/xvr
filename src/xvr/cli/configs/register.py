@@ -46,3 +46,4 @@ class RunParams:
     convention: Annotated[str, Parameter(help="If parameterization='euler_angles', specify order", group=_OPTIMIZER)] = "ZXY"
     init_only: Annotated[bool, Parameter(help="Return initial pose estimate result", group=_OPTIMIZER)] = False
     savepath: Annotated[str | None, Parameter(help="Location to save the registration results", group=_MISC)] = None
+    saveplot: Annotated[bool | None, Parameter(help="Save plots of registration results", group=_MISC)] = False
