@@ -75,5 +75,6 @@ class TrainParams:
 
     # Logging
     project: Annotated[str, Parameter(help="WandB project name", group=_LOGGING)] = "xvr"
+    group: Annotated[str, Parameter(help="WandB run group", group=_LOGGING)] = None
     name: Annotated[str | None, Parameter(help="WandB run name", group=_LOGGING)] = None
     id: Annotated[str | None, Parameter(help="WandB run ID (useful when restarting from a checkpoint)", group=_LOGGING)] = None

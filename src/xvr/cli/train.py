@@ -55,12 +55,14 @@ def _train(params: TrainParams):
 
     # Strip logging fields not needed by Trainer
     project = config.pop("project")
+    group = config.pop("group")
     name = config.pop("name")
     id_ = config.pop("id")
 
     wandb.login(key=os.environ["WANDB_API_KEY"])
     run = wandb.init(
         project=project,
+        group=group,
         name=name if name is not None else project,
         config=config,
         id=id_,

@@ -42,7 +42,7 @@ class RunParams:
     subtract_background: Annotated[bool, Parameter(help="Subtract background from the image", group=_PREPROCESSING)] = False
     equalize: Annotated[bool, Parameter(help="Apply histogram equalization during optimization", group=_PREPROCESSING)] = False
     reducefn: Annotated[str, Parameter(help="Reduction function for multi-frame images", group=_PREPROCESSING)] = "max"
-    parameterization: Annotated[str, Parameter(help="Parameterization of SO(3) for pose optimization", group=_MODEL)] = "euler_angles"
-    convention: Annotated[str, Parameter(help="If parameterization='euler_angles', specify order", group=_MODEL)] = "ZXY"
+    parameterization: Annotated[str, Parameter(help="Parameterization of SO(3) for pose optimization", group=_OPTIMIZER)] = "euler_angles"
+    convention: Annotated[str, Parameter(help="If parameterization='euler_angles', specify order", group=_OPTIMIZER)] = "ZXY"
     init_only: Annotated[bool, Parameter(help="Return initial pose estimate result", group=_OPTIMIZER)] = False
     savepath: Annotated[str | None, Parameter(help="Location to save the registration results", group=_MISC)] = None
