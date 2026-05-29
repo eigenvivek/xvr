@@ -51,15 +51,6 @@ class RegistrationResult:
         Args:
             path: Output file path.
         """
-        if self.log is not None:
-            log = {
-                "losses": self.log.losses,
-                "scales": self.log.scales,
-                "rescale_factors": self.log.rescale_factors,
-                "rots": self.log.rots.cpu(),
-                "xyzs": self.log.xyzs.cpu(),
-            }
-
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(
@@ -75,7 +66,15 @@ class RegistrationResult:
                 "init_pose": self.init_pose.matrix.cpu(),
                 "final_pose": self.final_pose.matrix.cpu(),
                 "gt": self.gt.cpu(),
-                "log": log,
+                "log": {
+                    "losses": self.log.losses,
+                    "scales": self.log.scales,
+                    "rescale_factors": self.log.rescale_factors,
+                    "rots": self.log.rots.cpu(),
+                    "xyzs": self.log.xyzs.cpu(),
+                }
+                if self.log is not None
+                else None,
             },
             path,
         )
