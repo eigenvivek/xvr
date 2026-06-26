@@ -98,3 +98,26 @@ class DicomPose:
 
     def __call__(self, ctx: XrayContext) -> RigidTransform:
         return parse_dicom_pose(ctx.filename, self.orientation, self.device)
+
+
+@define(slots=False)
+class RestartPose:
+    """Initial pose loaded from a previous registration run's final pose.
+
+    Args:
+        ckpt: Path to a `.pth` saved by a previous registration run.
+    """
+
+    ckpt: str
+    orientation: str | None = "AP"
+    device: str = "cuda"
+    reverse_x_axis: bool = field(init=False, default=False)
+    pose: RigidTransform = field(init=False, repr=False, default=None)
+
+    def __attrs_post_init__(self):
+        data = torch.load(self.ckpt, weights_only=False)
+        self.reverse_x_axis = bool(data["detector"]["reverse_x_axis"])
+        self.pose = RigidTransform(data["final_pose"])  # saved as .matrix.cpu()
+
+    def __call__(self, ctx: XrayContext) -> RigidTransform:
+        return self.pose.to(self.device)
