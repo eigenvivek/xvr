@@ -153,6 +153,7 @@ class Register:
             init_pose = self.initializer(ctx).to(self.device)
 
         # Build the DRR renderer and pose model
+        intrinsics.x0 = -intrinsics.x0
         drr = DRR(
             subject=self.subject,
             height=height,
