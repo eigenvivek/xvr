@@ -289,7 +289,7 @@ class Trainer:
         loss = (per_sample * keep).sum() / (n_kept * self.n_grad_accum_itrs)
         log = {
             k: terms[k].mean().item() if k in terms else 0.0
-            for k in ("mncc", "dgeo", "rgeo", "tgeo", "dice", "haus", "dist", "mvco")
+            for k in ("mncc", "dgeo", "rgeo", "tgeo", "dice", "haus", "dist")
         }
         log.update(
             loss=loss.item(),
