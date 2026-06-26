@@ -27,6 +27,23 @@ def model(
 
 
 @register.command
+def restart(
+    ckpt: Annotated[str, Parameter(help="Path to a previous run's saved .pth result", group=_POSE)],
+    *,
+    orientation: Annotated[
+        str, Parameter(help="Patient orientation for the DRR", group=_POSE)
+    ] = "AP",
+    base: BaseParams,
+    run: RunParams = RunParams(),
+) -> None:
+    """Register by restarting optimization from a previous run's final pose."""
+    from ..register import RestartPose
+
+    initializer = RestartPose(ckpt=ckpt, orientation=orientation, device=base.device)
+    _run_registration(initializer, base, run)
+
+
+@register.command
 def fixed(
     rot: Annotated[tuple[float, float, float], Parameter(help="Rotations in degrees", group=_POSE)],
     xyz: Annotated[tuple[float, float, float], Parameter(help="Translations in mm", group=_POSE)],

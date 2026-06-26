@@ -116,6 +116,7 @@ class Register:
         convention: str | None = "ZXY",
         init_only: bool = False,
         savepath: Path | str | None = None,
+        saveplot: bool = False,
     ) -> RegistrationResult:
         """Run registration on an X-ray image.
 
@@ -134,6 +135,7 @@ class Register:
             convention: If `parameterization='euler_angles'`, specify order.
             init_only: Return initial pose estimate result without optimization.
             savepath: Location to save the registration results.
+            saveplot: Save plots of registration results.
 
         Returns:
             A RegistrationResult with the optimized pose and full optimization log.
@@ -151,6 +153,7 @@ class Register:
             init_pose = self.initializer(ctx).to(self.device)
 
         # Build the DRR renderer and pose model
+        intrinsics.x0 = -intrinsics.x0
         drr = DRR(
             subject=self.subject,
             height=height,
@@ -172,8 +175,9 @@ class Register:
         if savepath is not None:
             savepath = Path(savepath) / Path(filename).stem
             result.save(savepath.with_suffix(".pth"))
-            plot(result).save(savepath.with_suffix(".png"))
-            gif(result).save(savepath.with_suffix(".gif"))
+            if saveplot:
+                plot(result).save(savepath.with_suffix(".png"))
+                gif(result).save(savepath.with_suffix(".gif"))
 
         return result
 
