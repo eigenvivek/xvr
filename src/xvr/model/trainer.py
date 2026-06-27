@@ -7,6 +7,7 @@ import wandb
 from diffdrr.data import transform_hu_to_density
 from diffdrr.pose import RigidTransform, convert
 from diffdrr.visualization import plot_drr, plot_mask
+from nibabel.affines import apply_affine
 from timm.utils.agc import adaptive_clip_grad as adaptive_clip_grad_
 from tqdm import tqdm
 
@@ -67,6 +68,8 @@ class Trainer:
         weights: list[float] | None = None,
         img_threshold: float = 0.10,
         mask_threshold: float = 0.05,
+        n_samples: int = 500,
+        geodesic_only: bool = False,
     ):
         """Train a pose regression model.
 
@@ -202,6 +205,8 @@ class Trainer:
         self.n_save_every_itrs = n_save_every_itrs
         self.img_threshold = img_threshold
         self.mask_threshold = mask_threshold
+        self.n_samples = n_samples
+        self.geodesic_only = geodesic_only
         self.outpath = outpath
 
     def train(self, run: wandb.Run = None):
@@ -242,14 +247,18 @@ class Trainer:
 
         # Load the subject and translate the pose to its isocenter
         vol, seg, world2grid, offset = self.load(subject, pose.matrix.dtype, pose.matrix.device)
-        pose = pose.compose(offset)
+        assert not vol.min() == vol.max()
+        if subject is None:
+            pose = pose.compose(offset)
 
         # Render a batch of DRRs and keep samples that capture the volume
         contrast = self.contrast_distribution.sample().item()
         tmp = transform_hu_to_density(vol, contrast)
 
         with torch.no_grad():
-            img, mask, keep = self.render_samples(tmp, seg, world2grid, pose)
+            img, mask, keep = self.render_samples(
+                tmp, None if self.geodesic_only else seg, world2grid, pose
+            )
 
         # Regress the poses of the DRRs (and optionally convert between reference frames)
         x = self.transforms(self.augmentations(img))
@@ -257,15 +266,36 @@ class Trainer:
         if self.reframe is not None:
             pred_pose = pred_pose.compose(self.reframe)
 
-        # Render DRRs from the predicted poses
-        pred_img, pred_mask, _ = self.render_samples(tmp, seg, world2grid, pred_pose)
-
-        # Compute the loss
-        img, pred_img = self.transforms(img), self.transforms(pred_img)
-        metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
         n_kept = keep.sum().clamp(min=1)
-        loss = (metrics.loss * keep).sum() / (n_kept * self.n_grad_accum_itrs)
+        if self.geodesic_only:
+            rgeo, tgeo, dgeo = self.lossfn.geodesic(pose, pred_pose)
+            per_sample = self.lossfn.weight_geo * dgeo
+            pred_img = pred_mask = None
+            terms = {"rgeo": rgeo, "tgeo": tgeo, "dgeo": dgeo}
+        else:
+            pred_img, pred_mask, _ = self.render_samples(tmp, seg, world2grid, pred_pose)
+            img, pred_img = self.transforms(img), self.transforms(pred_img)
+            metrics = self.lossfn(img, mask, pose, pred_img, pred_mask, pred_pose)
+            per_sample = metrics.loss
+            terms = {
+                "mncc": metrics.mncc,
+                "dgeo": metrics.dgeo,
+                "rgeo": metrics.rgeo,
+                "tgeo": metrics.tgeo,
+                "dice": metrics.dice,
+                "haus": metrics.haus,
+            }
 
+        loss = (per_sample * keep).sum() / (n_kept * self.n_grad_accum_itrs)
+        log = {
+            k: terms[k].mean().item() if k in terms else 0.0
+            for k in ("mncc", "dgeo", "rgeo", "tgeo", "dice", "haus", "dist")
+        }
+        log.update(
+            loss=loss.item(),
+            lr=self.scheduler.get_last_lr()[0],
+            kept=keep.float().mean().item(),
+        )
         # Optimize the model
         loss.mean().backward()
         if ((itr + 1) % self.n_grad_accum_itrs == 0) or ((itr + 1) == self.n_total_itrs):
@@ -274,18 +304,11 @@ class Trainer:
             self.scheduler.step()
             self.optimizer.zero_grad()
 
-        # Return losses and imgs
-        log = {
-            "mncc": metrics.mncc.mean().item(),
-            "dgeo": metrics.dgeo.mean().item(),
-            "rgeo": metrics.rgeo.mean().item(),
-            "tgeo": metrics.tgeo.mean().item(),
-            "dice": metrics.dice.mean().item(),
-            "haus": metrics.haus.mean().item(),
-            "loss": loss.mean().item(),
-            "lr": self.scheduler.get_last_lr()[0],
-            "kept": keep.float().mean().item(),
-        }
+        # Return imgs/masks for logging
+        if pred_img is None:
+            imgs = x[:8]
+            masks = mask[:8]
+            return log, imgs, masks
         imgs = torch.concat([x[:4], pred_img[:4]])
         masks = torch.concat([mask[:4], pred_mask[:4]])
         return log, imgs, masks
@@ -311,31 +334,31 @@ class Trainer:
             mask = None
 
         # Get the volume's isocenter and construct a translation to it
-        affine = torch.from_numpy(subject["volume"]["affine"]).to(dtype=dtype)
-        affine = RigidTransform(affine)
-        center = (torch.tensor(volume.shape)[None, None] - 1) / 2
-        center = affine(center)[0].to(device, dtype)
-        offset = make_translation(center)
+        affine = torch.from_numpy(subject["volume"]["affine"]).to(torch.float32)
+        center = (torch.tensor(volume.shape) - 1) / 2
+        center = -torch.from_numpy(apply_affine(affine[0], center))
+        affine[:, :3, 3:] += center[None, :, None]
+        offset = make_translation(center[None].to(device, dtype))
 
         # Make the world2grid matrix
-        affine = torch.from_numpy(subject["volume"]["affine"]).to(device, dtype)
+        affine = affine.to(device, dtype)
         voxel2grid = _make_voxel_to_grid(volume.permute(2, 1, 0).shape, device, dtype)
         world2grid = RigidTransform(affine.inverse()).compose(voxel2grid)
 
         return volume, mask, world2grid, offset
 
-    def render_samples(self, tmp, seg, world2grid, pose, n_samples=500):
+    def render_samples(self, tmp, seg, world2grid, pose):
         # Make the cam2grid transform
         cam2grid = self.drr.detector.reorient.compose(pose).compose(world2grid)
 
         # Initialize the source and target points
         src, tgt = self.drr.detector.source.clone(), self.drr.detector.target.clone()
         tgt = self.drr.detector.calibration(tgt)
-        step_size = (tgt - src).norm(dim=-1) / float(n_samples - 1)
+        step_size = (tgt - src).norm(dim=-1) / float(self.n_samples - 1)
 
         # Create the sampling points
         src_, tgt_ = cam2grid(src), cam2grid(tgt)
-        t = torch.linspace(0, 1, n_samples, device="cuda", dtype=src_.dtype)
+        t = torch.linspace(0, 1, self.n_samples, device="cuda", dtype=src_.dtype)
         pts = torch.lerp(
             src_[:, None, :, None],
             tgt_[:, None, :, None],
@@ -361,6 +384,7 @@ class Trainer:
                 align_corners=False,
             )[:, 0, ..., 0].long()  # [B, n_samples, N]
             C = int(seg.max() + 1)
+            idx = idx.clamp(0, C - 1)
         else:
             idx = torch.zeros_like(img).long()
             C = 1

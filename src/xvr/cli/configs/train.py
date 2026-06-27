@@ -45,6 +45,8 @@ class TrainParams:
     reverse_x_axis: Annotated[bool, Parameter(help="Obey radiologic convention (e.g., heart on right)", group=_RENDERER)] = False
     img_threshold: Annotated[float, Parameter(help="Minimum fraction of foreground pixels to keep a DRR", group=_SAMPLING)] = 0.10
     mask_threshold: Annotated[float, Parameter(help="Minimum fraction of mask pixels to keep a DRR", group=_SAMPLING)] = 0.05
+    n_samples: Annotated[int, Parameter(help="Number of points sampled along each ray when rendering DRRs", group=_SAMPLING)] = 500
+    geodesic_only: Annotated[bool, Parameter(help="Skip re-rendering from predicted poses; supervise pose directly with geodesic loss only (fast)", group=_SAMPLING)] = False
 
     # Model
     model_name: Annotated[str, Parameter(help="Name of model to instantiate from the timm library", group=_MODEL)] = "resnet18"

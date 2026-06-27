@@ -27,6 +27,11 @@ class PoseRegressor(torch.nn.Module):
         self.convention = convention
         n_angular_components = N_ANGULAR_COMPONENTS[parameterization]
 
+        # Handle norm_layer in timm
+        norm_layer = kwargs.pop("norm_layer", None)
+        if norm_layer not in (None, "default", "batchnorm", "batchnorm2d"):
+            kwargs["norm_layer"] = norm_layer
+
         # Get the size of the output from the backbone
         self.backbone = timm.create_model(
             model_name,

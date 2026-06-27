@@ -23,7 +23,7 @@ class PoseRegressionLoss(torch.nn.Module):
         self,
         sdd: float,
         weight_ncc: float = 1e0,
-        weight_geo: float = 1e-2,
+        weight_geo: float = 1e-1,
         weight_dice: float = 1e0,
         weight_haus: float = 1e-1,
         device: str = "cuda",
@@ -122,6 +122,8 @@ class HausdorffLoss(torch.nn.Module):
         y_true = y_true.float()[:, 1:]
         y_pred = y_pred.float()[:, 1:]
         B, C = y_true.shape[:2]
+        if C == 0:
+            return y_true.new_zeros(B)  # All-zero patch
         y_true = y_true.reshape(B * C, 1, *y_true.shape[2:])
         y_pred = y_pred.reshape(B * C, 1, *y_pred.shape[2:])
 
