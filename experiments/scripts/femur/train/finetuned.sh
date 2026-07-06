@@ -19,8 +19,8 @@ SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 source .venv/bin/activate
 
 xvr train \
-    -v data/femur/$SUBJECT/volume.nii.gz \
-    -m data/femur/$SUBJECT/mask.nii.gz \
+    -v experiments/data/femur/$SUBJECT/volume.nii.gz \
+    -m experiments/data/femur/$SUBJECT/mask.nii.gz \
     --ckptpath experiments/models/foundation/resnet34.pth \
     -o experiments/models/femur/finetuned/$SUBJECT \
     --orientation AP \

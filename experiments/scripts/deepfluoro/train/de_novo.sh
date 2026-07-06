@@ -18,8 +18,8 @@ SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 source .venv/bin/activate
 
 xvr train \
-    -v data/deepfluoro/$SUBJECT/volume.nii.gz \
-    -m data/deepfluoro/$SUBJECT/mask.nii.gz \
+    -v experiments/data/deepfluoro/$SUBJECT/volume.nii.gz \
+    -m experiments/data/deepfluoro/$SUBJECT/mask.nii.gz \
     -o experiments/models/deepfluoro/de_novo/$SUBJECT \
     --orientation AP \
     --r1 135.0 225.0 \

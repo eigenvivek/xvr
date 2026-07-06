@@ -34,10 +34,10 @@ echo "Ckpt:     $CKPT"
 echo "Preproc:  $PP"
 
 xvr register model \
-    --files data/femur/$SUBJECT/xrays/*.dcm \
+    --files experiments/data/femur/$SUBJECT/xrays/*.dcm \
     --ckpt "$CKPT" \
-    --imagepath data/femur/$SUBJECT/volume.nii.gz \
-    --labelpath data/femur/$SUBJECT/mask.nii.gz \
+    --imagepath experiments/data/femur/$SUBJECT/volume.nii.gz \
+    --labelpath experiments/data/femur/$SUBJECT/mask.nii.gz \
     --labels 1 2 3 4 \
     --scales 16 8 4 \
     --n-itrs 500 250 100 \
@@ -46,13 +46,13 @@ xvr register model \
     $PP \
     --savepath "$R1"
 
-for FILE in data/femur/$SUBJECT/xrays/*.dcm; do
+for FILE in experiments/data/femur/$SUBJECT/xrays/*.dcm; do
     STEM=$(basename "$FILE" .dcm)
     xvr register restart \
         --files "$FILE" \
         --ckpt "$R1/$STEM.pth" \
-        --imagepath data/femur/$SUBJECT/volume.nii.gz \
-        --labelpath data/femur/$SUBJECT/mask.nii.gz \
+        --imagepath experiments/data/femur/$SUBJECT/volume.nii.gz \
+        --labelpath experiments/data/femur/$SUBJECT/mask.nii.gz \
         --labels 1 2 3 4 \
         --orientation AP \
         --scales 4 2 \

@@ -36,13 +36,13 @@ class Evaluator:
 
 def read_true(dataset, subject, xray, device):
     """Ground-truth pose and stored intrinsics for one x-ray."""
-    ckpt = torch.load(f"data/{dataset}/{subject}/xrays/{xray}.pt", weights_only=False)
+    ckpt = torch.load(f"experiments/data/{dataset}/{subject}/xrays/{xray}.pt", weights_only=False)
     pose = RigidTransform(ckpt["pose"].to(torch.float32))
     return pose.to(device), ckpt["intrinsics"]
 
 
 def build_evaluator(dataset, subject, intrinsics, device):
-    data = Path("data") / dataset
+    data = Path("experiments/data") / dataset
     mask = MASKS[dataset]
     subj = read(
         str(data / subject / "volume.nii.gz"),
@@ -73,7 +73,7 @@ def main(dataset, result, path, device):
     rows, evaluator, cached = [], None, None
     for pth in tqdm(sorted(root.glob("subject*/*.pth"))):
         subject, xray = pth.parent.name, pth.stem
-        if not Path(f"data/{dataset}/{subject}/xrays/{xray}.pt").exists():
+        if not Path(f"experiments/data/{dataset}/{subject}/xrays/{xray}.pt").exists():
             continue
         true_pose, intrinsics = read_true(dataset, subject, xray, device)
         if cached != subject:

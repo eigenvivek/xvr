@@ -27,9 +27,9 @@ echo "Ckpt:     $CKPT"
 echo "Savepath: $SAVEPATH"
 
 xvr register model \
-    --files data/ljubljana/$SUBJECT/xrays/*[!_max].dcm \
+    --files experiments/data/ljubljana/$SUBJECT/xrays/*[!_max].dcm \
     --ckpt "$CKPT" \
-    --imagepath data/ljubljana/$SUBJECT/volume.nii.gz \
+    --imagepath experiments/data/ljubljana/$SUBJECT/volume.nii.gz \
     --scales 16 8 4 2 \
     --n-itrs 500 500 500 100 \
     --patience 15 10 5 5 \
