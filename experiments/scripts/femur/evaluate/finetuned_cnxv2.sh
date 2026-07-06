@@ -37,7 +37,7 @@ xvr register model \
     --files data/femur/$SUBJECT/xrays/*.dcm \
     --ckpt "$CKPT" \
     --imagepath data/femur/$SUBJECT/volume.nii.gz \
-    --labelpath data/femur/$SUBJECT/mask_all.nii.gz \
+    --labelpath data/femur/$SUBJECT/mask.nii.gz \
     --labels 1 2 3 4 \
     --scales 16 8 4 \
     --n-itrs 500 250 100 \
@@ -52,7 +52,7 @@ for FILE in data/femur/$SUBJECT/xrays/*.dcm; do
         --files "$FILE" \
         --ckpt "$R1/$STEM.pth" \
         --imagepath data/femur/$SUBJECT/volume.nii.gz \
-        --labelpath data/femur/$SUBJECT/mask_all.nii.gz \
+        --labelpath data/femur/$SUBJECT/mask.nii.gz \
         --labels 1 2 3 4 \
         --orientation AP \
         --scales 4 2 \

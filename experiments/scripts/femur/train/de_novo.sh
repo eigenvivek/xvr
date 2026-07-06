@@ -19,7 +19,7 @@ source .venv/bin/activate
 
 xvr train \
     -v data/femur/$SUBJECT/volume.nii.gz \
-    -m data/femur/$SUBJECT/mask_all.nii.gz \
+    -m data/femur/$SUBJECT/mask.nii.gz \
     -o experiments/models/femur/de_novo/$SUBJECT \
     --orientation AP \
     --r1 75.0 270.0 \

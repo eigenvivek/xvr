@@ -20,7 +20,7 @@ source .venv/bin/activate
 
 xvr train \
     -v data/femur/$SUBJECT/volume.nii.gz \
-    -m data/femur/$SUBJECT/mask_all.nii.gz \
+    -m data/femur/$SUBJECT/mask.nii.gz \
     --ckptpath experiments/models/foundation/resnet34.pth \
     -o experiments/models/femur/finetuned/$SUBJECT \
     --orientation AP \

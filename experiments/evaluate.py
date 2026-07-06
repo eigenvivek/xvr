@@ -9,7 +9,7 @@ from diffdrr.metrics import DoubleGeodesicSE3
 from diffdrr.pose import RigidTransform
 from tqdm import tqdm
 
-MASKS = {"deepfluoro": "mask.nii.gz", "femur": "mask_all.nii.gz", "ljubljana": None}
+MASKS = {"deepfluoro": "mask.nii.gz", "femur": "mask.nii.gz", "ljubljana": None}
 
 
 class Evaluator:
