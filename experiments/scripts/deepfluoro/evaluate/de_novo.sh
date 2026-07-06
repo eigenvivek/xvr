@@ -27,10 +27,10 @@ echo "Ckpt:     $CKPT"
 echo "Savepath: $SAVEPATH"
 
 xvr register model \
-    --files data/deepfluoro/$SUBJECT/xrays/*.dcm \
+    --files experiments/data/deepfluoro/$SUBJECT/xrays/*.dcm \
     --ckpt "$CKPT" \
-    --imagepath data/deepfluoro/$SUBJECT/volume.nii.gz \
-    --labelpath data/deepfluoro/$SUBJECT/mask.nii.gz \
+    --imagepath experiments/data/deepfluoro/$SUBJECT/volume.nii.gz \
+    --labelpath experiments/data/deepfluoro/$SUBJECT/mask.nii.gz \
     --labels 1 2 3 4 7 \
     --scales 24 12 6 \
     --n-itrs 500 500 500 \

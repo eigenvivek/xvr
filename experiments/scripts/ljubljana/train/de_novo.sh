@@ -18,7 +18,7 @@ SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 source .venv/bin/activate
 
 xvr train \
-    -v data/ljubljana/$SUBJECT/volume.nii.gz \
+    -v experiments/data/ljubljana/$SUBJECT/volume.nii.gz \
     -o experiments/models/ljubljana/de_novo/$SUBJECT \
     --orientation AP \
     --r1 -45.0 105.0 \
