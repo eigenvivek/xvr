@@ -9,9 +9,6 @@ from diffdrr.metrics import DoubleGeodesicSE3
 from diffdrr.pose import RigidTransform
 from tqdm import tqdm
 
-ZFLIP = RigidTransform(
-    torch.tensor([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], dtype=torch.float32)
-)
 MASKS = {"deepfluoro": "mask.nii.gz", "femur": "mask_all.nii.gz", "ljubljana": None}
 
 
@@ -38,11 +35,9 @@ class Evaluator:
 
 
 def read_true(dataset, subject, xray, device):
-    """Ground-truth pose (with the deepfluoro z-flip) and stored intrinsics for one x-ray."""
+    """Ground-truth pose and stored intrinsics for one x-ray."""
     ckpt = torch.load(f"data/{dataset}/{subject}/xrays/{xray}.pt", weights_only=False)
     pose = RigidTransform(ckpt["pose"].to(torch.float32))
-    if dataset == "deepfluoro":
-        pose = ZFLIP.compose(pose)
     return pose.to(device), ckpt["intrinsics"]
 
 
