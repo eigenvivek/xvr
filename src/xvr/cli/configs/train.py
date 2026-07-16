@@ -51,7 +51,7 @@ class TrainParams:
     # Model
     model_name: Annotated[str, Parameter(help="Name of model to instantiate from the timm library", group=_MODEL)] = "resnet18"
     norm_layer: Annotated[str, Parameter(help="Normalization layer", group=_MODEL)] = "groupnorm"
-    pretrained: Annotated[bool, Parameter(help="Load pretrained ImageNet-1k weights", group=_MODEL)] = True
+    pretrained: Annotated[bool, Parameter(help="Load pretrained ImageNet-1k weights", group=_MODEL)] = False
     parameterization: Annotated[str, Parameter(help="Parameterization of SO(3) for regression", group=_MODEL)] = "quaternion_adjugate"
     convention: Annotated[str, Parameter(help="If parameterization='euler_angles', specify order", group=_MODEL)] = "ZXY"
     unit_conversion_factor: Annotated[float, Parameter(help="Scale factor for translation prediction (e.g., from m to mm)", group=_MODEL)] = 1000.0
@@ -72,8 +72,6 @@ class TrainParams:
     # Checkpoint
     ckptpath: Annotated[str | None, Parameter(help="Checkpoint of a pretrained pose regressor", group=_CHECKPOINT)] = None
     reuse_optimizer: Annotated[bool, Parameter(help="Initialize the previous optimizer's state", group=_CHECKPOINT)] = False
-    warp: Annotated[str | None, Parameter(help="SimpleITK transform to warp input CT to checkpoint's reference frame", group=_CHECKPOINT)] = None
-    invert: Annotated[bool, Parameter(help="Whether to invert the warp or not", group=_CHECKPOINT)] = False
 
     # Logging
     project: Annotated[str, Parameter(help="WandB project name", group=_LOGGING)] = "xvr"
