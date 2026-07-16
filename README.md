@@ -143,8 +143,6 @@ Optimizer options:
 Checkpoint options:
   -c, --ckptpath PATH             Checkpoint of a pretrained pose regressor
   --reuse_optimizer               If ckptpath passed, initialize the previous optimizer's state
-  -w, --warp PATH                 SimpleITK transform to warp input CT to the checkpoint's reference frame
-  --invert                        Whether to invert the warp or not
 
 Logging options:
   --name TEXT                     WandB run name
@@ -203,16 +201,11 @@ Logging options:
   --init_only                    Directly return the initial pose estimate (no iterative pose refinement)
   --saveimg                      Save ground truth X-ray and predicted DRRs
   --verbose INTEGER RANGE        Verbosity level for logging  [default: 1; 0<=x<=3]
-
-Miscellaneous options:
-  --warp PATH                    SimpleITK transform to warp input CT to a template reference frame
-  --invert                       Whether to invert the warp or not
 ```
 
 #### Notes
 
 - By passing a `--mask` and a comma-separated set of `--labels`, registration will be performed with respect to specific structures.
-- If the model was trained with a coordinate frame different to that of the `--volume`, you can pass a `--warp` to rigidly realign the model's predictions to the new patient.
 
 ## Experiments
 
