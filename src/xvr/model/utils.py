@@ -17,7 +17,7 @@ from torchio import (
 )
 from tqdm import tqdm
 
-from ..utils import XrayTransforms, read_rigid_transform
+from ..utils import XrayTransforms
 from .network import PoseRegressor
 from .scheduler import IdentitySchedule, WarmupCosineSchedule
 
@@ -180,9 +180,3 @@ def _load_checkpoint(ckptpath, reuse_optimizer):
         else:
             return ckpt, 0, 0
     return None, 0, 0
-
-
-def initialize_coordinate_frame(warp, img, invert):
-    if warp is None:
-        return None
-    return read_rigid_transform(warp, img, invert).cuda()
