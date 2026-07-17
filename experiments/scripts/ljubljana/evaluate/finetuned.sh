@@ -7,7 +7,7 @@
 #SBATCH --qos=vision-polina-main
 #SBATCH --account=vision-polina
 #SBATCH --gres=gpu:1
-#SBATCH --constraint="nvidia_rtx_a6000|nvidia_rtx_6000_ada_generation"
+#SBATCH --constraint="nvidia_rtx_a6000"
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=50G
 #SBATCH --time=03:00:00

@@ -29,8 +29,6 @@ def _restart(
     config = torch.load(ckptpath, weights_only=False)["config"]
     config["ckptpath"] = ckptpath
     config["reuse_optimizer"] = True
-    config.pop("warp", None)
-    config.pop("invert", None)
 
     wandb.login(key=os.environ["WANDB_API_KEY"])
     project = config["project"] if project is None else project
