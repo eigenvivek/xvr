@@ -105,7 +105,7 @@ def main(dataset, result, path, device):
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     if out.exists():
-        old = pd.read_csv(out)
+        old = pd.read_csv(out, dtype={"subject": str, "xray": str})
         df = pd.concat(
             [old[~((old.dataset == dataset) & (old.result == result))], df], ignore_index=True
         )
