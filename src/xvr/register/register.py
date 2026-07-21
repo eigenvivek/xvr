@@ -243,7 +243,7 @@ class Register:
             maximize=True,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, "max", self.factor, patience, self.threshold
+            optimizer, "max", self.factor, patience, self.threshold, threshold_mode="abs"
         )
         transform = XrayTransforms(drr.detector.height, drr.detector.width, equalize=equalize)
         return optimizer, scheduler, transform
