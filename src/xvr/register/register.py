@@ -1,7 +1,8 @@
 import math
 import warnings
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
 import torch
 from attrs import define, field

@@ -9,4 +9,4 @@ if hasattr(torch.backends.cudnn, "conv"):
 else:
     torch.backends.cudnn.allow_tf32 = False
 
-__all__ = ["read_rigid_transform", "Standardize", "XrayTransforms"]
+__all__ = ["Standardize", "XrayTransforms", "read_rigid_transform"]
