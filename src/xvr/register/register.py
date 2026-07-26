@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -233,7 +234,7 @@ class Register:
 
     def _setup_stage(self, drr: DRR, pose: Pose, stage: int, patience: int, equalize: bool):
         """Configure the optimizer, scheduler, and transforms for a single scale stage."""
-        step_size_scalar = 2**stage
+        step_size_scalar = math.prod(2**i for i in range(stage + 1))
         optimizer = torch.optim.Adam(
             [
                 {"params": [pose._rot], "lr": self.lr_rot / step_size_scalar},
