@@ -1,4 +1,5 @@
 import math
+import warnings
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -192,6 +193,12 @@ class Register:
         """Run coarse-to-fine multiscale optimization."""
         # Compute sequential rescale ratios (with a terminal reset-to-full-res step)
         factors = parse_scales(self.scales + [1], crop, gt.shape[2])
+
+        # Early stop if the initial pose doesn't intersect the volume
+        with torch.no_grad():
+            if drr(pose()).std() < 1e-8:
+                warnings.warn("Initial DRR is blank; skipping optimization.")
+                return None
 
         losses, scales, rescale_factors, rots, xyzs = [], [], [], [], []
         for stage, (scale, rescale_factor, n_itrs, patience) in enumerate(
