@@ -31,10 +31,11 @@ def _read_transform(mat: str | Path, invert: bool) -> Float[np.ndarray, "4 4"]:
     if invert:
         xform = xform.GetInverse()
 
-    Rt = np.array(xform.GetParameters())
+    # Read as float32 to match ANTS
+    Rt = np.array(xform.GetParameters(), dtype=np.float32).astype(np.float64)
     R = Rt[:9].reshape(3, 3)
     t = Rt[9:]
-    c = np.array(xform.GetFixedParameters())
+    c = np.array(xform.GetFixedParameters(), dtype=np.float32).astype(np.float64)
     t = -R @ c + t + c
 
     M = np.eye(4)
