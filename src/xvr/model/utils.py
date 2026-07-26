@@ -1,6 +1,5 @@
 from itertools import zip_longest
 from pathlib import Path
-from typing import Optional
 
 import torch
 from diffdrr.data import load_example_ct, read
@@ -17,20 +16,20 @@ from torchio import (
 )
 from tqdm import tqdm
 
-from ..utils import XrayTransforms
+from ..utils import XrayTransforms, read_rigid_transform
 from .network import PoseRegressor
 from .scheduler import IdentitySchedule, WarmupCosineSchedule
 
 
 def initialize_subjects(
     volpath: str,  # A single CT or a directory with multiple volumes
-    maskpath: Optional[str],  # Optional labelmaps corresponding to the CTs
-    orientation: Optional[str],  # "AP", "PA", or None
-    patch_size: Optional[tuple],  # Tuple for random crop sizes (h, w, d)
+    maskpath: str | None,  # Optional labelmaps corresponding to the CTs
+    orientation: str | None,  # "AP", "PA", or None
+    patch_size: tuple | None,  # Tuple for random crop sizes (h, w, d)
     num_samples: int,  # Total number of training iterations
     num_workers: int,  # Number of workers for the dataloader
     pin_memory: bool,  # Pin memory for the dataloader
-    weights: Optional[tuple[float, ...]] = None,  # Sampling probability for each volume
+    weights: tuple[float, ...] | None = None,  # Sampling probability for each volume
     replacement: bool = True,  # Sample with replacement
 ):
     # If only a single subject is passed, load it and return
@@ -180,3 +179,9 @@ def _load_checkpoint(ckptpath, reuse_optimizer):
         else:
             return ckpt, 0, 0
     return None, 0, 0
+
+
+def initialize_coordinate_frame(warp, img, invert):
+    if warp is None:
+        return None
+    return read_rigid_transform(warp, img, invert).cuda()

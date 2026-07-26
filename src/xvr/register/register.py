@@ -1,5 +1,8 @@
+import math
+import warnings
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
 import torch
 from attrs import define, field
@@ -142,7 +145,6 @@ class Register:
         """
         # Read and preprocess the ground truth X-ray
         gt, intrinsics, _ = read_xray(filename, crop, subtract_background, linearize, reducefn)
-        gt = gt.to(self.device)
         *_, height, width = gt.shape
 
         # Bundle per-call facts for the initializer
@@ -193,6 +195,12 @@ class Register:
         # Compute sequential rescale ratios (with a terminal reset-to-full-res step)
         factors = parse_scales(self.scales + [1], crop, gt.shape[2])
 
+        # Early stop if the initial pose doesn't intersect the volume
+        with torch.no_grad():
+            if drr(pose()).std() < 1e-8:
+                warnings.warn("Initial DRR is blank; skipping optimization.")
+                return None
+
         losses, scales, rescale_factors, rots, xyzs = [], [], [], [], []
         for stage, (scale, rescale_factor, n_itrs, patience) in enumerate(
             zip(self.scales, factors, self.n_itrs, self.patience)
@@ -203,7 +211,7 @@ class Register:
                 drr, pose, stage, patience, equalize
             )
             current_lr, n_plateaus = torch.inf, 0
-            true = transform(gt)
+            true = transform(gt).to(self.device)
             for _ in pbar:
                 optimizer.zero_grad()
                 pred = transform(drr(pose()))
@@ -234,7 +242,7 @@ class Register:
 
     def _setup_stage(self, drr: DRR, pose: Pose, stage: int, patience: int, equalize: bool):
         """Configure the optimizer, scheduler, and transforms for a single scale stage."""
-        step_size_scalar = 2**stage
+        step_size_scalar = math.prod(2**i for i in range(stage + 1))
         optimizer = torch.optim.Adam(
             [
                 {"params": [pose._rot], "lr": self.lr_rot / step_size_scalar},
@@ -243,7 +251,7 @@ class Register:
             maximize=True,
         )
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, "max", self.factor, patience, self.threshold, threshold_mode="abs"
+            optimizer, "max", self.factor, patience, self.threshold, threshold_mode="rel"
         )
         transform = XrayTransforms(drr.detector.height, drr.detector.width, equalize=equalize)
         return optimizer, scheduler, transform

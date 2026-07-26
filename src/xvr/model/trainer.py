@@ -14,7 +14,7 @@ from tqdm import tqdm
 from .augmentations import XrayAugmentations
 from .loss import PoseRegressionLoss
 from .sampler import get_random_pose
-from .utils import initialize_modules, initialize_subjects
+from .utils import initialize_coordinate_frame, initialize_modules, initialize_subjects
 
 
 class Trainer:
@@ -60,6 +60,8 @@ class Trainer:
         disable_scheduler: bool = False,
         ckptpath: str | None = None,
         reuse_optimizer: bool = False,
+        warp: str | None = None,
+        invert: bool = False,
         patch_size: tuple[int, int, int] | None = None,
         num_workers: int = 4,
         pin_memory: bool = False,
@@ -112,6 +114,8 @@ class Trainer:
             disable_scheduler: Turn off cosine learning rate scheduler.
             ckptpath: Checkpoint of a pretrained pose regressor.
             reuse_optimizer: Initialize the previous optimizer's state.
+            warp: SimpleITK transform to warp input CT to checkpoint's reference frame.
+            invert: Whether to invert the warp or not.
             patch_size: Optional random crop size; if None, return entire volume.
             num_workers: Number of subprocesses to use in the dataloader.
             pin_memory: Copy volumes into CUDA pinned memory before returning.
@@ -192,6 +196,9 @@ class Trainer:
             batch_size=batch_size,
         )
 
+        # Initialize a conversion between the template and canonical frames of reference
+        self.reframe = initialize_coordinate_frame(warp, volpath, invert)
+
         # Save training config
         self.n_total_itrs = n_total_itrs
         self.n_grad_accum_itrs = n_grad_accum_itrs
@@ -253,9 +260,11 @@ class Trainer:
                 tmp, None if self.geodesic_only else seg, world2grid, pose
             )
 
-        # Regress the poses of the DRRs
+        # Regress the poses of the DRRs (and optionally convert between reference frames)
         x = self.transforms(self.augmentations(img))
         pred_pose = self.model(x)
+        if self.reframe is not None:
+            pred_pose = pred_pose.compose(self.reframe)
 
         n_kept = keep.sum().clamp(min=1)
         if self.geodesic_only:
