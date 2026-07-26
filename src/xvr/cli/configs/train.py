@@ -72,6 +72,8 @@ class TrainParams:
     # Checkpoint
     ckptpath: Annotated[str | None, Parameter(help="Checkpoint of a pretrained pose regressor", group=_CHECKPOINT)] = None
     reuse_optimizer: Annotated[bool, Parameter(help="Initialize the previous optimizer's state", group=_CHECKPOINT)] = False
+    warp: Annotated[str | None, Parameter(help="SimpleITK transform to warp input CT to checkpoint's reference frame", group=_CHECKPOINT)] = None
+    invert: Annotated[bool, Parameter(help="Whether to invert the warp or not", group=_CHECKPOINT)] = False
 
     # Logging
     project: Annotated[str, Parameter(help="WandB project name", group=_LOGGING)] = "xvr"

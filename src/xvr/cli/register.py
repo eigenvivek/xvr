@@ -22,7 +22,7 @@ def model(
     """Register using a neural network initial pose estimate."""
     from ..register import ModelPose
 
-    initializer = ModelPose(ckpt=ckpt, device=base.device)
+    initializer = ModelPose(ckpt=ckpt, device=base.device, warp=base.warp, volume=base.imagepath)
     _run_registration(initializer, base, run)
 
 
@@ -102,6 +102,7 @@ def _run_registration(
     from ..register import Register
 
     base_dict = asdict(base)
+    base_dict.pop("warp", None)
     files = _expand_files(base_dict.pop("files"))
 
     reg = Register(initializer=initializer, **base_dict)

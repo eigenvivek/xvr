@@ -3,7 +3,7 @@ from diffdrr.pose import RigidTransform, convert
 from diffdrr.utils import resample
 from torchvision.transforms.functional import center_crop
 
-from ..utils import XrayTransforms
+from ..utils import XrayTransforms, read_rigid_transform
 
 
 def predict_pose(model, config, img, sdd, delx, dely, x0, y0):
@@ -37,6 +37,15 @@ def _resample_xray(img, sdd, delx, dely, x0, y0, config):
     img = resample(img, sdd, delx, x0, y0, config["sdd"], new_delx, 0, 0)
 
     return img, height, width
+
+
+def _correct_pose(pose, warp, volume, invert):
+    if warp is None:
+        return pose
+
+    # Get the closest SE(3) transformation relating the CT to some reference frame
+    T = read_rigid_transform(warp, volume, invert).cuda()
+    return pose.compose(T)
 
 
 def _construct_antipode(pose: RigidTransform) -> RigidTransform:
