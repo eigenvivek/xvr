@@ -142,7 +142,6 @@ class Register:
         """
         # Read and preprocess the ground truth X-ray
         gt, intrinsics, _ = read_xray(filename, crop, subtract_background, linearize, reducefn)
-        gt = gt.to(self.device)
         *_, height, width = gt.shape
 
         # Bundle per-call facts for the initializer
@@ -203,7 +202,7 @@ class Register:
                 drr, pose, stage, patience, equalize
             )
             current_lr, n_plateaus = torch.inf, 0
-            true = transform(gt)
+            true = transform(gt).to(self.device)
             for _ in pbar:
                 optimizer.zero_grad()
                 pred = transform(drr(pose()))
