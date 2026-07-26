@@ -195,18 +195,17 @@ class Register:
         # Compute sequential rescale ratios (with a terminal reset-to-full-res step)
         factors = parse_scales(self.scales + [1], crop, gt.shape[2])
 
-        # Early stop if the initial pose doesn't intersect the volume
-        with torch.no_grad():
-            if drr(pose()).std() < 1e-8:
-                warnings.warn("Initial DRR is blank; skipping optimization.")
-                return None
-
         losses, scales, rescale_factors, rots, xyzs = [], [], [], [], []
         for stage, (scale, rescale_factor, n_itrs, patience) in enumerate(
             zip(self.scales, factors, self.n_itrs, self.patience)
         ):
             pbar = tqdm(range(n_itrs), ncols=100, desc=f"Scale {scale:>{self.max_scale_len}}")
             drr.rescale_detector_(rescale_factor)
+
+            if stage == 0 and _drr_is_blank(drr, pose):
+                warnings.warn("Initial DRR is blank; skipping optimization.")
+                return None
+
             optimizer, scheduler, transform = self._setup_stage(
                 drr, pose, stage, patience, equalize
             )
@@ -271,3 +270,9 @@ def parse_scales(scales: list[float], crop: int, height: int) -> list[float]:
     """
     pyramid = [1.0] + [1.0 if x == 1.0 else x * (height / (height + crop)) for x in scales]
     return [pyramid[idx] / pyramid[idx + 1] for idx in range(len(pyramid) - 1)]
+
+
+@torch.no_grad()
+def _drr_is_blank(drr: DRR, pose: Pose) -> bool:
+    """Guard against initial pose estimates that completely miss the volume."""
+    return bool(drr(pose()).std() < 1e-8)

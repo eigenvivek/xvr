@@ -6,8 +6,7 @@
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
 #SBATCH --account=vision-polina
-#SBATCH --gres=gpu:1
-#SBATCH --constraint="nvidia_rtx_a6000"
+#SBATCH --gres=gpu:rtx_6000_ada:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=50G
 #SBATCH --time=03:00:00
@@ -31,10 +30,11 @@ xvr register model \
     --ckpt "$CKPT" \
     --imagepath experiments/data/deepfluoro/$SUBJECT/volume.nii.gz \
     --labelpath experiments/data/deepfluoro/$SUBJECT/mask.nii.gz \
+    --warp experiments/data/deepfluoro/$SUBJECT/warp.txt \
     --labels 1 2 3 4 7 \
     --scales 24 12 6 \
     --n-itrs 500 500 500 \
-    --patience 15 10 10 \
+    --patience 10 10 10 \
     --crop 100 \
     --linearize \
     --savepath "$SAVEPATH"
