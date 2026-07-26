@@ -6,8 +6,7 @@
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
 #SBATCH --account=vision-polina
-#SBATCH --gres=gpu:1
-#SBATCH --constraint="nvidia_rtx_a6000"
+#SBATCH --gres=gpu:rtx_6000_ada:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=50G
 #SBATCH --time=03:00:00
@@ -38,10 +37,11 @@ xvr register model \
     --ckpt "$CKPT" \
     --imagepath experiments/data/femur/$SUBJECT/volume.nii.gz \
     --labelpath experiments/data/femur/$SUBJECT/mask.nii.gz \
+    --warp experiments/data/femur/$SUBJECT/warp.txt \
     --labels 1 2 3 4 \
     --scales 16 8 4 \
     --n-itrs 500 250 100 \
-    --patience 15 10 5 \
+    --patience 10 10 10 \
     --crop 20 \
     $PP \
     --savepath "$R1"
@@ -53,14 +53,13 @@ for FILE in experiments/data/femur/$SUBJECT/xrays/*.dcm; do
         --ckpt "$R1/$STEM.pth" \
         --imagepath experiments/data/femur/$SUBJECT/volume.nii.gz \
         --labelpath experiments/data/femur/$SUBJECT/mask.nii.gz \
-        --labels 1 2 3 4 \
         --orientation AP \
         --scales 4 2 \
         --n-itrs 250 100 \
-        --patience 10 5 \
+        --patience 10 10 \
         --lr-rot 1e-3 \
         --lr-xyz 1e-1 \
-        --crop 20 \
+        --crop 1 \
         $PP \
         --savepath "$R2"
 done

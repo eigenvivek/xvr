@@ -6,8 +6,7 @@
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
 #SBATCH --account=vision-polina
-#SBATCH --gres=gpu:1
-#SBATCH --constraint="nvidia_rtx_a6000"
+#SBATCH --gres=gpu:rtx_6000_ada:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=50G
 #SBATCH --time=03:00:00
@@ -30,9 +29,10 @@ xvr register model \
     --files experiments/data/ljubljana/$SUBJECT/xrays/*[!_max].dcm \
     --ckpt "$CKPT" \
     --imagepath experiments/data/ljubljana/$SUBJECT/volume.nii.gz \
-    --scales 16 8 4 2 \
-    --n-itrs 500 500 500 100 \
-    --patience 15 10 5 5 \
+    --warp experiments/data/ljubljana/$SUBJECT/warp.txt \
+    --scales 16 8 4 \
+    --n-itrs 500 500 500 \
+    --patience 10 10 10 \
     --linearize \
     --subtract-background \
     --savepath "$SAVEPATH"
