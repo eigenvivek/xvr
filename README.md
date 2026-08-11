@@ -164,6 +164,7 @@ Data options:
   --patch_size TEXT               Optional random crop size (e.g., 'h,w,d'); if None, return entire volume
   --num_workers INTEGER           Number of subprocesses to use in the dataloader  [default: 4]
   --pin_memory                    Copy volumes from the dataloader into CUDA pinned memory before returning
+  --sample_weights PATH           Probability for sampling each volume in `volpath`
 
 Sampling options:
   --r1 <FLOAT FLOAT>...           Range for primary angle (in degrees)  [required]
@@ -275,6 +276,7 @@ Logging options:
 Miscellaneous options:
   --warp PATH                    SimpleITK transform to warp input CT to a template reference frame
   --invert                       Whether to invert the warp or not
+  --antipodal                    Initialize from antipode of predicted pose
 ```
 
 #### Notes
