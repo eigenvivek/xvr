@@ -78,14 +78,14 @@ xvr --version
 
 ## Experiments
 
-Reproducing the paper's registration results requires a CUDA GPU and ~10 GB of disk space. First, build the environment with `uv`:
+Reproducing the paper's registration results requires a CUDA GPU. First, build the environment with `uv`:
 
 ```bash
 git clone https://github.com/eigenvivek/xvr.git && cd xvr
 uv sync --all-groups
 ```
 
-Then download the [pretrained models](https://huggingface.co/eigenvivek/xvr) (3.7 GB) and [datasets](https://huggingface.co/datasets/eigenvivek/xvr-data) (5.8 GB) from HuggingFace:
+Then download the [pretrained models](https://huggingface.co/eigenvivek/xvr) (3.7 GB) and [datasets](https://huggingface.co/datasets/eigenvivek/xvr-data) (4.8 GB) from HuggingFace:
 
 ```bash
 uvx hf download eigenvivek/xvr      --repo-type model   --local-dir experiments/models/
