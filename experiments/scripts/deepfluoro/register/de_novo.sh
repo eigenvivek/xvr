@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-eval-deepfluoro-de-novo
-#SBATCH --output=logs/deepfluoro_eval_de_novo_%A_%a.out
-#SBATCH --error=logs/deepfluoro_eval_de_novo_%A_%a.err
+#SBATCH --job-name=xvr-register-deepfluoro-de-novo
+#SBATCH --output=logs/deepfluoro_register_de_novo_%A_%a.out
+#SBATCH --error=logs/deepfluoro_register_de_novo_%A_%a.err
 #SBATCH --array=1-6
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
