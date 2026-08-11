@@ -42,20 +42,83 @@ You can also enable tab-completion for `xvr` by adding this line to your `~/.bas
 eval "$(_XVR_COMPLETE=bash_source xvr)"
 ```
 
-## Roadmap
+## Development
 
-The current repository contains a fully functional package for registering X-ray and CT data. Additionally, pretrained models and data are released such that the results in the paper can be reproduced. 
+`xvr` is built using [`uv`](https://docs.astral.sh/uv/), an extremely fast Python project manager.
 
-In the future, extensive documentation, tutorials, and usability improvements (e.g., a user interface) will be added! Feel free to open an issue if there is anything in particular you would like to be added to `xvr`!
+If you want to modify `xvr` (e.g., adding different loss functions, network architectures, etc.), `uv` makes it easy to set up a development environment:
 
-- [x] Release a pip-installable version of `xvr`
-- [x] Upload pretrained models to reproduce all results in the paper
-- [x] Add detailed documentation
-- [x] Colab tutorial for iterative pose refinement
-- [ ] Colab tutorial for training patient-specific pose regression models
-- [ ] User interface for interactive 2D/3D registration
+```bash
+# Download xvr
+git clone https://github.com/eigenvivek/xvr && cd xvr
 
-## Usage
+# Install uv and build the environment with all dev requirements
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync --all-groups
+
+# Install pre-commit hooks locally
+uv tool install prek
+uvx prek install -f
+```
+
+To verify your virtual environment, you can run
+
+```bash
+uv run xvr --version
+```
+
+Alternatively, you can directly use the virtual environment that `uv` creates:
+
+```bash
+source .venv/bin/activate
+xvr --version
+```
+
+`xvr`'s [pre-commit hooks](.pre-commit-config.yaml) automatically take care of things like linting and formatting, so hack away! All PRs are welcome.
+
+## Experiments
+
+Reproducing the paper's registration results requires a CUDA GPU. First, build the environment with `uv`:
+
+```bash
+git clone https://github.com/eigenvivek/xvr.git && cd xvr
+uv sync --all-groups
+```
+
+Then download the [pretrained models](https://huggingface.co/eigenvivek/xvr) (3.7 GB) and [datasets](https://huggingface.co/datasets/eigenvivek/xvr-data) (4.8 GB) from HuggingFace:
+
+```bash
+uvx hf download eigenvivek/xvr      --repo-type model   --local-dir experiments/models/
+uvx hf download eigenvivek/xvr-data --repo-type dataset --local-dir experiments/data/
+```
+
+Registration runs three datasets (DeepFluoro, Femur, Ljubljana) × three initializations (_de novo_, finetuned, foundation) as nine SLURM array jobs:
+
+```bash
+./experiments/run.sh register
+```
+
+The scripts are in `experiments/scripts/{dataset}/register/`. Four `#SBATCH` directives are cluster-specific: update `--partition`, `--qos`, `--account`, and `--gres` to match your platform. Note that the reported metrics were computed on an NVIDIA RTX 6000 Ada with PyTorch 2.10.
+
+If you don't have SLURM, you can run the subjects in series by manually supplying the array index:
+
+```bash
+for m in de_novo finetuned foundation; do
+    for i in $(seq 1 6);  do SLURM_ARRAY_TASK_ID=$i bash experiments/scripts/deepfluoro/register/$m.sh; done
+    for i in $(seq 1 5);  do SLURM_ARRAY_TASK_ID=$i bash experiments/scripts/femur/register/$m.sh;      done
+    for i in $(seq 1 10); do SLURM_ARRAY_TASK_ID=$i bash experiments/scripts/ljubljana/register/$m.sh;  done
+done
+```
+
+Once every job has finished, score the results:
+
+```bash
+./experiments/run.sh evaluate
+```
+
+This writes `experiments/results/registration.csv`, rebuilt from scratch on each run, with one row per x-ray per pose (`init` and `final`) recording mPE, mRPE, mTRE, dGeo, the final NCC, and runtime.
+
+## CLI Usage
 
 `xvr` provides a command-line interface for training/finetuning pose regression models and registering clinical data with gradient-based iterative optimization with trained models. The API is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations.
 
@@ -101,6 +164,7 @@ Data options:
   --patch_size TEXT               Optional random crop size (e.g., 'h,w,d'); if None, return entire volume
   --num_workers INTEGER           Number of subprocesses to use in the dataloader  [default: 4]
   --pin_memory                    Copy volumes from the dataloader into CUDA pinned memory before returning
+  --sample_weights PATH           Probability for sampling each volume in `volpath`
 
 Sampling options:
   --r1 <FLOAT FLOAT>...           Range for primary angle (in degrees)  [required]
@@ -156,6 +220,11 @@ Logging options:
 - The `--volpath` argument should point to a directory containing CT volumes for training.
   - If the directory contains a single CT scan, the resulting model be patient-specific.
   - If the directory contains multiple CTs, it's beneficial to preregister them to a common reference frame (e.g., using [ANTs](https://github.com/ANTsX/ANTs)). This will improve the accuracy of the model, but this isn't strictly necessary.
+- We use `wandb` to log experiments. To use this feature, set the `WANDB_API_KEY` environment variable by adding the following line to your `.zshrc` or `.bashrc` file:
+
+    ```bash
+    export WANDB_API_KEY=your_api_key
+    ```
  
 ### Registration (test-time optimization)
 
@@ -207,109 +276,10 @@ Logging options:
 Miscellaneous options:
   --warp PATH                    SimpleITK transform to warp input CT to a template reference frame
   --invert                       Whether to invert the warp or not
+  --antipodal                    Initialize from antipode of predicted pose
 ```
 
 #### Notes
 
 - By passing a `--mask` and a comma-separated set of `--labels`, registration will be performed with respect to specific structures.
 - If the model was trained with a coordinate frame different to that of the `--volume`, you can pass a `--warp` to rigidly realign the model's predictions to the new patient.
-
-## Experiments
-
-#### Models
-
-Pretrained models are available [here](https://huggingface.co/eigenvivek/xvr/tree/main).
-
-#### Data
-
-Benchmarks datasets, reformatted into DICOM/NIfTI files, are available [here](https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main).
-
-If you use the [`DeepFluoro`](https://github.com/rg2/DeepFluoroLabeling-IPCAI2020) dataset, please cite:
-
-    @article{grupp2020automatic,
-      title={Automatic annotation of hip anatomy in fluoroscopy for robust and efficient 2D/3D registration},
-      author={Grupp, Robert B and Unberath, Mathias and Gao, Cong and Hegeman, Rachel A and Murphy, Ryan J and Alexander, Clayton P and Otake, Yoshito and McArthur, Benjamin A and Armand, Mehran and Taylor, Russell H},
-      journal={International journal of computer assisted radiology and surgery},
-      volume={15},
-      pages={759--769},
-      year={2020},
-      publisher={Springer}
-    }
-
-If you use the [`Ljubljana`](https://lit.fe.uni-lj.si/en/research/resources/3D-2D-GS-CA/) dataset, please cite:
-
-    @article{pernus20133d,
-      title={3D-2D registration of cerebral angiograms: A method and evaluation on clinical images},
-      author={Mitrović, Uroš and Špiclin, Žiga and Likar, Boštjan and Pernuš, Franjo},
-      journal={IEEE transactions on medical imaging},
-      volume={32},
-      number={8},
-      pages={1550--1563},
-      year={2013},
-      publisher={IEEE}
-    }
-
-#### Logging
-
-We use `wandb` to log experiments. To use this feature, set the `WANDB_API_KEY` environment variable by adding the following line to your `.zshrc` or `.bashrc` file:
-
-```bash
-export WANDB_API_KEY=your_api_key
-```
-
-## Development
-
-`xvr` is built using [`uv`](https://docs.astral.sh/uv/), an extremely fast Python project manager.
-
-If you want to modify `xvr` (e.g., adding different loss functions, network architectures, etc.), `uv` makes it easy to set up a development environment:
-
-```bash
-# Install uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Download xvr
-git clone https://github.com/eigenvivek/xvr
-cd xvr
-
-# Set up the virtual environment with all dev requirements
-uv sync --all-groups
-
-# Install pre-commit hooks locally
-uv tool install prek
-uvx prek install -f
-```
-
-To verify your virtual environment, you can run
-
-```bash
-uv run xvr --version
-```
-
-Alternatively, you can directly use the virtual environment that `uv` creates:
-
-```bash
-source .venv/bin/activate
-xvr --version
-```
-
-`xvr`'s [pre-commit hooks](.pre-commit-config.yaml) automatically take care of things like linting and formatting, so hack away! All PRs are welcome.
-
-## Reproducibility
-
-First, set up your environment as described above.
-
-#### Download the datasets
-
-```bash
-uvx hf download eigenvivek/xvr-data --repo-type dataset --local-dir data/
-```
-
-HuggingFace's internet connection can be spotty, so you sometimes have to run this command multiple (2-4) times. Luckily their CLI won't redownload cached files. Execute the command until it runs with raising an error message.
-
-#### Download the pretrained models
-
-```bash
-uvx hf download eigenvivek/xvr --repo-type model --local-dir models/
-```
-
-Similar to the data, rerun til the command raises no errors.
