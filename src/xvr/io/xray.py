@@ -154,6 +154,7 @@ def parse_dicom_pose(
     return convert(
         torch.tensor([[alpha, beta, 0.0]], device=device),
         torch.tensor([[0.0, sid, 0.0]], device=device),
+        parameterization="euler_angles",
         convention="ZXY",
         degrees=True,
     )
