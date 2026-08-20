@@ -69,17 +69,16 @@ class ModelPose:
 
     Args:
         ckpt: Path to the model checkpoint.
-        warp: SimpleITK transform reframing the predicted pose into the CT's frame
-            (needed for foundation models trained in a template frame). None for
-            patient-specific models already in the CT's frame.
         volume: Path to the CT image the warp is defined against (Register's imagepath).
+        warp: SimpleITK transform reframing the predicted pose into the CT's frame.
+            None for patient-specific models already in the CT's frame.
         antipodal: Initialize from the antipode of the predicted pose.
     """
 
     ckpt: str
     device: str = "cuda"
-    warp: str | None = None
     volume: str | None = None
+    warp: str | None = None
     antipodal: bool = False
     model: torch.nn.Module = field(init=False, repr=False, default=None)
     config: dict = field(init=False, repr=False, factory=dict)

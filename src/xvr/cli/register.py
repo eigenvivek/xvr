@@ -16,6 +16,10 @@ _MODEL = Group("MODEL", sort_key=1)
 def model(
     ckpt: Annotated[str, Parameter(help="Path to model checkpoint", group=_MODEL)],
     *,
+    warp: Annotated[
+        str | None,
+        Parameter(help=("SimpleITK transform reframing a model's predicted pose"), group=_MODEL),
+    ] = None,
     antipodal: Annotated[
         bool, Parameter(help="Initialize from the antipode of the predicted pose", group=_MODEL)
     ] = False,
@@ -28,8 +32,8 @@ def model(
     initializer = ModelPose(
         ckpt=ckpt,
         device=base.device,
-        warp=base.warp,
         volume=base.imagepath,
+        warp=warp,
         antipodal=antipodal,
     )
     _run_registration(initializer, base, run)
@@ -111,7 +115,6 @@ def _run_registration(
     from ..register import Register
 
     base_dict = asdict(base)
-    base_dict.pop("warp", None)
     files = _expand_files(base_dict.pop("files"))
 
     reg = Register(initializer=initializer, **base_dict)
