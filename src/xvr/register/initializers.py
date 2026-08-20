@@ -5,7 +5,7 @@ from attrs import define, field
 from diffdrr.pose import RigidTransform, convert
 
 from ..io import parse_dicom_pose
-from ..model.inference import _correct_pose, predict_pose
+from ..model.inference import _construct_antipode, _correct_pose, predict_pose
 from ..model.network import load_model
 from .context import XrayContext
 
@@ -73,12 +73,14 @@ class ModelPose:
             (needed for foundation models trained in a template frame). None for
             patient-specific models already in the CT's frame.
         volume: Path to the CT image the warp is defined against (Register's imagepath).
+        antipodal: Initialize from the antipode of the predicted pose.
     """
 
     ckpt: str
     device: str = "cuda"
     warp: str | None = None
     volume: str | None = None
+    antipodal: bool = False
     model: torch.nn.Module = field(init=False, repr=False, default=None)
     config: dict = field(init=False, repr=False, factory=dict)
     orientation: str | None = field(init=False, default="AP")
@@ -92,7 +94,10 @@ class ModelPose:
 
     def __call__(self, ctx: XrayContext) -> RigidTransform:
         pose = predict_pose(self.model, self.config, ctx.img.cpu(), **ctx.intrinsics)
-        return _correct_pose(pose, self.warp, self.volume, invert=False)
+        pose = _correct_pose(pose, self.warp, self.volume, invert=False)
+        if self.antipodal:
+            pose = _construct_antipode(pose)
+        return pose
 
 
 @define(slots=False)
