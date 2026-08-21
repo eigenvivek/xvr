@@ -23,7 +23,6 @@ class BaseParams:
     imagepath: Annotated[str, Parameter(help="Path to the CT image", group=_DATA)]
     labelpath: Annotated[str | None, Parameter(help="Path to the segmentation label map. If None, uses the full image", group=_DATA)] = None
     labels: Annotated[list[int] | None, Parameter(help="Label indices to include in the DRR. If None, uses all labels", group=_DATA, validator=_non_empty, consume_multiple=True)] = None
-    warp: Annotated[str | None, Parameter(help="SimpleITK transform reframing a model's predicted pose into the CT's frame (foundation models only)", group=_DATA)] = None
     metric: Annotated[str, Parameter(help="Image similarity metric", group=_OPTIMIZER)] = "gmncc"
     scales: Annotated[list[float], Parameter(help="Downsampling scale(s) for multiscale registration", group=_OPTIMIZER, validator=_non_empty, consume_multiple=True)] = field(default_factory=lambda: [8.0])
     n_itrs: Annotated[list[int], Parameter(help="Number of optimization iterations per scale", group=_OPTIMIZER, validator=_non_empty, consume_multiple=True)] = field(default_factory=lambda: [500])
