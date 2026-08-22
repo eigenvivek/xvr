@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-ttopt-femur-foundation
-#SBATCH --output=logs/xvr_femur_foundation_ttopt_%A_%a.out
-#SBATCH --error=logs/xvr_femur_foundation_ttopt_%A_%a.err
+#SBATCH --job-name=xvr-register-femur-foundation
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --array=1-5
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -19,90 +19,57 @@ source .venv/bin/activate
 
 SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 
+CKPT=experiments/models/wbct/model.pth
+
 # subject04's x-rays are already linearized, so they get no intensity preprocessing
 if [[ "$SLURM_ARRAY_TASK_ID" == "4" ]]; then
-    LINEARIZE_FLAG=""
-    SUBTRACT_BACKGROUND_FLAG=""
-    EQUALIZE_FLAG=""
+    PP="--no-linearize --no-subtract-background --no-equalize"
+    PP_RESTART="--no-linearize --no-subtract-background --equalize"
+    CROP_RESTART=0
 else
-    LINEARIZE_FLAG="--linearize"
-    SUBTRACT_BACKGROUND_FLAG="--subtract_background"
-    EQUALIZE_FLAG="--equalize"
+    PP="--linearize --subtract-background --equalize"
+    PP_RESTART="$PP"
+    CROP_RESTART=1
 fi
 
-OUTDIR=experiments/results/femur/foundation/$SUBJECT
-RESTART_OUTDIR=experiments/results/femur/foundation_restart/$SUBJECT
-ANTIPODAL_OUTDIR=experiments/results/femur/foundation_antipodal/$SUBJECT
-ANTIPODAL_RESTART_OUTDIR=experiments/results/femur/foundation_antipodal_restart/$SUBJECT
+for PAIR in "foundation:" "foundation_antipodal:--antipodal"; do
+    NAME="${PAIR%%:*}"
+    ANTIPODAL="${PAIR#*:}"
+    OUTDIR=experiments/results/femur/$NAME/$SUBJECT
+    RESTART_OUTDIR=experiments/results/femur/${NAME}_restart/$SUBJECT
+    rm -rf "$OUTDIR" "$RESTART_OUTDIR"
+    mkdir -p "$OUTDIR" "$RESTART_OUTDIR"
 
-rm -rf "$OUTDIR" "$RESTART_OUTDIR" "$ANTIPODAL_OUTDIR" "$ANTIPODAL_RESTART_OUTDIR"
-mkdir -p "$OUTDIR" "$RESTART_OUTDIR" "$ANTIPODAL_OUTDIR" "$ANTIPODAL_RESTART_OUTDIR"
-
-xvr register model \
-    experiments/data/femur/$SUBJECT/xrays \
-    -v experiments/data/femur/$SUBJECT/volume.nii.gz \
-    -m experiments/data/femur/$SUBJECT/mask.nii.gz \
-    -c experiments/models/wbct.pth \
-    -o $OUTDIR \
-    --labels 1,2,3,4 \
-    --crop 20 \
-    $LINEARIZE_FLAG \
-    $SUBTRACT_BACKGROUND_FLAG \
-    $EQUALIZE_FLAG \
-    --scales 24,12,6 \
-    --n_itrs 500,500,500 \
-    --warp experiments/data/femur/$SUBJECT/warp.txt
-
-for FILE in experiments/data/femur/$SUBJECT/xrays/*.dcm; do
-    XRAY=$(basename "$FILE" .dcm)
-    xvr register restart \
-        "$FILE" \
-        -v experiments/data/femur/$SUBJECT/volume.nii.gz \
-        -m experiments/data/femur/$SUBJECT/mask.nii.gz \
-        -c $OUTDIR/$XRAY/parameters.pt \
-        -o $RESTART_OUTDIR \
-        --orientation AP \
+    xvr register model \
+        --files experiments/data/femur/$SUBJECT/xrays/*.dcm \
+        --ckpt "$CKPT" \
+        --imagepath experiments/data/femur/$SUBJECT/volume.nii.gz \
+        --labelpath experiments/data/femur/$SUBJECT/mask.nii.gz \
+        --warp experiments/data/femur/$SUBJECT/warp.txt \
+        --labels 1 2 3 4 \
+        --scales 24 12 6 \
+        --n-itrs 500 500 500 \
+        --patience 10 10 10 \
         --crop 20 \
-        $LINEARIZE_FLAG \
-        $SUBTRACT_BACKGROUND_FLAG \
-        $EQUALIZE_FLAG \
-        --scales 4,2 \
-        --n_itrs 250,100 \
-        --lr_rot 1e-3 \
-        --lr_xyz 1e-1
-done
+        $PP \
+        $ANTIPODAL \
+        --savepath "$OUTDIR"
 
-xvr register model \
-    experiments/data/femur/$SUBJECT/xrays \
-    -v experiments/data/femur/$SUBJECT/volume.nii.gz \
-    -m experiments/data/femur/$SUBJECT/mask.nii.gz \
-    -c experiments/models/wbct.pth \
-    -o $ANTIPODAL_OUTDIR \
-    --labels 1,2,3,4 \
-    --crop 20 \
-    $LINEARIZE_FLAG \
-    $SUBTRACT_BACKGROUND_FLAG \
-    $EQUALIZE_FLAG \
-    --scales 24,12,6 \
-    --n_itrs 500,500,500 \
-    --warp experiments/data/femur/$SUBJECT/warp.txt \
-    --antipodal
-
-for FILE in experiments/data/femur/$SUBJECT/xrays/*.dcm; do
-    XRAY=$(basename "$FILE" .dcm)
-    xvr register restart \
-        "$FILE" \
-        -v experiments/data/femur/$SUBJECT/volume.nii.gz \
-        -m experiments/data/femur/$SUBJECT/mask.nii.gz \
-        -c $ANTIPODAL_OUTDIR/$XRAY/parameters.pt \
-        -o $ANTIPODAL_RESTART_OUTDIR \
-        --orientation AP \
-        --crop 20 \
-        $LINEARIZE_FLAG \
-        $SUBTRACT_BACKGROUND_FLAG \
-        $EQUALIZE_FLAG \
-        --scales 4,2 \
-        --n_itrs 250,100 \
-        --lr_rot 1e-3 \
-        --lr_xyz 1e-1
+    for FILE in experiments/data/femur/$SUBJECT/xrays/*.dcm; do
+        STEM=$(basename "$FILE" .dcm)
+        xvr register restart \
+            --files "$FILE" \
+            --ckpt "$OUTDIR/$STEM.pth" \
+            --imagepath experiments/data/femur/$SUBJECT/volume.nii.gz \
+            --labelpath experiments/data/femur/$SUBJECT/mask.nii.gz \
+            --orientation AP \
+            --scales 4 2 \
+            --n-itrs 250 100 \
+            --patience 10 10 \
+            --lr-rot 1e-3 \
+            --lr-xyz 1e-1 \
+            --crop $CROP_RESTART \
+            $PP_RESTART \
+            --savepath "$RESTART_OUTDIR"
+    done
 done

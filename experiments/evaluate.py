@@ -3,14 +3,15 @@ from pathlib import Path
 import click
 import pandas as pd
 import torch
+from diffdrr.data import read
+from diffdrr.drr import DRR
+from diffdrr.metrics import DoubleGeodesicSE3
 from diffdrr.pose import RigidTransform
 from tqdm import tqdm
 
-from xvr.metrics import Evaluator
-from xvr.renderer import initialize_drr
-
-DATA = Path("experiments/data")
-RESULTS = Path("experiments/results")
+ROOT = Path(__file__).resolve().parent
+DATA = ROOT / "data"
+RESULTS = ROOT / "results"
 
 MASKS = {"deepfluoro": "mask.nii.gz", "femur": "mask.nii.gz", "ljubljana": None}
 
@@ -24,37 +25,30 @@ EXCLUDE = {
 }
 
 
-def load_subject(
-    dataset: str,
-    subject: str,
-    device: str,
-) -> tuple[object, torch.Tensor]:
-    """Load a subject's CT volume and fiducials, reused across all of its x-rays."""
-    mask = MASKS[dataset]
-    drr = initialize_drr(
-        str(DATA / dataset / subject / "volume.nii.gz"),
-        str(DATA / dataset / subject / mask) if mask else None,
-        None,
-        "AP",
-        *(100, 100, 1000.0, 1.0, 1.0, 0.0, 0.0),
-        False,
-        "trilinear",
-        device=device,
-    )
-    fiducials = torch.load(
-        DATA / dataset / subject / "fiducials.pt", weights_only=False
-    )
-    return drr, fiducials.to(device)
+class Evaluator:
+    """Four 2D/3D registration error metrics (all in mm): mPE, mRPE, mTRE, dGeo."""
 
+    def __init__(self, drr: DRR, fiducials: torch.Tensor) -> None:
+        self.drr = drr
+        self.fiducials = fiducials
+        self.geodesic = DoubleGeodesicSE3(drr.detector.sdd, eps=0.0)
 
-def initialize_evaluator(
-    drr,
-    fiducials: torch.Tensor,
-    intrinsics: dict,
-) -> Evaluator:
-    """Apply one x-ray's intrinsics to the cached DRR and rebuild its Evaluator."""
-    drr.set_intrinsics_(**intrinsics)
-    return Evaluator(drr, fiducials)
+    def __call__(
+        self,
+        true_pose: RigidTransform,
+        pred_pose: RigidTransform,
+    ) -> list[float]:
+        x = self.drr.perspective_projection(pred_pose, self.fiducials)
+        y = self.drr.perspective_projection(true_pose, self.fiducials)
+        mpe = (self.drr.detector.delx * (x - y)).norm(dim=-1).mean(dim=-1)
+        mrpe = (
+            (self.drr.inverse_projection(pred_pose, x) - self.drr.inverse_projection(true_pose, y))
+            .norm(dim=-1)
+            .mean(dim=-1)
+        )
+        mtre = (pred_pose(self.fiducials) - true_pose(self.fiducials)).norm(dim=-1).mean(dim=-1)
+        *_, dgeo = self.geodesic(true_pose, pred_pose)
+        return torch.stack([mpe, mrpe, mtre, dgeo], dim=-1).squeeze().tolist()
 
 
 def read_true(
@@ -63,34 +57,31 @@ def read_true(
     xray: str,
     device: str,
 ) -> tuple[RigidTransform, dict]:
-    """Read one x-ray's ground-truth pose and stored intrinsics."""
-    ckpt = torch.load(
-        DATA / dataset / subject / "xrays" / f"{xray}.pt", weights_only=False
-    )
-    true_pose = RigidTransform(ckpt["pose"].to(torch.float32)).to(device)
-    return true_pose, ckpt["intrinsics"]
+    """Ground-truth pose and stored intrinsics for one x-ray."""
+    ckpt = torch.load(DATA / dataset / subject / "xrays" / f"{xray}.pt", weights_only=False)
+    pose = RigidTransform(ckpt["pose"].to(torch.float32))
+    return pose.to(device), ckpt["intrinsics"]
 
 
-def read_pred(
-    model_path: Path,
-    final_path: Path,
+def build_evaluator(
+    dataset: str,
+    subject: str,
+    intrinsics: dict,
     device: str,
-) -> tuple[RigidTransform, float, RigidTransform, float, float]:
-    """Read the initial pose from the model stage and the final pose from the final stage."""
-    model = torch.load(model_path, weights_only=False)
-    init_pose = RigidTransform(model["init_pose"].to(torch.float32)).to(device)
-    ncc_init = model["trajectory"]["ncc"].iloc[0].item()
-    runtime = float(model["runtime"])
-
-    if final_path == model_path:
-        final = model
-    else:
-        final = torch.load(final_path, weights_only=False)
-        runtime += float(final["runtime"])
-    final_pose = RigidTransform(final["final_pose"].to(torch.float32)).to(device)
-    ncc_final = final["trajectory"]["ncc"].iloc[-1].item()
-
-    return init_pose, ncc_init, final_pose, ncc_final, runtime
+) -> Evaluator:
+    data = DATA / dataset
+    mask = MASKS[dataset]
+    subj = read(
+        str(data / subject / "volume.nii.gz"),
+        str(data / subject / mask) if mask else None,
+        None,
+        "AP",
+    )
+    drr = DRR(subj, sdd=1000.0, height=100, delx=1.0, renderer="trilinear", reverse_x_axis=False)
+    drr = drr.to(device)
+    drr.set_intrinsics_(**intrinsics)
+    fiducials = torch.load(data / subject / "fiducials.pt", weights_only=False).to(torch.float32)
+    return Evaluator(drr, fiducials.to(device))
 
 
 def final_stage(root: Path) -> Path:
@@ -100,78 +91,81 @@ def final_stage(root: Path) -> Path:
 
 
 def hemispheres(root: Path) -> list[Path]:
-    """The runs to choose between: a foundation prediction and its antipode, else just the run.
-
-    The foundation model's prediction and its antipode (a ~180 deg C-arm flip) are equally valid
-    initializations, so `register/foundation.sh` optimizes both. Ground truth is not available at
-    inference, so the winner is whichever reached the higher final image similarity (NCC).
-    """
+    """If the antipode was run, return its path."""
     antipodal = root.parent / f"{root.name}_antipodal"
     return [root, antipodal] if antipodal.is_dir() else [root]
 
 
+def read_pred(
+    run: Path,
+    subject: str,
+    xray: str,
+) -> tuple[torch.Tensor, float, torch.Tensor, float, float]:
+    """Return the init pose, final pose, image similarity scores, and runtimes."""
+    first_pth = run / subject / f"{xray}.pth"
+    final_pth = final_stage(run) / subject / f"{xray}.pth"
+
+    first = torch.load(first_pth, weights_only=False)
+    final = first if final_pth == first_pth else torch.load(final_pth, weights_only=False)
+
+    sim_init = first["log"]["losses"][0] if first["log"] is not None else -torch.inf
+    sim_final = final["log"]["losses"][-1] if final["log"] is not None else -torch.inf
+
+    stages = [first] if final_pth == first_pth else [first, final]
+    runtime = sum(s["runtime"] for s in stages)
+    return first["init_pose"], sim_init, final["final_pose"], sim_final, runtime
+
+
 @click.command()
 @click.option("--dataset", required=True, type=click.Choice(list(MASKS)))
-@click.option(
-    "--result", required=True, help="folder under experiments/results/<dataset>/"
-)
-@click.option(
-    "--main", "savepath", default=str(RESULTS / "registration.csv"), type=click.Path()
-)
+@click.option("--result", required=True, help="folder under experiments/results/<dataset>/")
+@click.option("--main", "savepath", default=str(RESULTS / "registration.csv"), type=click.Path())
 @click.option("--device", default="cpu")
 def main(dataset, result, savepath, device):
-    """Score a registration run's initial and final poses into the metrics CSV."""
+    """Score a registration run's init/final poses into the main metrics CSV."""
     root = RESULTS / dataset / result
     runs = hemispheres(root)
 
-    results = []
-    cached = None
-    n_antipode, n_incomplete = 0, 0
-    for model_path in tqdm(sorted(root.glob("subject*/*/parameters.pt"))):
-        subject, xray = model_path.parent.parent.name, model_path.parent.name
+    rows, evaluator, cached = [], None, None
+    n_antipode = 0
+    for pth in tqdm(sorted(root.glob("subject*/*.pth"))):
+        subject, xray = pth.parent.name, pth.stem
         if (dataset, subject, xray) in EXCLUDE:
             continue
 
-        preds = [
-            read_pred(
-                model_path, final_stage(root) / subject / xray / "parameters.pt", device
-            )
-        ]
-        for run in runs[1:]:
-            counterpart = run / subject / xray / "parameters.pt"
-            if not counterpart.exists():
-                break
-            final_path = final_stage(run) / subject / xray / "parameters.pt"
-            preds.append(read_pred(counterpart, final_path, device))
-        if len(preds) < len(runs):
-            n_incomplete += 1
-            continue
+        # Score the prediction and (for foundation runs) its antipode, then keep the winner.
+        preds = [read_pred(run, subject, xray) for run in runs]
 
         # Ties keep the raw prediction, since max() returns the first maximal element
-        init_pose, ncc_init, final_pose, ncc_final, runtime = max(
-            preds, key=lambda p: p[3]
-        )
-        n_antipode += ncc_final != preds[0][3]
+        init_pose, sim_init, final_pose, sim_final, runtime = max(preds, key=lambda p: p[3])
+        n_antipode += sim_final != preds[0][3]
 
+        # Rebuild the DRR when the subject changes
         true_pose, intrinsics = read_true(dataset, subject, xray, device)
         if cached != subject:
-            drr, fiducials, cached = *load_subject(dataset, subject, device), subject
-        evaluator = initialize_evaluator(drr, fiducials, intrinsics)
+            evaluator, cached = build_evaluator(dataset, subject, intrinsics, device), subject
 
-        for estimate, pred_pose, ncc, elapsed in [
-            ("init", init_pose, ncc_init, 0.0),
-            ("final", final_pose, ncc_final, runtime),
+        # Adapt the DRR's intrinsics to the X-ray's intrinsics
+        evaluator.drr.set_intrinsics_(**intrinsics)
+        evaluator.geodesic = DoubleGeodesicSE3(evaluator.drr.detector.sdd, eps=0.0)
+
+        # Compute errors
+        for pose, mat, sim, rt in [
+            ("init", init_pose, sim_init, 0.0),
+            ("final", final_pose, sim_final, runtime),
         ]:
-            mpe, mrpe, mtre, dgeo = evaluator(true_pose, pred_pose)
-            results.append(
+            mpe, mrpe, mtre, dgeo = evaluator(
+                true_pose, RigidTransform(mat.to(torch.float32)).to(device)
+            )
+            rows.append(
                 {
                     "dataset": dataset,
                     "result": result,
                     "subject": subject,
                     "xray": xray,
-                    "pose": estimate,
-                    "ncc": ncc,
-                    "runtime": elapsed,
+                    "pose": pose,
+                    "ncc": sim,
+                    "runtime": rt,
                     "mPE": mpe,
                     "mRPE": mrpe,
                     "mTRE": mtre,
@@ -179,27 +173,15 @@ def main(dataset, result, savepath, device):
                 }
             )
 
-    if len(runs) > 1:
-        n = len(results) // 2
-        print(
-            f"{dataset}/{result}: raw prediction kept for {n - n_antipode}, antipode for {n_antipode}"
-        )
-    if n_incomplete:
-        print(
-            f"WARNING: skipped {n_incomplete} x-rays missing a counterpart in {runs[-1]}"
-        )
-
-    df = pd.DataFrame(results)
+    df = pd.DataFrame(rows)
     out = Path(savepath)
+    out.parent.mkdir(parents=True, exist_ok=True)
     if out.exists():
         old = pd.read_csv(out, dtype={"subject": str, "xray": str})
         df = pd.concat(
-            [old[~((old.dataset == dataset) & (old.result == result))], df],
-            ignore_index=True,
+            [old[~((old.dataset == dataset) & (old.result == result))], df], ignore_index=True
         )
-    df.sort_values(["dataset", "result", "subject", "xray", "pose"]).to_csv(
-        out, index=False
-    )
+    df.sort_values(["dataset", "result", "subject", "xray", "pose"]).to_csv(out, index=False)
     print(f"{len(df)} rows -> {out}")
 
 

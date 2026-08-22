@@ -4,7 +4,7 @@ from torchvision.transforms import Compose, Normalize, Resize
 
 def XrayTransforms(
     height: int,
-    width: int = None,
+    width: int | None = None,
     mean: float = 0.15,
     std: float = 0.1,
     equalize: bool = False,

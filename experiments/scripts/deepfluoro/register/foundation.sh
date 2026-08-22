@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-ttopt-deepfluoro-foundation
-#SBATCH --output=logs/xvr_deepfluoro_foundation_ttopt_%A_%a.out
-#SBATCH --error=logs/xvr_deepfluoro_foundation_ttopt_%A_%a.err
+#SBATCH --job-name=xvr-register-deepfluoro-foundation
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --array=1-6
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -19,35 +19,27 @@ source .venv/bin/activate
 
 SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 
+CKPT=experiments/models/wbct/model.pth
 OUTDIR=experiments/results/deepfluoro/foundation/$SUBJECT
-ANTIPODAL_OUTDIR=experiments/results/deepfluoro/foundation_antipodal/$SUBJECT
+RESTART_OUTDIR=experiments/results/deepfluoro/foundation_antipodal/$SUBJECT
+rm -rf "$OUTDIR" "$RESTART_OUTDIR"
+mkdir -p "$OUTDIR" "$RESTART_OUTDIR"
 
-rm -rf "$OUTDIR" "$ANTIPODAL_OUTDIR"
-mkdir -p "$OUTDIR" "$ANTIPODAL_OUTDIR"
-
-xvr register model \
-    experiments/data/deepfluoro/$SUBJECT/xrays \
-    -v experiments/data/deepfluoro/$SUBJECT/volume.nii.gz \
-    -m experiments/data/deepfluoro/$SUBJECT/mask.nii.gz \
-    -c experiments/models/wbct.pth \
-    -o $OUTDIR \
-    --crop 100 \
-    --linearize \
-    --labels 1,2,3,4,7 \
-    --scales 24,12,6 \
-    --n_itrs 500,500,500 \
-    --warp experiments/data/deepfluoro/$SUBJECT/warp.txt
-
-xvr register model \
-    experiments/data/deepfluoro/$SUBJECT/xrays \
-    -v experiments/data/deepfluoro/$SUBJECT/volume.nii.gz \
-    -m experiments/data/deepfluoro/$SUBJECT/mask.nii.gz \
-    -c experiments/models/wbct.pth \
-    -o $ANTIPODAL_OUTDIR \
-    --crop 100 \
-    --linearize \
-    --labels 1,2,3,4,7 \
-    --scales 24,12,6 \
-    --n_itrs 500,500,500 \
-    --warp experiments/data/deepfluoro/$SUBJECT/warp.txt \
-    --antipodal
+for PAIR in "$OUTDIR:" "$RESTART_OUTDIR:--antipodal"; do
+    OUTDIR="${PAIR%%:*}"
+    ANTIPODAL="${PAIR#*:}"
+    xvr register model \
+        --files experiments/data/deepfluoro/$SUBJECT/xrays/*.dcm \
+        --ckpt "$CKPT" \
+        --imagepath experiments/data/deepfluoro/$SUBJECT/volume.nii.gz \
+        --labelpath experiments/data/deepfluoro/$SUBJECT/mask.nii.gz \
+        --warp experiments/data/deepfluoro/$SUBJECT/warp.txt \
+        --labels 1 2 3 4 7 \
+        --scales 24 12 6 \
+        --n-itrs 500 500 500 \
+        --patience 10 10 10 \
+        --crop 100 \
+        --linearize \
+        $ANTIPODAL \
+        --savepath "$OUTDIR"
+done

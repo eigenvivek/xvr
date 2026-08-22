@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=xvr-train-ljubljana-de-novo
-#SBATCH --output=logs/xvr_ljubljana_de_novo_train_%A_%a.out
-#SBATCH --error=logs/xvr_ljubljana_de_novo_train_%A_%a.err
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --array=1-10
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -31,10 +31,15 @@ xvr train \
     --sdd 1250.0 \
     --height 128 \
     --delx 2.31 \
-    --model_name resnet34 \
+    --model-name resnet34 \
+    --batch-size 116 \
     --lr 0.001 \
-    --batch_size 116 \
-    --n_total_itrs 30000 \
-    --n_save_every_itrs 250 \
-    --name ljubljana-$SUBJECT-de-novo \
-    --project xvr
+    --weight-haus 0.0 \
+    --n-total-itrs 30000 \
+    --n-save-every-itrs 250 \
+    --project xvr \
+    --name ljubljana-$SUBJECT-de-novo
+
+FINAL=$(ls experiments/models/ljubljana/de_novo/$SUBJECT/*.pth | sort | tail -n 1)
+mv "$FINAL" experiments/models/ljubljana/de_novo/$SUBJECT.pth
+rm -rf experiments/models/ljubljana/de_novo/$SUBJECT

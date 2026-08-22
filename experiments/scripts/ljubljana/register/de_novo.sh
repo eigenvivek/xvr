@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=xvr-ttopt-ljubljana-de-novo
-#SBATCH --output=logs/xvr_ljubljana_de_novo_ttopt_%A_%a.out
-#SBATCH --error=logs/xvr_ljubljana_de_novo_ttopt_%A_%a.err
+#SBATCH --job-name=xvr-register-ljubljana-de-novo
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --array=1-10
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:rtx_6000_ada:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=50G
-#SBATCH --time=05:00:00
+#SBATCH --time=03:00:00
 
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
@@ -19,18 +19,19 @@ source .venv/bin/activate
 
 SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 
+CKPT=experiments/models/ljubljana/de_novo/$SUBJECT.pth
 OUTDIR=experiments/results/ljubljana/de_novo/$SUBJECT
 rm -rf "$OUTDIR"
 mkdir -p "$OUTDIR"
 
-# --pattern skips the *_max.dcm maximum-intensity projections, which are not registered
+# the glob skips the *_max.dcm maximum-intensity projections, which are not registered
 xvr register model \
-    experiments/data/ljubljana/$SUBJECT/xrays \
-    -v experiments/data/ljubljana/$SUBJECT/volume.nii.gz \
-    -c experiments/models/ljubljana/de_novo/$SUBJECT.pth \
-    -o $OUTDIR \
+    --files experiments/data/ljubljana/$SUBJECT/xrays/*[!_max].dcm \
+    --ckpt "$CKPT" \
+    --imagepath experiments/data/ljubljana/$SUBJECT/volume.nii.gz \
+    --scales 16 8 4 \
+    --n-itrs 500 500 500 \
+    --patience 10 10 10 \
     --linearize \
-    --subtract_background \
-    --scales 16,8,4 \
-    --n_itrs 500,500,500 \
-    --pattern '*[!_max].dcm'
+    --subtract-background \
+    --savepath "$OUTDIR"
