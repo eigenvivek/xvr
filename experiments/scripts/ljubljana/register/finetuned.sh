@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=xvr-register-ljubljana-finetuned
-#SBATCH --output=logs/ljubljana_register_finetuned_%A_%a.out
-#SBATCH --error=logs/ljubljana_register_finetuned_%A_%a.err
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --array=1-10
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -11,20 +11,20 @@
 #SBATCH --mem=50G
 #SBATCH --time=03:00:00
 
-mkdir -p logs
+cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
+mkdir -p logs
 
 source .venv/bin/activate
 
+SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
+
 CKPT=experiments/models/ljubljana/finetuned/$SUBJECT.pth
-SAVEPATH=experiments/results/ljubljana/finetuned/$SUBJECT
-mkdir -p "$SAVEPATH"
+OUTDIR=experiments/results/ljubljana/finetuned/$SUBJECT
+rm -rf "$OUTDIR"
+mkdir -p "$OUTDIR"
 
-echo "Subject:  $SUBJECT"
-echo "Ckpt:     $CKPT"
-echo "Savepath: $SAVEPATH"
-
+# the glob skips the *_max.dcm maximum-intensity projections, which are not registered
 xvr register model \
     --files experiments/data/ljubljana/$SUBJECT/xrays/*[!_max].dcm \
     --ckpt "$CKPT" \
@@ -35,4 +35,4 @@ xvr register model \
     --patience 10 10 10 \
     --linearize \
     --subtract-background \
-    --savepath "$SAVEPATH"
+    --savepath "$OUTDIR"

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=xvr-register-femur-de-novo
-#SBATCH --output=logs/femur_register_de_novo_%A_%a.out
-#SBATCH --error=logs/femur_register_de_novo_%A_%a.err
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --array=1-5
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -11,21 +11,22 @@
 #SBATCH --mem=50G
 #SBATCH --time=03:00:00
 
-mkdir -p logs
+cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
+mkdir -p logs
 
 source .venv/bin/activate
 
-CKPT=experiments/models/femur/de_novo/$SUBJECT.pth
-R1=experiments/results/femur/de_novo/$SUBJECT
-R2=experiments/results/femur/de_novo_restart/$SUBJECT
-mkdir -p "$R1" "$R2"
+SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 
-# The restart flags replicate main's old CLI, whose restart command scrambled its
-# positional args: crop became bool(subtract_background) and equalize was always on.
-# Matching main's registration results bitwise requires replicating that behavior.
-if [ "$SLURM_ARRAY_TASK_ID" == "4" ]; then
+CKPT=experiments/models/femur/de_novo/$SUBJECT.pth
+OUTDIR=experiments/results/femur/de_novo/$SUBJECT
+RESTART_OUTDIR=experiments/results/femur/de_novo_restart/$SUBJECT
+rm -rf "$OUTDIR" "$RESTART_OUTDIR"
+mkdir -p "$OUTDIR" "$RESTART_OUTDIR"
+
+# subject04's x-rays are already linearized, so they get no intensity preprocessing
+if [[ "$SLURM_ARRAY_TASK_ID" == "4" ]]; then
     PP="--no-linearize --no-subtract-background --no-equalize"
     PP_RESTART="--no-linearize --no-subtract-background --equalize"
     CROP_RESTART=0
@@ -34,10 +35,6 @@ else
     PP_RESTART="$PP"
     CROP_RESTART=1
 fi
-
-echo "Subject:  $SUBJECT"
-echo "Ckpt:     $CKPT"
-echo "Preproc:  $PP"
 
 xvr register model \
     --files experiments/data/femur/$SUBJECT/xrays/*.dcm \
@@ -50,13 +47,13 @@ xvr register model \
     --patience 10 10 10 \
     --crop 20 \
     $PP \
-    --savepath "$R1"
+    --savepath "$OUTDIR"
 
 for FILE in experiments/data/femur/$SUBJECT/xrays/*.dcm; do
     STEM=$(basename "$FILE" .dcm)
     xvr register restart \
         --files "$FILE" \
-        --ckpt "$R1/$STEM.pth" \
+        --ckpt "$OUTDIR/$STEM.pth" \
         --imagepath experiments/data/femur/$SUBJECT/volume.nii.gz \
         --labelpath experiments/data/femur/$SUBJECT/mask.nii.gz \
         --orientation AP \
@@ -67,5 +64,5 @@ for FILE in experiments/data/femur/$SUBJECT/xrays/*.dcm; do
         --lr-xyz 1e-1 \
         --crop $CROP_RESTART \
         $PP_RESTART \
-        --savepath "$R2"
+        --savepath "$RESTART_OUTDIR"
 done
