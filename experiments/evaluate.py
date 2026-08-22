@@ -28,12 +28,16 @@ EXCLUDE = {
 class Evaluator:
     """Four 2D/3D registration error metrics (all in mm): mPE, mRPE, mTRE, dGeo."""
 
-    def __init__(self, drr, fiducials):
+    def __init__(self, drr: DRR, fiducials: torch.Tensor) -> None:
         self.drr = drr
         self.fiducials = fiducials
         self.geodesic = DoubleGeodesicSE3(drr.detector.sdd, eps=0.0)
 
-    def __call__(self, true_pose, pred_pose):
+    def __call__(
+        self,
+        true_pose: RigidTransform,
+        pred_pose: RigidTransform,
+    ) -> list[float]:
         x = self.drr.perspective_projection(pred_pose, self.fiducials)
         y = self.drr.perspective_projection(true_pose, self.fiducials)
         mpe = (self.drr.detector.delx * (x - y)).norm(dim=-1).mean(dim=-1)
@@ -47,14 +51,24 @@ class Evaluator:
         return torch.stack([mpe, mrpe, mtre, dgeo], dim=-1).squeeze().tolist()
 
 
-def read_true(dataset, subject, xray, device):
+def read_true(
+    dataset: str,
+    subject: str,
+    xray: str,
+    device: str,
+) -> tuple[RigidTransform, dict]:
     """Ground-truth pose and stored intrinsics for one x-ray."""
     ckpt = torch.load(DATA / dataset / subject / "xrays" / f"{xray}.pt", weights_only=False)
     pose = RigidTransform(ckpt["pose"].to(torch.float32))
     return pose.to(device), ckpt["intrinsics"]
 
 
-def build_evaluator(dataset, subject, intrinsics, device):
+def build_evaluator(
+    dataset: str,
+    subject: str,
+    intrinsics: dict,
+    device: str,
+) -> Evaluator:
     data = DATA / dataset
     mask = MASKS[dataset]
     subj = read(
@@ -63,14 +77,11 @@ def build_evaluator(dataset, subject, intrinsics, device):
         None,
         "AP",
     )
-    # sdd/delx are placeholders (set_intrinsics_ overwrites them per x-ray); height is fixed.
     drr = DRR(subj, sdd=1000.0, height=100, delx=1.0, renderer="trilinear", reverse_x_axis=False)
     drr = drr.to(device)
     drr.set_intrinsics_(**intrinsics)
     fiducials = torch.load(data / subject / "fiducials.pt", weights_only=False).to(torch.float32)
-    return Evaluator(
-        drr.to(device), fiducials[None].to(device) if fiducials.ndim == 2 else fiducials.to(device)
-    )
+    return Evaluator(drr, fiducials.to(device))
 
 
 def final_stage(root: Path) -> Path:
@@ -79,10 +90,18 @@ def final_stage(root: Path) -> Path:
     return restart if restart.is_dir() else root
 
 
-def read_pred(run: Path, subject: str, xray: str):
-    """Init pose (+ first similarity) from a run's first stage, final pose (+ final similarity)
-    from its final stage. The similarity metric is maximized, so higher is better; a run whose
-    initial DRR was blank has no optimization log and scores -inf."""
+def hemispheres(root: Path) -> list[Path]:
+    """If the antipode was run, return its path."""
+    antipodal = root.parent / f"{root.name}_antipodal"
+    return [root, antipodal] if antipodal.is_dir() else [root]
+
+
+def read_pred(
+    run: Path,
+    subject: str,
+    xray: str,
+) -> tuple[torch.Tensor, float, torch.Tensor, float, float]:
+    """Return the init pose, final pose, image similarity scores, and runtimes."""
     first_pth = run / subject / f"{xray}.pth"
     final_pth = final_stage(run) / subject / f"{xray}.pth"
 
@@ -91,27 +110,35 @@ def read_pred(run: Path, subject: str, xray: str):
 
     sim_init = first["log"]["losses"][0] if first["log"] is not None else -torch.inf
     sim_final = final["log"]["losses"][-1] if final["log"] is not None else -torch.inf
-    return first["init_pose"], sim_init, final["final_pose"], sim_final
+
+    stages = [first] if final_pth == first_pth else [first, final]
+    runtime = sum(s["runtime"] for s in stages)
+    return first["init_pose"], sim_init, final["final_pose"], sim_final, runtime
 
 
 @click.command()
 @click.option("--dataset", required=True, type=click.Choice(list(MASKS)))
 @click.option("--result", required=True, help="folder under experiments/results/<dataset>/")
-@click.option("--main", "path", default=str(RESULTS / "registration.csv"), type=click.Path())
+@click.option("--main", "savepath", default=str(RESULTS / "registration.csv"), type=click.Path())
 @click.option("--device", default="cpu")
-def main(dataset, result, path, device):
+def main(dataset, result, savepath, device):
     """Score a registration run's init/final poses into the main metrics CSV."""
     root = RESULTS / dataset / result
+    runs = hemispheres(root)
 
     rows, evaluator, cached = [], None, None
+    n_antipode = 0
     for pth in tqdm(sorted(root.glob("subject*/*.pth"))):
         subject, xray = pth.parent.name, pth.stem
-        if not (DATA / dataset / subject / "xrays" / f"{xray}.pt").exists():
-            continue
         if (dataset, subject, xray) in EXCLUDE:
             continue
 
-        init_pose, sim_init, final_pose, sim_final = read_pred(root, subject, xray)
+        # Score the prediction and (for foundation runs) its antipode, then keep the winner.
+        preds = [read_pred(run, subject, xray) for run in runs]
+
+        # Ties keep the raw prediction, since max() returns the first maximal element
+        init_pose, sim_init, final_pose, sim_final, runtime = max(preds, key=lambda p: p[3])
+        n_antipode += sim_final != preds[0][3]
 
         # Rebuild the DRR when the subject changes
         true_pose, intrinsics = read_true(dataset, subject, xray, device)
@@ -123,7 +150,10 @@ def main(dataset, result, path, device):
         evaluator.geodesic = DoubleGeodesicSE3(evaluator.drr.detector.sdd, eps=0.0)
 
         # Compute errors
-        for pose, mat, sim in [("init", init_pose, sim_init), ("final", final_pose, sim_final)]:
+        for pose, mat, sim, rt in [
+            ("init", init_pose, sim_init, 0.0),
+            ("final", final_pose, sim_final, runtime),
+        ]:
             mpe, mrpe, mtre, dgeo = evaluator(
                 true_pose, RigidTransform(mat.to(torch.float32)).to(device)
             )
@@ -135,6 +165,7 @@ def main(dataset, result, path, device):
                     "xray": xray,
                     "pose": pose,
                     "ncc": sim,
+                    "runtime": rt,
                     "mPE": mpe,
                     "mRPE": mrpe,
                     "mTRE": mtre,
@@ -143,7 +174,7 @@ def main(dataset, result, path, device):
             )
 
     df = pd.DataFrame(rows)
-    out = Path(path)
+    out = Path(savepath)
     out.parent.mkdir(parents=True, exist_ok=True)
     if out.exists():
         old = pd.read_csv(out, dtype={"subject": str, "xray": str})
