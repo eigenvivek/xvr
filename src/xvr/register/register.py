@@ -1,4 +1,5 @@
 import math
+import time
 import warnings
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -195,7 +196,7 @@ class Register:
         # Compute sequential rescale ratios (with a terminal reset-to-full-res step)
         factors = parse_scales(self.scales + [1], crop, gt.shape[2])
 
-        losses, scales, rescale_factors, rots, xyzs = [], [], [], [], []
+        losses, scales, rescale_factors, rots, xyzs, times = [], [], [], [], [], []
         for stage, (scale, rescale_factor, n_itrs, patience) in enumerate(
             zip(self.scales, factors, self.n_itrs, self.patience)
         ):
@@ -212,12 +213,16 @@ class Register:
             current_lr, n_plateaus = torch.inf, 0
             true = transform(gt).to(self.device)
             for _ in pbar:
+                self._sync()
+                t0 = time.perf_counter()
                 optimizer.zero_grad()
                 pred = transform(drr(pose()))
                 loss = self.imagesim(true, pred)
                 loss.backward()
                 optimizer.step()
                 scheduler.step(loss.detach())
+                self._sync()
+                times.append(time.perf_counter() - t0)
 
                 pbar.set_postfix_str(f"loss = {loss.item():5.3f}")
                 losses.append(loss.item())
@@ -237,7 +242,12 @@ class Register:
         drr.rescale_detector_(factors[-1])
 
         rots, xyzs = torch.cat(rots).cpu(), torch.cat(xyzs).cpu()
-        return OptimizationLogger(losses, scales, rescale_factors, rots, xyzs)
+        return OptimizationLogger(losses, scales, rescale_factors, times, rots, xyzs)
+
+    def _sync(self) -> None:
+        """Block until queued CUDA work finishes, so timings measure the GPU, not the queue."""
+        if self.device.startswith("cuda"):
+            torch.cuda.synchronize()
 
     def _setup_stage(self, drr: DRR, pose: Pose, stage: int, patience: int, equalize: bool):
         """Configure the optimizer, scheduler, and transforms for a single scale stage."""

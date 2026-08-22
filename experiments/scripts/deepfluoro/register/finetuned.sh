@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=xvr-register-deepfluoro-finetuned
-#SBATCH --output=logs/deepfluoro_register_finetuned_%A_%a.out
-#SBATCH --error=logs/deepfluoro_register_finetuned_%A_%a.err
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --error=logs/%x_%A_%a.err
 #SBATCH --array=1-6
 #SBATCH --partition=polina-all
 #SBATCH --qos=vision-polina-main
@@ -11,19 +11,18 @@
 #SBATCH --mem=50G
 #SBATCH --time=03:00:00
 
-mkdir -p logs
+cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
+mkdir -p logs
 
 source .venv/bin/activate
 
-CKPT=experiments/models/deepfluoro/finetuned/$SUBJECT.pth
-SAVEPATH=experiments/results/deepfluoro/finetuned/$SUBJECT
-mkdir -p "$SAVEPATH"
+SUBJECT=subject$(printf "%02d" $SLURM_ARRAY_TASK_ID)
 
-echo "Subject:  $SUBJECT"
-echo "Ckpt:     $CKPT"
-echo "Savepath: $SAVEPATH"
+CKPT=experiments/models/deepfluoro/finetuned/$SUBJECT.pth
+OUTDIR=experiments/results/deepfluoro/finetuned/$SUBJECT
+rm -rf "$OUTDIR"
+mkdir -p "$OUTDIR"
 
 xvr register model \
     --files experiments/data/deepfluoro/$SUBJECT/xrays/*.dcm \
@@ -37,4 +36,4 @@ xvr register model \
     --patience 10 10 10 \
     --crop 100 \
     --linearize \
-    --savepath "$SAVEPATH"
+    --savepath "$OUTDIR"
