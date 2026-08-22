@@ -16,6 +16,7 @@ class OptimizationLogger:
     losses: list[float]
     scales: list[float]
     rescale_factors: list[float]
+    times: list[float]
     rots: Float[torch.Tensor, "N 3"]
     xyzs: Float[torch.Tensor, "N 3"]
 
@@ -63,6 +64,7 @@ class RegistrationResult:
                     "dely": self.drr.detector.dely,
                     "reverse_x_axis": self.drr.detector.reverse_x_axis,
                 },
+                "runtime": sum(self.log.times) if self.log is not None else 0.0,
                 "init_pose": self.init_pose.matrix.cpu(),
                 "final_pose": self.final_pose.matrix.cpu(),
                 "gt": self.gt.cpu(),
@@ -70,6 +72,7 @@ class RegistrationResult:
                     "losses": self.log.losses,
                     "scales": self.log.scales,
                     "rescale_factors": self.log.rescale_factors,
+                    "times": self.log.times,
                     "rots": self.log.rots.cpu(),
                     "xyzs": self.log.xyzs.cpu(),
                 }
