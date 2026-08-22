@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 DATASETS="deepfluoro femur ljubljana"
-METHODS="de_novo finetuned"
+METHODS="de_novo finetuned foundation"
 CSV="experiments/results/registration.csv"
 
 case "${1:-}" in
