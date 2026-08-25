@@ -15,6 +15,15 @@ repos:
     hooks:
       - id: uv-lock
 
+  - repo: local
+    hooks:
+      - id: docs-coverage
+        name: docs cover every subpackage and command
+        entry: uv run --no-sync python tools/macros.py
+        language: system
+        pass_filenames: false
+        files: ^(src/xvr/|docs/|tools/macros\.py|zensical\.toml)
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.3
     hooks:
