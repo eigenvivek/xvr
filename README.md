@@ -37,6 +37,23 @@ Verify the installation version (should match the latest release on GitHub):
 xvr --version
 ```
 
+## CLI Usage
+
+`xvr` provides a command-line interface for training/finetuning pose regression models and registering clinical data with gradient-based iterative optimization with trained models. It is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations. Full documentation is available [here](https://xvr.csail.mit.edu/).
+
+```
+$ xvr --help
+
+Usage: xvr COMMAND
+
+Commands:
+register     Use gradient-based optimization to register XRAY to a CT/MR.
+restart      Restart model training from a checkpoint.
+train        Train a pose regression model.
+--help -h    Display this message and exit.
+--version    Display application version.
+```
+
 ## Development
 
 `xvr` is built using [`uv`](https://docs.astral.sh/uv/), an extremely fast Python project manager.
@@ -112,20 +129,3 @@ Once every job has finished, score the results:
 ```
 
 This writes `experiments/results/registration.csv`, rebuilt from scratch on each run, with one row per x-ray per pose (`init` and `final`) recording mPE, mRPE, mTRE, dGeo, the final NCC, and runtime.
-
-## CLI Usage
-
-`xvr` provides a command-line interface for training/finetuning pose regression models and registering clinical data with gradient-based iterative optimization with trained models. It is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations.
-
-```
-$ xvr --help
-
-Usage: xvr COMMAND
-
-Commands:
-register   Use gradient-based optimization to register XRAY to a CT/MR.
-restart    Restart model training from a checkpoint.
-train      Train a pose regression model.
---help -h  Display this message and exit.
---version  Display application version.
-```
