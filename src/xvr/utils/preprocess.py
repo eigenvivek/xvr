@@ -8,7 +8,19 @@ def XrayTransforms(
     mean: float = 0.15,
     std: float = 0.1,
     equalize: bool = False,
-):
+) -> Compose:
+    """Build the resize-and-normalize pipeline shared by training and registration.
+
+    Args:
+        height: Output height in pixels.
+        width: Output width in pixels. Defaults to `height`.
+        mean: Mean used to normalize intensities.
+        std: Standard deviation used to normalize intensities.
+        equalize: If True, apply differentiable histogram equalization.
+
+    Returns:
+        A `Compose` transform mapping a ``(B, 1, H, W)`` image to ``(B, 1, height, width)``.
+    """
     width = height if width is None else width
     return Compose(
         [
@@ -21,6 +33,8 @@ def XrayTransforms(
 
 
 class Standardize(torch.nn.Module):
+    """Rescale each image to the range [0, 1]."""
+
     def __init__(self, eps=1e-6):
         super().__init__()
         self.eps = eps
@@ -30,6 +44,8 @@ class Standardize(torch.nn.Module):
 
 
 class Identity(torch.nn.Module):
+    """Pass the image through unchanged, standing in for a disabled transform."""
+
     def __init__(self):
         super().__init__()
 
@@ -38,6 +54,13 @@ class Identity(torch.nn.Module):
 
 
 class Equalize(torch.nn.Module):
+    """Differentiable histogram equalization.
+
+    Soft-assigns pixels to bins with a Gaussian kernel so the histogram, and
+    therefore the equalized image, stays differentiable with respect to the
+    input. `tau` sets how soft that assignment is.
+    """
+
     def __init__(self, n_bins: int = 256, tau: float = 0.01, eps: float = 1e-10):
         super().__init__()
         self.n_bins = n_bins

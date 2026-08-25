@@ -41,7 +41,7 @@ class Register:
     `initializer` argument. See `PoseInitializer` for the contract; built-in
     implementations include `FixedPose` and `ModelPose`.
 
-    Args:
+    Attributes:
         imagepath: Path to the CT image.
         initializer: Strategy for computing the initial pose before optimization.
             Also supplies the CT orientation and DRR `reverse_x_axis` flag.

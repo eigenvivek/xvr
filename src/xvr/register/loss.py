@@ -1,3 +1,5 @@
+from typing import Any
+
 import torch
 from diffdrr.metrics import (
     GradientNormalizedCrossCorrelation2d,
@@ -13,7 +15,7 @@ METRICS: dict[str, type[torch.nn.Module]] = {
 }
 
 
-def load_loss_function(loss: str | torch.nn.Module, **kwargs) -> torch.nn.Module:
+def load_loss_function(loss: str | torch.nn.Module, **kwargs: Any) -> torch.nn.Module:
     """Initialize a loss function for 2D/3D registration.
 
     Args:

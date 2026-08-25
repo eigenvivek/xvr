@@ -4,6 +4,7 @@ from typing import Annotated, Any
 
 from cyclopts import App, Group, Parameter
 
+from .configs._types import Orientation, Vector3
 from .configs.register import BaseParams, RunParams
 
 register = App(name="register", help="Use gradient-based optimization to register XRAY to a CT/MR.")
@@ -44,7 +45,7 @@ def restart(
     ckpt: Annotated[str, Parameter(help="Path to a previous run's saved .pth result", group=_POSE)],
     *,
     orientation: Annotated[
-        str, Parameter(help="Patient orientation for the DRR", group=_POSE)
+        Orientation, Parameter(help="Patient orientation for the DRR", group=_POSE)
     ] = "AP",
     base: BaseParams,
     run: RunParams = RunParams(),
@@ -58,11 +59,11 @@ def restart(
 
 @register.command
 def fixed(
-    rot: Annotated[tuple[float, float, float], Parameter(help="Rotations in degrees", group=_POSE)],
-    xyz: Annotated[tuple[float, float, float], Parameter(help="Translations in mm", group=_POSE)],
+    rot: Annotated[Vector3, Parameter(help="Rotations in degrees", group=_POSE)],
+    xyz: Annotated[Vector3, Parameter(help="Translations in mm", group=_POSE)],
     *,
     orientation: Annotated[
-        str, Parameter(help="Patient orientation for the DRR", group=_POSE)
+        Orientation, Parameter(help="Patient orientation for the DRR", group=_POSE)
     ] = "AP",
     reverse_x_axis: Annotated[
         bool, Parameter(help="Horizontally flip the rendered DRRs", group=_POSE)
@@ -87,7 +88,7 @@ def fixed(
 def dicom(
     *,
     orientation: Annotated[
-        str, Parameter(help="Patient orientation for the DRR", group=_POSE)
+        Orientation, Parameter(help="Patient orientation for the DRR", group=_POSE)
     ] = "AP",
     reverse_x_axis: Annotated[
         bool, Parameter(help="Horizontally flip the rendered DRRs", group=_POSE)

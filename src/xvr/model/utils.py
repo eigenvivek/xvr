@@ -4,6 +4,8 @@ from pathlib import Path
 import torch
 from diffdrr.data import load_example_ct, read
 from diffdrr.drr import DRR
+from diffdrr.pose import RigidTransform
+from torch.optim import Optimizer
 from torch.utils.data import WeightedRandomSampler
 from torchio import (
     LabelMap,
@@ -14,6 +16,7 @@ from torchio import (
     SubjectsLoader,
     UniformSampler,
 )
+from torchvision.transforms import Compose
 from tqdm import tqdm
 
 from ..utils import XrayTransforms, read_rigid_transform
@@ -31,7 +34,20 @@ def initialize_subjects(
     pin_memory: bool,  # Pin memory for the dataloader
     weights: tuple[float, ...] | None = None,  # Sampling probability for each volume
     replacement: bool = True,  # Sample with replacement
-):
+) -> tuple[Subject | SubjectsLoader, bool]:
+    """Load the CT (or CTs) to render training DRRs from.
+
+    A single volume is read eagerly. A directory is loaded lazily into a
+    weighted-sampling dataloader, optionally serving random patches rather than
+    whole volumes. Volumes and masks are matched by filename across the two
+    directories.
+
+    Returns:
+        subjects: A single `Subject` if `volpath` is one file, else a loader
+            yielding subjects or patches.
+        single_subject: True if `volpath` was a single volume, which tells the
+            trainer whether the DRR module can hold the volume itself.
+    """
     # If only a single subject is passed, load it and return
     single_subject = False
     if Path(volpath).is_file():
@@ -114,7 +130,31 @@ def initialize_modules(
     disable_scheduler,
     ckptpath,
     reuse_optimizer,
-):
+) -> tuple[
+    PoseRegressor,
+    DRR,
+    Compose,
+    Optimizer,
+    IdentitySchedule | WarmupCosineSchedule,
+    int,
+    int,
+]:
+    """Construct the model, renderer, and optimizer for a training run.
+
+    Restores model weights from `ckptpath` when given, and the optimizer and
+    scheduler state as well when `reuse_optimizer` is set. With more than one
+    subject the DRR module is built against a dummy CT, since each step swaps in
+    its own volume.
+
+    Returns:
+        model: The pose regressor.
+        drr: The differentiable renderer.
+        transforms: X-ray preprocessing shared with inference.
+        optimizer: The optimizer.
+        scheduler: The learning rate scheduler.
+        start_itr: Iteration to resume from, 0 unless reusing an optimizer.
+        model_number: Checkpoint number to resume from.
+    """
     # Initialize the pose regression model
     model = PoseRegressor(
         model_name=model_name,
@@ -181,7 +221,21 @@ def _load_checkpoint(ckptpath, reuse_optimizer):
     return None, 0, 0
 
 
-def initialize_coordinate_frame(warp, img, invert):
+def initialize_coordinate_frame(
+    warp: str | Path | None,
+    img: str | Path,
+    invert: bool,
+) -> RigidTransform | None:
+    """Read the rigid transform reframing a CT into a checkpoint's frame.
+
+    Args:
+        warp: Path to a SimpleITK transform, or None for no reframing.
+        img: Path to the CT the transform is defined against.
+        invert: If True, invert the transform.
+
+    Returns:
+        The transform, or None if `warp` is None.
+    """
     if warp is None:
         return None
     return read_rigid_transform(warp, img, invert).cuda()

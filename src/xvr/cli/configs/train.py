@@ -3,6 +3,8 @@ from typing import Annotated
 
 from cyclopts import Group, Parameter
 
+from ._types import Convention, Orientation, Parameterization, Range
+
 _DATA = Group("Data", sort_key=2)
 _SAMPLING = Group("Sampling", sort_key=3)
 _RENDERER = Group("Renderer", sort_key=4)
@@ -12,8 +14,8 @@ _CHECKPOINT = Group("Checkpoint", sort_key=7)
 _LOGGING = Group("Logging", sort_key=8)
 
 
-@Parameter(name="*")
-@dataclass
+@Parameter(name="*", negative_iterable=())
+@dataclass(kw_only=True)
 class TrainParams:
     # Data
     volpath: Annotated[str, Parameter(name=["--volpath", "-v"], help="CT or directory of CTs for pretraining", group=_DATA)]
@@ -25,12 +27,12 @@ class TrainParams:
     delx: Annotated[float, Parameter(help="DRR pixel size (in millimeters / pixel)", group=_RENDERER)]
 
     # Sampling
-    r1: Annotated[tuple[float, float], Parameter(help="Range for primary angle (in degrees)", group=_SAMPLING)]
-    r2: Annotated[tuple[float, float], Parameter(help="Range for secondary angle (in degrees)", group=_SAMPLING)]
-    r3: Annotated[tuple[float, float], Parameter(help="Range for tertiary angle (in degrees)", group=_SAMPLING)]
-    tx: Annotated[tuple[float, float], Parameter(help="Range for x-offset (in millimeters)", group=_SAMPLING)]
-    ty: Annotated[tuple[float, float], Parameter(help="Range for y-offset (in millimeters)", group=_SAMPLING)]
-    tz: Annotated[tuple[float, float], Parameter(help="Range for z-offset (in millimeters)", group=_SAMPLING)]
+    r1: Annotated[Range, Parameter(help="Range for primary angle (in degrees)", group=_SAMPLING)]
+    r2: Annotated[Range, Parameter(help="Range for secondary angle (in degrees)", group=_SAMPLING)]
+    r3: Annotated[Range, Parameter(help="Range for tertiary angle (in degrees)", group=_SAMPLING)]
+    tx: Annotated[Range, Parameter(help="Range for x-offset (in millimeters)", group=_SAMPLING)]
+    ty: Annotated[Range, Parameter(help="Range for y-offset (in millimeters)", group=_SAMPLING)]
+    tz: Annotated[Range, Parameter(help="Range for z-offset (in millimeters)", group=_SAMPLING)]
     batch_size: Annotated[int, Parameter(help="Number of DRRs per batch", group=_SAMPLING)] = 116
 
     # Data (optional)
@@ -41,7 +43,7 @@ class TrainParams:
     pin_memory: Annotated[bool, Parameter(help="Copy volumes into CUDA pinned memory before returning", group=_DATA)] = False
 
     # Renderer (optional)
-    orientation: Annotated[str, Parameter(help="Orientation of CT volumes", group=_RENDERER)] = "AP"
+    orientation: Annotated[Orientation, Parameter(help="Orientation of CT volumes", group=_RENDERER)] = "AP"
     reverse_x_axis: Annotated[bool, Parameter(help="Obey radiologic convention (e.g., heart on right)", group=_RENDERER)] = False
     img_threshold: Annotated[float, Parameter(help="Minimum fraction of foreground pixels to keep a DRR", group=_SAMPLING)] = 0.10
     mask_threshold: Annotated[float, Parameter(help="Minimum fraction of mask pixels to keep a DRR", group=_SAMPLING)] = 0.05
@@ -52,8 +54,8 @@ class TrainParams:
     model_name: Annotated[str, Parameter(help="Name of model to instantiate from the timm library", group=_MODEL)] = "resnet18"
     norm_layer: Annotated[str, Parameter(help="Normalization layer", group=_MODEL)] = "groupnorm"
     pretrained: Annotated[bool, Parameter(help="Load pretrained ImageNet-1k weights", group=_MODEL)] = False
-    parameterization: Annotated[str, Parameter(help="Parameterization of SO(3) for regression", group=_MODEL)] = "quaternion_adjugate"
-    convention: Annotated[str, Parameter(help="If parameterization='euler_angles', specify order", group=_MODEL)] = "ZXY"
+    parameterization: Annotated[Parameterization, Parameter(help="Parameterization of SO(3) for regression", group=_MODEL)] = "quaternion_adjugate"
+    convention: Annotated[Convention, Parameter(help="If parameterization='euler_angles', specify order", group=_MODEL)] = "ZXY"
     unit_conversion_factor: Annotated[float, Parameter(help="Scale factor for translation prediction (e.g., from m to mm)", group=_MODEL)] = 1000.0
     p_augmentation: Annotated[float, Parameter(help="Base probability of image augmentations during training", group=_MODEL)] = 0.333
 

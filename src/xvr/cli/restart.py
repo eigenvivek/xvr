@@ -8,6 +8,7 @@ restart = App(name="restart", help="Restart model training from a checkpoint.")
 @restart.default
 def _restart(
     ckptpath: Annotated[str, Parameter(help="Checkpoint of a pretrained pose regressor.")],
+    /,
     *,
     id: Annotated[str | None, Parameter(help="WandB run ID.")] = None,
     project: Annotated[str | None, Parameter(help="WandB project name.")] = None,

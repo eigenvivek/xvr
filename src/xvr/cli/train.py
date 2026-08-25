@@ -4,7 +4,11 @@ from cyclopts import App
 
 from .configs.train import TrainParams
 
-train = App(name="train", help="Train a pose regression model.")
+train = App(
+    name="train",
+    help="Train a pose regression model.",
+    usage="Usage: xvr train [OPTIONS]",
+)
 
 
 @train.default
