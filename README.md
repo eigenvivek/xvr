@@ -37,12 +37,6 @@ Verify the installation version (should match the latest release on GitHub):
 xvr --version
 ```
 
-You can also enable tab-completion for `xvr` by adding this line to your `~/.bashrc` (instructions for other shells are [here](https://click.palletsprojects.com/en/stable/shell-completion/)):
-
-```bash
-eval "$(_XVR_COMPLETE=bash_source xvr)"
-```
-
 ## Development
 
 `xvr` is built using [`uv`](https://docs.astral.sh/uv/), an extremely fast Python project manager.
