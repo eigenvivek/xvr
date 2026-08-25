@@ -37,7 +37,7 @@ class FixedPose:
     Useful when an approximate pose is already known, e.g., from a prior
     scan, a clinical estimate, or a hand-tuned guess.
 
-    Args:
+    Attributes:
         rot: Rotation angles in degrees as (rx, ry, rz), ZXY convention.
         xyz: Translation in mm as (x, y, z).
         eps: Small value added to inputs to avoid degenerate gradients.
@@ -67,7 +67,7 @@ class ModelPose:
     The checkpoint dictates `orientation` and `reverse_x_axis`; users do not
     set these directly.
 
-    Args:
+    Attributes:
         ckpt: Path to the model checkpoint.
         volume: Path to the CT image the warp is defined against (Register's imagepath).
         warp: SimpleITK transform reframing the predicted pose into the CT's frame.
@@ -115,7 +115,7 @@ class DicomPose:
 class RestartPose:
     """Initial pose loaded from a previous registration run's final pose.
 
-    Args:
+    Attributes:
         ckpt: Path to a `.pth` saved by a previous registration run.
     """
 

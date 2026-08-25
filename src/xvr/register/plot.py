@@ -1,6 +1,6 @@
 import base64
 from io import BytesIO
-from typing import Literal
+from typing import Any, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,7 +73,7 @@ def plot(
     method: VizMethod = "edges",
     histeq_strength: float = 0.5,
     width: int = 900,
-    **kwargs,
+    **kwargs: Any,
 ) -> RegistrationOutput:
     """Visualise registration results (GT | GT vs initial pred | GT vs final pred).
 

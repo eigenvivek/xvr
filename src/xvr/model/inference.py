@@ -1,12 +1,44 @@
 import torch
 from diffdrr.pose import RigidTransform, convert
 from diffdrr.utils import resample
+from jaxtyping import Float
 from torchvision.transforms.functional import center_crop
 
 from ..utils import XrayTransforms, read_rigid_transform
+from .network import PoseRegressor
 
 
-def predict_pose(model, config, img, sdd, delx, dely, x0, y0):
+def predict_pose(
+    model: PoseRegressor,
+    config: dict,
+    img: Float[torch.Tensor, "1 1 H W"],
+    sdd: float,
+    delx: float,
+    dely: float,
+    x0: float,
+    y0: float,
+) -> RigidTransform:
+    """Regress the camera pose of an X-ray with a trained pose regressor.
+
+    The X-ray is resampled to the intrinsics the model was trained on, center
+    cropped, and normalized before being passed through the network. This is how
+    a checkpoint is used as an initializer for iterative registration.
+
+    Args:
+        model: Trained `PoseRegressor`.
+        config: The checkpoint's saved training config, supplying the model's
+            assumed `sdd`, `height`, and `delx`.
+        img: X-ray image tensor of shape ``(1, 1, H, W)``.
+        sdd: Source-to-detector distance of the X-ray, in millimeters.
+        delx: Pixel spacing of the X-ray along the x-axis, in millimeters.
+        dely: Pixel spacing of the X-ray along the y-axis, in millimeters.
+            Must equal `delx`; non-square pixels are not supported.
+        x0: Detector origin offset along the x-axis, in millimeters.
+        y0: Detector origin offset along the y-axis, in millimeters.
+
+    Returns:
+        The predicted camera pose.
+    """
     # Resample the X-ray image to match the model's assumed intrinsics
     img, height, width = _resample_xray(img, sdd, delx, dely, x0, y0, config)
     height = min(height, width)
