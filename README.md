@@ -1,5 +1,6 @@
 # `xvr`: X-ray to Volume Registration
 
+[![docs](https://github.com/eigenvivek/xvr/actions/workflows/docs.yml/badge.svg)](https://github.com/eigenvivek/xvr/actions/workflows/docs.yml)
 [![Paper shield](https://img.shields.io/badge/arXiv-2503.16309-red.svg)](https://arxiv.org/abs/2503.16309)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 <a href="https://colab.research.google.com/drive/1K9lBPxcLh55mr8o50Y7aHkjzjEWKPCrM?usp=sharing"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg"></a>
@@ -98,7 +99,7 @@ Registration runs three datasets (DeepFluoro, Femur, Ljubljana) × three initial
 ./experiments/run.sh register
 ```
 
-The scripts are in `experiments/scripts/{dataset}/register/`. Four `#SBATCH` directives are cluster-specific: update `--partition`, `--qos`, `--account`, and `--gres` to match your platform. Note that the reported metrics were computed on an NVIDIA RTX 6000 Ada with PyTorch 2.10.
+The scripts are in `experiments/scripts/{dataset}/register/`. Four `#SBATCH` directives are cluster-specific: update `--partition`, `--qos`, `--account`, and `--gres` to match your platform. Metrics were computed on an NVIDIA RTX 6000 Ada with PyTorch 2.10.
 
 If you don't have SLURM, you can run the subjects in series by manually supplying the array index:
 
@@ -120,7 +121,7 @@ This writes `experiments/results/registration.csv`, rebuilt from scratch on each
 
 ## CLI Usage
 
-`xvr` provides a command-line interface for training/finetuning pose regression models and registering clinical data with gradient-based iterative optimization with trained models. The API is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations.
+`xvr` provides a command-line interface for training/finetuning pose regression models and registering clinical data with gradient-based iterative optimization with trained models. It is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations.
 
 ```
 $ xvr --help
@@ -134,189 +135,3 @@ train      Train a pose regression model.
 --help -h  Display this message and exit.
 --version  Display application version.
 ```
-
-### Training
-
-To train a pose regression model from scratch on a single patient or a set of preregistered subjects, use `xvr train`:
-
-```
-$ xvr train --help
-
-Usage: xvr train [OPTIONS]
-
-Train a pose regression model.
-
-Data:
-* --volpath -v TEXT              CT or directory of CTs for pretraining [required]
-* --outpath -o TEXT              Directory in which to save model weights [required]
-  --maskpath -m TEXT             Optional labelmaps corresponding to the CTs
-  --patch-size TEXT              Optional random crop size e.g. 'h,w,d'; if None,
-                                 return entire volume
-  --sample-weights TEXT          Probability for sampling each volume in volpath
-  --num-workers INTEGER          Number of subprocesses to use in the dataloader
-                                 [default: 4]
-  --pin-memory --no-pin-memory   Copy volumes into CUDA pinned memory before
-                                 returning [default: False]
-
-Sampling:
-* --r1 <FLOAT FLOAT>...          Range for primary angle (in degrees) [required]
-* --r2 <FLOAT FLOAT>...          Range for secondary angle (in degrees) [required]
-* --r3 <FLOAT FLOAT>...          Range for tertiary angle (in degrees) [required]
-* --tx <FLOAT FLOAT>...          Range for x-offset (in millimeters) [required]
-* --ty <FLOAT FLOAT>...          Range for y-offset (in millimeters) [required]
-* --tz <FLOAT FLOAT>...          Range for z-offset (in millimeters) [required]
-  --batch-size INTEGER           Number of DRRs per batch [default: 116]
-  --img-threshold FLOAT          Minimum fraction of foreground pixels to keep a DRR
-                                 [default: 0.1]
-  --mask-threshold FLOAT         Minimum fraction of mask pixels to keep a DRR
-                                 [default: 0.05]
-  --n-samples INTEGER            Number of points sampled along each ray when
-                                 rendering DRRs [default: 500]
-  --geodesic-only                Skip re-rendering from predicted poses; supervise
-    --no-geodesic-only           pose directly with geodesic loss only (fast)
-                                 [default: False]
-
-Renderer:
-* --sdd FLOAT                    Source-to-detector distance (in millimeters)
-                                 [required]
-* --height INTEGER               DRR height (in pixels) [required]
-* --delx FLOAT                   DRR pixel size (in millimeters / pixel) [required]
-  --orientation TEXT             Orientation of CT volumes [choices: AP, PA]
-                                 [default: AP]
-  --reverse-x-axis               Obey radiologic convention (e.g., heart on right)
-    --no-reverse-x-axis          [default: False]
-
-Model:
-  --model-name TEXT              Name of model to instantiate from the timm library
-                                 [default: resnet18]
-  --norm-layer TEXT              Normalization layer [default: groupnorm]
-  --pretrained --no-pretrained   Load pretrained ImageNet-1k weights [default:
-                                 False]
-  --parameterization TEXT        Parameterization of SO(3) for regression [default:
-                                 quaternion_adjugate]
-  --convention TEXT              If parameterization='euler_angles', specify order
-                                 [default: ZXY]
-  --unit-conversion-factor FLOAT Scale factor for translation prediction (e.g., from
-                                 m to mm) [default: 1000.0]
-  --p-augmentation FLOAT         Base probability of image augmentations during
-                                 training [default: 0.333]
-
-Optimizer:
-  --lr FLOAT                     Maximum learning rate [default: 0.0002]
-  --weight-ncc FLOAT             Weight on mNCC loss term [default: 1.0]
-  --weight-geo FLOAT             Weight on geodesic loss term [default: 0.01]
-  --weight-dice FLOAT            Weight on Dice loss term [default: 1.0]
-  --weight-haus FLOAT            Weight on Hausdorff loss term [default: 0.1]
-  --n-total-itrs INTEGER         Number of iterations for training the model
-                                 [default: 1000000]
-  --n-warmup-itrs INTEGER        Number of iterations for warming up the learning
-                                 rate [default: 1000]
-  --n-grad-accum-itrs INTEGER    Number of iterations for gradient accumulation
-                                 [default: 4]
-  --n-save-every-itrs INTEGER    Number of iterations before saving a new model
-                                 checkpoint [default: 1000]
-  --disable-scheduler            Turn off cosine learning rate scheduler [default:
-    --no-disable-scheduler       False]
-
-Checkpoint:
-  --ckptpath TEXT                Checkpoint of a pretrained pose regressor
-  --reuse-optimizer              Initialize the previous optimizer's state [default:
-    --no-reuse-optimizer         False]
-  --warp TEXT                    SimpleITK transform to warp input CT to
-                                 checkpoint's reference frame
-  --invert --no-invert           Whether to invert the warp or not [default: False]
-
-Logging:
-  --project TEXT                 WandB project name [default: xvr]
-  --group TEXT                   WandB run group
-  --name TEXT                    WandB run name
-  --id TEXT                      WandB run ID (useful when restarting from a
-                                 checkpoint)
-```
-
-#### Notes
-- The `--volpath` argument should point to a directory containing CT volumes for training.
-  - If the directory contains a single CT scan, the resulting model be patient-specific.
-  - If the directory contains multiple CTs, it's beneficial to preregister them to a common reference frame (e.g., using [Greedy](https://greedy.readthedocs.io/en/latest/install.html)). This will improve the accuracy of the model, but this isn't strictly necessary.
-- We use `wandb` to log experiments. To use this feature, set the `WANDB_API_KEY` environment variable by adding the following line to your `.zshrc` or `.bashrc` file:
-
-    ```bash
-    export WANDB_API_KEY=your_api_key
-    ```
- 
-### Registration (test-time optimization)
-
-To register **real** X-ray images using a pretrained model followed by iterative pose refinement with differentiable rendering, use `xvr register model`:
-
-```
-$ xvr register model --help
-
-Usage: xvr register model --files LIST[PATH] --imagepath STR [OPTIONS] CKPT
-
-Register using a neural network initial pose estimate.
-
-Parameters:
-* --files PATH...                X-ray images to register [required]
-
-MODEL:
-* CKPT --ckpt TEXT               Path to model checkpoint [required]
-  --warp TEXT                    SimpleITK transform reframing a model's predicted
-                                 pose
-  --antipodal --no-antipodal     Initialize from the antipode of the predicted pose
-                                 [default: False]
-
-Data:
-* --imagepath TEXT               Path to the CT image [required]
-  --labelpath TEXT               Path to the segmentation label map. If None, uses
-                                 the full image
-  --labels INTEGER...            Label indices to include in the DRR. If None, uses
-                                 all labels
-
-Optimizer:
-  --metric TEXT                  Image similarity metric [choices: mncc, gncc,
-                                 gmncc] [default: gmncc]
-  --scales FLOAT...              Downsampling scale(s) for multiscale registration
-                                 [default: [8.0]]
-  --n-itrs INTEGER...            Number of optimization iterations per scale
-                                 [default: [500]]
-  --lr-rot FLOAT                 Learning rate for rotation parameters [default:
-                                 0.01]
-  --lr-xyz FLOAT                 Learning rate for translation parameters [default:
-                                 1.0]
-  --lr-reduce-factor FLOAT       Factor by which to reduce the learning rate on
-                                 plateau [default: 0.1]
-  --patience INTEGER...          Number of steps with no improvement before reducing
-                                 the learning rate (one per scale) [default: [5]]
-  --threshold FLOAT              Minimum change to qualify as an improvement
-                                 [default: 0.0001]
-  --max-n-plateaus INTEGER       Number of learning rate reductions before early
-                                 stopping [default: 2]
-  --parameterization TEXT        Parameterization of SO(3) for pose optimization
-                                 [default: euler_angles]
-  --convention TEXT              If parameterization='euler_angles', specify order
-                                 [default: ZXY]
-  --init-only --no-init-only     Return initial pose estimate result [default:
-                                 False]
-
-Preprocessing:
-  --crop INTEGER                 Number of pixels to crop from the image border
-                                 [default: 0]
-  --linearize --no-linearize     Convert image to linear attenuation values
-                                 [default: True]
-  --subtract-background          Subtract background from the image [default: False]
-    --no-subtract-background
-  --equalize --no-equalize       Apply histogram equalization during optimization
-                                 [default: False]
-  --reducefn TEXT                Reduction function for multi-frame images [choices:
-                                 max, sum] [default: max]
-
-Miscellaneous:
-  --device TEXT                  Torch device to run on [default: cuda]
-  --savepath TEXT                Location to save the registration results
-  --saveplot --no-saveplot       Save plots of registration results [default: False]
-```
-
-#### Notes
-
-- By passing a `--labelpath` and a space-separated set of `--labels`, registration will be performed with respect to specific structures.
-- If the model was trained with a coordinate frame different to that of the `--imagepath`, you can pass a `--warp` to rigidly realign the model's predictions to the new patient.
