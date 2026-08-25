@@ -128,11 +128,11 @@ $ xvr --help
 Usage: xvr COMMAND
 
 Commands:
-  register: Use gradient-based optimization to register XRAY to a CT/MR.
-  restart: Restart model training from a checkpoint.
-  train: Train a pose regression model.
-  --help, -h: Display this message and exit.
-  --version: Display application version.
+register   Use gradient-based optimization to register XRAY to a CT/MR.
+restart    Restart model training from a checkpoint.
+train      Train a pose regression model.
+--help -h  Display this message and exit.
+--version  Display application version.
 ```
 
 ### Training
@@ -142,82 +142,96 @@ To train a pose regression model from scratch on a single patient or a set of pr
 ```
 $ xvr train --help
 
-Usage: xvr train VOLPATH OUTPATH SDD HEIGHT DELX R1 R2 R3 TX TY TZ [ARGS]
+Usage: xvr train [OPTIONS]
 
 Train a pose regression model.
 
 Data:
-  VOLPATH, --volpath, -v: CT or directory of CTs for pretraining [required]
-  OUTPATH, --outpath, -o: Directory in which to save model weights [required]
-  MASKPATH, --maskpath, -m: Optional labelmaps corresponding to the CTs
-  PATCH-SIZE, --patch-size: Optional random crop size e.g. 'h,w,d'; if None, return entire volume
-  SAMPLE-WEIGHTS, --sample-weights: Probability for sampling each volume in volpath
-  NUM-WORKERS, --num-workers: Number of subprocesses to use in the dataloader [default: 4]
-  PIN-MEMORY, --pin-memory, --no-pin-memory: Copy volumes into CUDA pinned memory before returning
-      [default: False]
+* --volpath -v TEXT              CT or directory of CTs for pretraining [required]
+* --outpath -o TEXT              Directory in which to save model weights [required]
+  --maskpath -m TEXT             Optional labelmaps corresponding to the CTs
+  --patch-size TEXT              Optional random crop size e.g. 'h,w,d'; if None,
+                                 return entire volume
+  --sample-weights TEXT          Probability for sampling each volume in volpath
+  --num-workers INTEGER          Number of subprocesses to use in the dataloader
+                                 [default: 4]
+  --pin-memory --no-pin-memory   Copy volumes into CUDA pinned memory before
+                                 returning [default: False]
 
 Sampling:
-  R1, --r1, --empty-r1: Range for primary angle (in degrees) [required]
-  R2, --r2, --empty-r2: Range for secondary angle (in degrees) [required]
-  R3, --r3, --empty-r3: Range for tertiary angle (in degrees) [required]
-  TX, --tx, --empty-tx: Range for x-offset (in millimeters) [required]
-  TY, --ty, --empty-ty: Range for y-offset (in millimeters) [required]
-  TZ, --tz, --empty-tz: Range for z-offset (in millimeters) [required]
-  BATCH-SIZE, --batch-size: Number of DRRs per batch [default: 116]
-  IMG-THRESHOLD, --img-threshold: Minimum fraction of foreground pixels to keep a DRR [default: 0.1]
-  MASK-THRESHOLD, --mask-threshold: Minimum fraction of mask pixels to keep a DRR [default: 0.05]
-  N-SAMPLES, --n-samples: Number of points sampled along each ray when rendering DRRs [default: 500]
-  GEODESIC-ONLY, --geodesic-only, --no-geodesic-only: Skip re-rendering from predicted poses;
-      supervise pose directly with geodesic loss only (fast) [default: False]
+* --r1 <FLOAT FLOAT>...          Range for primary angle (in degrees) [required]
+* --r2 <FLOAT FLOAT>...          Range for secondary angle (in degrees) [required]
+* --r3 <FLOAT FLOAT>...          Range for tertiary angle (in degrees) [required]
+* --tx <FLOAT FLOAT>...          Range for x-offset (in millimeters) [required]
+* --ty <FLOAT FLOAT>...          Range for y-offset (in millimeters) [required]
+* --tz <FLOAT FLOAT>...          Range for z-offset (in millimeters) [required]
+  --batch-size INTEGER           Number of DRRs per batch [default: 116]
+  --img-threshold FLOAT          Minimum fraction of foreground pixels to keep a DRR
+                                 [default: 0.1]
+  --mask-threshold FLOAT         Minimum fraction of mask pixels to keep a DRR
+                                 [default: 0.05]
+  --n-samples INTEGER            Number of points sampled along each ray when
+                                 rendering DRRs [default: 500]
+  --geodesic-only                Skip re-rendering from predicted poses; supervise
+    --no-geodesic-only           pose directly with geodesic loss only (fast)
+                                 [default: False]
 
 Renderer:
-  SDD, --sdd: Source-to-detector distance (in millimeters) [required]
-  HEIGHT, --height: DRR height (in pixels) [required]
-  DELX, --delx: DRR pixel size (in millimeters / pixel) [required]
-  ORIENTATION, --orientation: Orientation of CT volumes [default: AP]
-  REVERSE-X-AXIS, --reverse-x-axis, --no-reverse-x-axis: Obey radiologic convention (e.g., heart on
-      right) [default: False]
+* --sdd FLOAT                    Source-to-detector distance (in millimeters)
+                                 [required]
+* --height INTEGER               DRR height (in pixels) [required]
+* --delx FLOAT                   DRR pixel size (in millimeters / pixel) [required]
+  --orientation TEXT             Orientation of CT volumes [choices: AP, PA]
+                                 [default: AP]
+  --reverse-x-axis               Obey radiologic convention (e.g., heart on right)
+    --no-reverse-x-axis          [default: False]
 
 Model:
-  MODEL-NAME, --model-name: Name of model to instantiate from the timm library [default: resnet18]
-  NORM-LAYER, --norm-layer: Normalization layer [default: groupnorm]
-  PRETRAINED, --pretrained, --no-pretrained: Load pretrained ImageNet-1k weights [default: False]
-  PARAMETERIZATION, --parameterization: Parameterization of SO(3) for regression
-      [default: quaternion_adjugate]
-  CONVENTION, --convention: If parameterization='euler_angles', specify order [default: ZXY]
-  UNIT-CONVERSION-FACTOR, --unit-conversion-factor: Scale factor for translation prediction (e.g.,
-      from m to mm) [default: 1000.0]
-  P-AUGMENTATION, --p-augmentation: Base probability of image augmentations during training
-      [default: 0.333]
+  --model-name TEXT              Name of model to instantiate from the timm library
+                                 [default: resnet18]
+  --norm-layer TEXT              Normalization layer [default: groupnorm]
+  --pretrained --no-pretrained   Load pretrained ImageNet-1k weights [default:
+                                 False]
+  --parameterization TEXT        Parameterization of SO(3) for regression [default:
+                                 quaternion_adjugate]
+  --convention TEXT              If parameterization='euler_angles', specify order
+                                 [default: ZXY]
+  --unit-conversion-factor FLOAT Scale factor for translation prediction (e.g., from
+                                 m to mm) [default: 1000.0]
+  --p-augmentation FLOAT         Base probability of image augmentations during
+                                 training [default: 0.333]
 
 Optimizer:
-  LR, --lr: Maximum learning rate [default: 0.0002]
-  WEIGHT-NCC, --weight-ncc: Weight on mNCC loss term [default: 1.0]
-  WEIGHT-GEO, --weight-geo: Weight on geodesic loss term [default: 0.01]
-  WEIGHT-DICE, --weight-dice: Weight on Dice loss term [default: 1.0]
-  WEIGHT-HAUS, --weight-haus: Weight on Hausdorff loss term [default: 0.1]
-  N-TOTAL-ITRS, --n-total-itrs: Number of iterations for training the model [default: 1000000]
-  N-WARMUP-ITRS, --n-warmup-itrs: Number of iterations for warming up the learning rate
-      [default: 1000]
-  N-GRAD-ACCUM-ITRS, --n-grad-accum-itrs: Number of iterations for gradient accumulation
-      [default: 4]
-  N-SAVE-EVERY-ITRS, --n-save-every-itrs: Number of iterations before saving a new model checkpoint
-      [default: 1000]
-  DISABLE-SCHEDULER, --disable-scheduler, --no-disable-scheduler: Turn off cosine learning rate
-      scheduler [default: False]
+  --lr FLOAT                     Maximum learning rate [default: 0.0002]
+  --weight-ncc FLOAT             Weight on mNCC loss term [default: 1.0]
+  --weight-geo FLOAT             Weight on geodesic loss term [default: 0.01]
+  --weight-dice FLOAT            Weight on Dice loss term [default: 1.0]
+  --weight-haus FLOAT            Weight on Hausdorff loss term [default: 0.1]
+  --n-total-itrs INTEGER         Number of iterations for training the model
+                                 [default: 1000000]
+  --n-warmup-itrs INTEGER        Number of iterations for warming up the learning
+                                 rate [default: 1000]
+  --n-grad-accum-itrs INTEGER    Number of iterations for gradient accumulation
+                                 [default: 4]
+  --n-save-every-itrs INTEGER    Number of iterations before saving a new model
+                                 checkpoint [default: 1000]
+  --disable-scheduler            Turn off cosine learning rate scheduler [default:
+    --no-disable-scheduler       False]
 
 Checkpoint:
-  CKPTPATH, --ckptpath: Checkpoint of a pretrained pose regressor
-  REUSE-OPTIMIZER, --reuse-optimizer, --no-reuse-optimizer: Initialize the previous optimizer's
-      state [default: False]
-  WARP, --warp: SimpleITK transform to warp input CT to checkpoint's reference frame
-  INVERT, --invert, --no-invert: Whether to invert the warp or not [default: False]
+  --ckptpath TEXT                Checkpoint of a pretrained pose regressor
+  --reuse-optimizer              Initialize the previous optimizer's state [default:
+    --no-reuse-optimizer         False]
+  --warp TEXT                    SimpleITK transform to warp input CT to
+                                 checkpoint's reference frame
+  --invert --no-invert           Whether to invert the warp or not [default: False]
 
 Logging:
-  PROJECT, --project: WandB project name [default: xvr]
-  GROUP, --group: WandB run group
-  NAME, --name: WandB run name
-  ID, --id: WandB run ID (useful when restarting from a checkpoint)
+  --project TEXT                 WandB project name [default: xvr]
+  --group TEXT                   WandB run group
+  --name TEXT                    WandB run name
+  --id TEXT                      WandB run ID (useful when restarting from a
+                                 checkpoint)
 ```
 
 #### Notes
@@ -242,45 +256,64 @@ Usage: xvr register model --files LIST[PATH] --imagepath STR [OPTIONS] CKPT
 Register using a neural network initial pose estimate.
 
 Parameters:
-  --files, --empty-files: X-ray images to register [required]
+* --files PATH...                X-ray images to register [required]
 
 MODEL:
-  CKPT, --ckpt: Path to model checkpoint [required]
-  --warp: SimpleITK transform reframing a model's predicted pose
-  --antipodal, --no-antipodal: Initialize from the antipode of the predicted pose [default: False]
+* CKPT --ckpt TEXT               Path to model checkpoint [required]
+  --warp TEXT                    SimpleITK transform reframing a model's predicted
+                                 pose
+  --antipodal --no-antipodal     Initialize from the antipode of the predicted pose
+                                 [default: False]
 
 Data:
-  --imagepath: Path to the CT image [required]
-  --labelpath: Path to the segmentation label map. If None, uses the full image
-  --labels, --empty-labels: Label indices to include in the DRR. If None, uses all labels
+* --imagepath TEXT               Path to the CT image [required]
+  --labelpath TEXT               Path to the segmentation label map. If None, uses
+                                 the full image
+  --labels INTEGER...            Label indices to include in the DRR. If None, uses
+                                 all labels
 
 Optimizer:
-  --metric: Image similarity metric [default: gmncc]
-  --scales, --empty-scales: Downsampling scale(s) for multiscale registration [default: [8.0]]
-  --n-itrs, --empty-n-itrs: Number of optimization iterations per scale [default: [500]]
-  --lr-rot: Learning rate for rotation parameters [default: 0.01]
-  --lr-xyz: Learning rate for translation parameters [default: 1.0]
-  --lr-reduce-factor: Factor by which to reduce the learning rate on plateau [default: 0.1]
-  --patience, --empty-patience: Number of steps with no improvement before reducing the learning
-      rate (one per scale) [default: [5]]
-  --threshold: Minimum change to qualify as an improvement [default: 0.0001]
-  --max-n-plateaus: Number of learning rate reductions before early stopping [default: 2]
-  --parameterization: Parameterization of SO(3) for pose optimization [default: euler_angles]
-  --convention: If parameterization='euler_angles', specify order [default: ZXY]
-  --init-only, --no-init-only: Return initial pose estimate result [default: False]
+  --metric TEXT                  Image similarity metric [choices: mncc, gncc,
+                                 gmncc] [default: gmncc]
+  --scales FLOAT...              Downsampling scale(s) for multiscale registration
+                                 [default: [8.0]]
+  --n-itrs INTEGER...            Number of optimization iterations per scale
+                                 [default: [500]]
+  --lr-rot FLOAT                 Learning rate for rotation parameters [default:
+                                 0.01]
+  --lr-xyz FLOAT                 Learning rate for translation parameters [default:
+                                 1.0]
+  --lr-reduce-factor FLOAT       Factor by which to reduce the learning rate on
+                                 plateau [default: 0.1]
+  --patience INTEGER...          Number of steps with no improvement before reducing
+                                 the learning rate (one per scale) [default: [5]]
+  --threshold FLOAT              Minimum change to qualify as an improvement
+                                 [default: 0.0001]
+  --max-n-plateaus INTEGER       Number of learning rate reductions before early
+                                 stopping [default: 2]
+  --parameterization TEXT        Parameterization of SO(3) for pose optimization
+                                 [default: euler_angles]
+  --convention TEXT              If parameterization='euler_angles', specify order
+                                 [default: ZXY]
+  --init-only --no-init-only     Return initial pose estimate result [default:
+                                 False]
 
 Preprocessing:
-  --crop: Number of pixels to crop from the image border [default: 0]
-  --linearize, --no-linearize: Convert image to linear attenuation values [default: True]
-  --subtract-background, --no-subtract-background: Subtract background from the image
-      [default: False]
-  --equalize, --no-equalize: Apply histogram equalization during optimization [default: False]
-  --reducefn: Reduction function for multi-frame images [default: max]
+  --crop INTEGER                 Number of pixels to crop from the image border
+                                 [default: 0]
+  --linearize --no-linearize     Convert image to linear attenuation values
+                                 [default: True]
+  --subtract-background          Subtract background from the image [default: False]
+    --no-subtract-background
+  --equalize --no-equalize       Apply histogram equalization during optimization
+                                 [default: False]
+  --reducefn TEXT                Reduction function for multi-frame images [choices:
+                                 max, sum] [default: max]
 
 Miscellaneous:
-  --device: Torch device to run on [default: cuda]
-  --savepath: Location to save the registration results
-  --saveplot, --no-saveplot: Save plots of registration results [default: False]
+  --device TEXT                  Torch device to run on [default: cuda]
+  --savepath TEXT                Location to save the registration results
+  --saveplot --no-saveplot       Save plots of registration results [default: False]
 ```
 
 #### Notes
