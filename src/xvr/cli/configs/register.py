@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from cyclopts import Group, Parameter
+
+from ._types import Convention, Parameterization
 
 
 def _non_empty(type_, value):
@@ -16,14 +18,14 @@ _PREPROCESSING = Group("Preprocessing", sort_key=4)
 _MISC = Group("Miscellaneous", sort_key=5)
 
 
-@Parameter(name="*")
+@Parameter(name="*", negative_iterable=())
 @dataclass
 class BaseParams:
-    files: Annotated[list[Path], Parameter(help="X-ray images to register", consume_multiple=True)]
+    files: Annotated[list[Path], Parameter(help="X-ray images to register", validator=_non_empty, consume_multiple=True)]
     imagepath: Annotated[str, Parameter(help="Path to the CT image", group=_DATA)]
     labelpath: Annotated[str | None, Parameter(help="Path to the segmentation label map. If None, uses the full image", group=_DATA)] = None
     labels: Annotated[list[int] | None, Parameter(help="Label indices to include in the DRR. If None, uses all labels", group=_DATA, validator=_non_empty, consume_multiple=True)] = None
-    metric: Annotated[str, Parameter(help="Image similarity metric", group=_OPTIMIZER)] = "gmncc"
+    metric: Annotated[Literal["mncc", "gncc", "gmncc"], Parameter(help="Image similarity metric", group=_OPTIMIZER)] = "gmncc"
     scales: Annotated[list[float], Parameter(help="Downsampling scale(s) for multiscale registration", group=_OPTIMIZER, validator=_non_empty, consume_multiple=True)] = field(default_factory=lambda: [8.0])
     n_itrs: Annotated[list[int], Parameter(help="Number of optimization iterations per scale", group=_OPTIMIZER, validator=_non_empty, consume_multiple=True)] = field(default_factory=lambda: [500])
     lr_rot: Annotated[float, Parameter(help="Learning rate for rotation parameters", group=_OPTIMIZER)] = 1e-2
@@ -41,9 +43,9 @@ class RunParams:
     linearize: Annotated[bool, Parameter(help="Convert image to linear attenuation values", group=_PREPROCESSING)] = True
     subtract_background: Annotated[bool, Parameter(help="Subtract background from the image", group=_PREPROCESSING)] = False
     equalize: Annotated[bool, Parameter(help="Apply histogram equalization during optimization", group=_PREPROCESSING)] = False
-    reducefn: Annotated[str, Parameter(help="Reduction function for multi-frame images", group=_PREPROCESSING)] = "max"
-    parameterization: Annotated[str, Parameter(help="Parameterization of SO(3) for pose optimization", group=_OPTIMIZER)] = "euler_angles"
-    convention: Annotated[str, Parameter(help="If parameterization='euler_angles', specify order", group=_OPTIMIZER)] = "ZXY"
+    reducefn: Annotated[Literal["max", "sum"], Parameter(help="Reduction function for multi-frame images", group=_PREPROCESSING)] = "max"
+    parameterization: Annotated[Parameterization, Parameter(help="Parameterization of SO(3) for pose optimization", group=_OPTIMIZER)] = "euler_angles"
+    convention: Annotated[Convention, Parameter(help="If parameterization='euler_angles', specify order", group=_OPTIMIZER)] = "ZXY"
     init_only: Annotated[bool, Parameter(help="Return initial pose estimate result", group=_OPTIMIZER)] = False
     savepath: Annotated[str | None, Parameter(help="Location to save the registration results", group=_MISC)] = None
     saveplot: Annotated[bool | None, Parameter(help="Save plots of registration results", group=_MISC)] = False
