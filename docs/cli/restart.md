@@ -1,3 +1,5 @@
-::: mkdocs-click
-    :module: xvr.cli.commands.restart
-    :command: restart
+---
+icon: lucide/rotate-ccw
+---
+
+{{ cli("restart") }}

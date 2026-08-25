@@ -1,0 +1,118 @@
+[project]
+site_name = "xvr"
+site_description = "Differentiable 2D/3D X-ray to volume registration"
+site_author = "Vivek Gopalakrishnan"
+site_url = "https://xvr.csail.mit.edu"
+repo_url = "https://github.com/eigenvivek/xvr"
+repo_name = "eigenvivek/xvr"
+edit_uri = "edit/main/docs/"
+copyright = "Copyright &copy; 2026 Vivek Gopalakrishnan"
+docs_dir = "docs"
+extra_css = ["stylesheets/extra.css"]
+
+# Editing a file under `src` already triggers a rebuild, because mkdocstrings
+# registers everything in `paths` below as a watched source. Do not add `src`
+# here as well: as of zensical 0.0.57, a watch entry that overlaps those paths
+# deadlocks the dev server on the first source edit. Adding a *new* module is
+# the one case the running server misses; restart `zensical serve` for that.
+watch = ["tools/macros.py"]
+
+# Navigation: https://zensical.org/docs/setup/navigation/
+nav = [
+    { Home = "index.md" },
+    { "CLI Reference" = [
+        { train = "cli/train.md" },
+        { restart = "cli/restart.md" },
+        { register = "cli/register.md" },
+    ] },
+    { "API Reference" = [
+        { io = "reference/io.md" },
+        { model = "reference/model.md" },
+        { register = "reference/register.md" },
+        { utils = "reference/utils.md" },
+    ] },
+]
+
+[project.theme]
+favicon = "assets/images/favicon.png"
+language = "en"
+
+features = [
+    "announce.dismiss",
+    "content.action.edit",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.footnote.tooltips",
+    "content.tabs.link",
+    "content.tooltips",
+    "navigation.expand",
+    "navigation.footer",
+    "navigation.indexes",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.path",
+    "navigation.sections",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+]
+
+# Palette: https://zensical.org/docs/setup/colors/
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "black"
+accent = "lime"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+# Logos: https://zensical.org/docs/setup/logo-and-icons
+[project.theme.icon]
+logo = "lucide/crosshair"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/eigenvivek/xvr"
+
+[[project.extra.social]]
+icon = "fontawesome/solid/file-lines"
+link = "https://arxiv.org/abs/2503.16309"
+
+# ----------------------------------------------------------------------------
+# Plugins configuration
+# ----------------------------------------------------------------------------
+
+# Jinja macros defined in tools/macros.py, used by the CLI and API reference
+# pages to generate their contents at build time. `module_name` is resolved as
+# a path below the project root, so it is not importable-module syntax.
+[project.plugins.macros]
+module_name = "tools/macros"
+on_error_fail = true
+
+[project.plugins.mkdocstrings.handlers.python]
+inventories = ["https://docs.python.org/3/objects.inv"]
+paths = ["src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"
+show_root_heading = true
+show_if_no_docstring = false
+inherited_members = true
+show_bases = false
+members_order = "source"
+separate_signature = true
+unwrap_annotated = true
+merge_init_into_class = true
+docstring_section_style = "spacy"
+signature_crossrefs = true
+show_signature_annotations = true
+show_symbol_type_heading = true
+show_symbol_type_toc = true
+line_length = 80

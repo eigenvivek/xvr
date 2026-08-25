@@ -1,3 +1,7 @@
+---
+icon: lucide/rocket
+---
+
 # X-ray to Volume Registration
 
 ***Training patient-specific 2D/3D registration models in 5 minutes***
