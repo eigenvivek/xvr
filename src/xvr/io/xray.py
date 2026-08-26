@@ -17,6 +17,7 @@ def read_xray(
     subtract_background: bool = False,
     linearize: bool = True,
     reducefn: str | int | Callable = "max",
+    radius: float | None = None,
 ) -> tuple[Float[torch.Tensor, "1 1 H W"], Intrinsics, bool]:
     """Read and preprocess an X-ray image from a DICOM file.
 
@@ -39,6 +40,9 @@ def read_xray(
             - ``int``: index of the frame to extract.
             - ``Callable``: arbitrary function applied to the 5D tensor.
             - ``None``: no reduction; tensor remains 5D.
+        radius: If given, treat the detector as circular with this radius (in
+            pixels), centered on the image. Pixels outside the circle are set
+            to the minimum intensity of the processed image.
 
     Returns:
         img: Preprocessed image tensor of shape ``(1, 1, H, W)``.
@@ -61,6 +65,10 @@ def read_xray(
     # Reduce a temporal dimension
     if img.ndim == 5:
         img = _reduce_frames(img, reducefn)
+
+    # Isolate the circular detector area
+    if radius is not None:
+        img = _mask_outside_circle(img, radius)
 
     return img, intrinsics, pf_to_af
 
@@ -91,6 +99,19 @@ def _parse_dicom_intrinsics(ds) -> tuple[Intrinsics, bool]:
         pass
 
     return Intrinsics(sdd, delx, dely, x0, y0), pf_to_af
+
+
+def _mask_outside_circle(img: torch.Tensor, radius: float) -> torch.Tensor:
+    """Set pixels outside a centered circle of the given radius to the image minimum."""
+    *_, height, width = img.shape
+    cy, cx = (height - 1) / 2, (width - 1) / 2
+    yy, xx = torch.meshgrid(
+        torch.arange(height, device=img.device),
+        torch.arange(width, device=img.device),
+        indexing="ij",
+    )
+    outside = (yy - cy) ** 2 + (xx - cx) ** 2 > radius**2
+    return torch.where(outside, img.min(), img)
 
 
 def _reduce_frames(img: torch.Tensor, reducefn: str | int | Callable | None) -> torch.Tensor:
