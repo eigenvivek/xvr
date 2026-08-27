@@ -3,11 +3,11 @@
 [![docs](https://github.com/eigenvivek/xvr/actions/workflows/docs.yml/badge.svg)](https://github.com/eigenvivek/xvr/actions/workflows/docs.yml)
 [![tests](https://github.com/eigenvivek/xvr/actions/workflows/tests.yml/badge.svg)](https://github.com/eigenvivek/xvr/actions/workflows/tests.yml)
 [![Paper shield](https://img.shields.io/badge/arXiv-2503.16309-red.svg)](https://arxiv.org/abs/2503.16309)
-<a href="https://colab.research.google.com/drive/1K9lBPxcLh55mr8o50Y7aHkjzjEWKPCrM?usp=sharing"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg"></a>
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 <a href="https://huggingface.co/eigenvivek/xvr/tree/main" target="_blank"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-ffc107?color=ffc107&logoColor=white"/></a>
 <a href="https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main" target="_blank"><img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Data-ffc107?color=ffc107&logoColor=white"/></a>
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+<!-- <a href="https://colab.research.google.com/drive/1K9lBPxcLh55mr8o50Y7aHkjzjEWKPCrM?usp=sharing"><img alt="Colab" src="https://colab.research.google.com/assets/colab-badge.svg"></a> -->
 
 A PyTorch package for training patient-specific 2D/3D registration models **in 5 minutes.**
 
