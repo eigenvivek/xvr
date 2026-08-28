@@ -43,6 +43,15 @@ src = ["src"]
 known-first-party = ["xvr"]
 known-third-party = ["wandb"]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    # torchio reads NIfTI through SimpleITK, whose SWIG bindings trip this on import
+    "ignore:builtin type Swig.*has no __module__:DeprecationWarning",
+]
+
+[tool.ty.src]
+include = ["src"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -50,6 +59,8 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "prek>=0.3.2",
+    "pytest>=9.0.2",
+    "ty>=0.0.21",
 ]
 docs = [
     "cyclopts>=4.11.2",
