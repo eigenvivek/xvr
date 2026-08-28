@@ -19,14 +19,6 @@ SDD = 1000.0
 PIXEL_SPACING = 2.0
 
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--update-golden",
-        action="store_true",
-        help="Rewrite the stored numerics in tests/data/golden/ instead of comparing against them.",
-    )
-
-
 @pytest.fixture(autouse=True)
 def _determinism():
     """Pin the sources of run-to-run variation.
@@ -159,40 +151,3 @@ def offset_pose():
         "rot": [TRUE_ROT[0] + 4.0, TRUE_ROT[1] + 4.0, TRUE_ROT[2] - 3.0],
         "xyz": [TRUE_XYZ[0] + 12.0, TRUE_XYZ[1] + 15.0, TRUE_XYZ[2] - 12.0],
     }
-
-
-@pytest.fixture
-def golden(request):
-    """Compare a run's numerics against a committed reference, or rewrite it.
-
-    The recovery tests prove the optimizer finds the right answer, but they tolerate large
-    changes to *how* it gets there. This is the layer that pins the trajectory itself, so a
-    change in the metric, the optimizer, or the preprocessing cannot pass unnoticed.
-
-    Regenerate with `pytest --update-golden`, then justify the diff in the pull request.
-    """
-    import json
-    from pathlib import Path
-
-    directory = Path(__file__).parent / "data" / "golden"
-
-    def _compare(name, actual, rtol=1e-4, atol=1e-6):
-        path = directory / f"{name}.json"
-        if request.config.getoption("--update-golden"):
-            directory.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(actual, indent=1) + "\n")
-            pytest.skip(f"rewrote {path.relative_to(Path(__file__).parent.parent)}")
-
-        assert path.exists(), f"missing golden file {path}; regenerate with --update-golden"
-        expected = json.loads(path.read_text())
-
-        assert actual.keys() == expected.keys()
-        for key, value in actual.items():
-            if isinstance(value, (int, str)) and not isinstance(value, bool):
-                assert value == expected[key], f"{name}.{key}: {value!r} != {expected[key]!r}"
-            else:
-                np.testing.assert_allclose(
-                    value, expected[key], rtol=rtol, atol=atol, err_msg=f"{name}.{key} drifted"
-                )
-
-    return _compare
