@@ -130,3 +130,17 @@ Once every job has finished, score the results:
 ```
 
 This writes `experiments/results/registration.csv`, rebuilt from scratch on each run, with one row per x-ray per pose (`init` and `final`) recording mPE, mRPE, mTRE, dGeo, the final NCC, and runtime.
+
+## Citing `xvr`
+
+If you find `xvr` useful for your work, please consider citing our [paper](https://doi.org/10.1038/s41586-026-11045-x):
+```
+@article{gopalakrishnan2026rapid,
+  title={Rapid patient-specific neural networks for X-ray to volume registration},
+  author={Gopalakrishnan, Vivek and Chlorogiannis, David-Dimitris and Abumoussa, Andrew and Larson, Anna M and Haouchine, Nazim and Orbach, Darren B and Frisken, Sarah and Dey, Neel and Golland, Polina},
+  journal={Nature},
+  pages={1--9},
+  year={2026},
+  publisher={Nature Publishing Group UK London}
+}
+```
