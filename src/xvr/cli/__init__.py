@@ -7,7 +7,7 @@ from .register import register
 from .restart import restart
 from .train import train
 
-xvr = App(name="xvr", version=version("xvreg"), help_formatter=formatter)
+xvr = App(name="xvr", version=lambda: version("xvreg"), help_formatter=formatter)
 
 
 xvr.command(train)
