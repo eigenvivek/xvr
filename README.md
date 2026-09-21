@@ -30,7 +30,7 @@ A PyTorch package for training patient-specific 2D/3D registration models **in 5
 
 Install the Python API and CLI (should take ~5 min if installing PyTorch with CUDA):
 ```bash
-pip install git+https://github.com/eigenvivek/xvr.git
+pip install xvreg
 ```
 
 Verify the installation version (should match the latest release on GitHub):

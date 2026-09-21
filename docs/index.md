@@ -14,4 +14,4 @@ icon: lucide/rocket
 - 💾 Supports macOS, Linux, and Windows
 
 !!! abstract "Paper"
-        Vivek Gopalakrishnan, David-Dimitris Chlorogiannis, Andrew Abumoussa, Anna M. Larson, Nazim Haouchine, Darren B. Orbach, Sarah Frisken, Neel Dey, and Polina Golland. [*Rapid patient-specific neural networks for X-ray to volume registration.*](https://doi.org/10.1038/s41586-026-11045-x) _Nature_ (2026): 1-9.
+     Vivek Gopalakrishnan, David-Dimitris Chlorogiannis, Andrew Abumoussa, Anna M. Larson, Nazim Haouchine, Darren B. Orbach, Sarah Frisken, Neel Dey, and Polina Golland. [*Rapid patient-specific neural networks for X-ray to volume registration.*](https://doi.org/10.1038/s41586-026-11045-x) _Nature_ (2026): 1-9.
