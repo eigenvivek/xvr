@@ -15,3 +15,32 @@ icon: lucide/rocket
 
 !!! abstract "Paper"
      Vivek Gopalakrishnan, David-Dimitris Chlorogiannis, Andrew Abumoussa, Anna M. Larson, Nazim Haouchine, Darren B. Orbach, Sarah Frisken, Neel Dey, and Polina Golland. [*Rapid patient-specific neural networks for X-ray to volume registration.*](https://doi.org/10.1038/s41586-026-11045-x) _Nature_ (2026): 1-9.
+
+## Installation
+
+`xvr` is distributed on PyPI under the package name [`xvreg`](https://pypi.org/project/xvreg/).
+
+### Full install
+
+If you want the API and CLI, install `xvr` with your favorite package manager:
+```bash
+pip install xvreg  # or `uv add xvreg`
+```
+
+### Just the CLI
+
+If you just want the CLI, you can run:
+```bash
+uv tool install xvreg
+```
+after which, the CLI will be available globally:
+```bash
+xvr --help
+```
+
+### A quick test
+
+If you just want to test the CLI without a permanent install, try:
+```bash
+uvx --from xvreg xvr --help
+```
