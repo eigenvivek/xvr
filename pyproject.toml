@@ -1,6 +1,6 @@
 [project]
-name = "xvr"
-version = "0.0.0rc2"
+name = "xvreg"
+version = "0.1.0"
 description = "Differentiable 2D/3D X-ray to volume registration"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -51,6 +51,9 @@ filterwarnings = [
 
 [tool.ty.src]
 include = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/xvr"]
 
 [build-system]
 requires = ["hatchling"]

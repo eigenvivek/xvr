@@ -28,9 +28,16 @@ A PyTorch package for training patient-specific 2D/3D registration models **in 5
 
 ## Installation
 
-Install the Python API and CLI (should take ~5 min if installing PyTorch with CUDA):
+`xvr` is distributed on PyPI under the package name [`xvreg`](https://pypi.org/project/xvreg/).
+
+Install the Python API and CLI:
 ```bash
-pip install git+https://github.com/eigenvivek/xvr.git
+pip install xvreg  # or `uv add xvreg`
+```
+
+If you just want the CLI, use [`uv`](https://docs.astral.sh/uv/):
+```bash
+uv tool install xvreg
 ```
 
 Verify the installation version (should match the latest release on GitHub):
