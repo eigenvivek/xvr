@@ -5084,8 +5084,8 @@ wheels = [
 ]
 
 [[package]]
-name = "xvr"
-version = "0.0.0rc2"
+name = "xvreg"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
