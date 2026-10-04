@@ -46,7 +46,11 @@ class Evaluator:
             .norm(dim=-1)
             .mean(dim=-1)
         )
-        mtre = (pred_pose(self.fiducials) - true_pose(self.fiducials)).norm(dim=-1).mean(dim=-1)
+        mtre = (
+            (pred_pose.inverse()(self.fiducials) - true_pose.inverse()(self.fiducials))
+            .norm(dim=-1)
+            .mean(dim=-1)
+        )
         *_, dgeo = self.geodesic(true_pose, pred_pose)
         return torch.stack([mpe, mrpe, mtre, dgeo], dim=-1).squeeze().tolist()
 
