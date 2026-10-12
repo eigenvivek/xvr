@@ -26,7 +26,10 @@ EXCLUDE = {
 
 
 class Evaluator:
-    """Four 2D/3D registration error metrics (all in mm): mPE, mRPE, mTRE, dGeo."""
+    """
+    Five 2D/3D registration error metrics (all in mm):
+    mPE, mRPE, mTRE (in the camera and world frames), and dGeo.
+    """
 
     def __init__(self, drr: DRR, fiducials: torch.Tensor) -> None:
         self.drr = drr
@@ -46,9 +49,16 @@ class Evaluator:
             .norm(dim=-1)
             .mean(dim=-1)
         )
-        mtre = (pred_pose(self.fiducials) - true_pose(self.fiducials)).norm(dim=-1).mean(dim=-1)
+        mtre_cpos = (
+            (pred_pose(self.fiducials) - true_pose(self.fiducials)).norm(dim=-1).mean(dim=-1)
+        )
+        mtre_wpos = (
+            (pred_pose.inverse()(self.fiducials) - true_pose.inverse()(self.fiducials))
+            .norm(dim=-1)
+            .mean(dim=-1)
+        )
         *_, dgeo = self.geodesic(true_pose, pred_pose)
-        return torch.stack([mpe, mrpe, mtre, dgeo], dim=-1).squeeze().tolist()
+        return torch.stack([mpe, mrpe, mtre_cpos, mtre_wpos, dgeo], dim=-1).squeeze().tolist()
 
 
 def read_true(
@@ -154,7 +164,7 @@ def main(dataset, result, savepath, device):
             ("init", init_pose, sim_init, 0.0),
             ("final", final_pose, sim_final, runtime),
         ]:
-            mpe, mrpe, mtre, dgeo = evaluator(
+            mpe, mrpe, mtre_cpos, mtre_wpos, dgeo = evaluator(
                 true_pose, RigidTransform(mat.to(torch.float32)).to(device)
             )
             rows.append(
@@ -168,7 +178,8 @@ def main(dataset, result, savepath, device):
                     "runtime": rt,
                     "mPE": mpe,
                     "mRPE": mrpe,
-                    "mTRE": mtre,
+                    "mTRE_cpos": mtre_cpos,
+                    "mTRE_wpos": mtre_wpos,
                     "dGeo": dgeo,
                 }
             )

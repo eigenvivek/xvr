@@ -138,6 +138,9 @@ Once every job has finished, score the results:
 
 This writes `experiments/results/registration.csv`, rebuilt from scratch on each run, with one row per x-ray per pose (`init` and `final`) recording mPE, mRPE, mTRE, dGeo, the final NCC, and runtime.
 
+> [!NOTE]
+> The paper reports mTRE calculated in the camera coordinate frame. However, mTRE is more often thought about in the [world frame](https://github.com/eigenvivek/xvr/issues/196). The evaluation script now computes both. Refer to `mtre_cpos` for the camera frame and `mtre_wpos` for the world frame.
+
 ## Citing `xvr`
 
 If you find `xvr` useful for your work, please consider citing our [paper](https://doi.org/10.1038/s41586-026-11045-x):
