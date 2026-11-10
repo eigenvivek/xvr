@@ -45,7 +45,7 @@ Verify the installation version (should match the latest release on GitHub):
 xvr --version
 ```
 
-## CLI Usage
+## CLI
 
 `xvr` provides a command-line interface for training/finetuning pose regression models and registering clinical data with gradient-based iterative optimization with trained models. It is designed to be modular and extensible, allowing users to easily train models on new datasets and anatomical structures without any manual annotations. Full documentation is available [here](https://xvr.csail.mit.edu/).
 
@@ -61,6 +61,10 @@ train        Train a pose regression model.
 --help -h    Display this message and exit.
 --version    Display application version.
 ```
+
+### Finetuning your own model
+
+To align a new CT volume to the `xvr` foundation model's coordinate frame, use the template volume (subject `PETCT_f1ca0f7c4c` from the [AutoPET dataset](https://www.cancerimagingarchive.net/collection/fdg-pet-ct-lesions/)) available on HuggingFace at [`xvr-data/wbct`](https://huggingface.co/datasets/eigenvivek/xvr-data/tree/main/wbct). In compliance with AutoPET's license, the publicly released template volume is defaced. In practice, you can often get away with not rigidly aligning a new volume to the template if you finetune for a few more iterations (around 50-100 iterations is usually enough to implicitly learn this alignment).
 
 ## Development
 
@@ -151,6 +155,6 @@ If you find `xvr` useful for your work, please consider citing our [paper](https
   journal={Nature},
   pages={1--9},
   year={2026},
-  publisher={Nature Publishing Group UK London}
+  publisher={Nature Publishing Group UK, London}
 }
 ```
